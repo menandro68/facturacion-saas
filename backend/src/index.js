@@ -7,6 +7,8 @@ const pool = require('./config/db');
 const createTables = require('./config/database');
 const authRoutes = require('./routes/auth');
 const tenantRoutes = require('./routes/tenants');
+const customerRoutes = require('./routes/customers');
+const productRoutes = require('./routes/products');
 
 const app = express();
 
@@ -25,6 +27,8 @@ app.use(limiter);
 // Rutas
 app.use('/auth', authRoutes);
 app.use('/tenant', tenantRoutes);
+app.use('/customers', customerRoutes);
+app.use('/products', productRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {

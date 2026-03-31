@@ -59,6 +59,41 @@ const createTables = async () => {
     `);
     console.log('✅ Índices creados');
 
+    // 5. Tabla customers
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        nombre VARCHAR(150) NOT NULL,
+        rnc_cedula VARCHAR(20),
+        email VARCHAR(100),
+        telefono VARCHAR(20),
+        direccion TEXT,
+        tipo VARCHAR(30) DEFAULT 'consumidor_final',
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla customers creada');
+
+    // 6. Tabla products
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        nombre VARCHAR(150) NOT NULL,
+        descripcion TEXT,
+        precio DECIMAL(12,2) NOT NULL DEFAULT 0,
+        itbis_rate DECIMAL(5,2) DEFAULT 18.00,
+        unidad VARCHAR(30) DEFAULT 'unidad',
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla products creada');
+
     console.log('🎉 Base de datos lista');
   } catch (error) {
     console.error('❌ Error creando tablas:', error.message);
