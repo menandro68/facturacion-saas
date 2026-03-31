@@ -7,6 +7,7 @@ import Facturas from './pages/Facturas'
 import Pagos from './pages/Pagos'
 import Reportes from './pages/Reportes'
 import Configuracion from './pages/Configuracion'
+import Proveedores from './pages/Proveedores'
 
 function App() {
   const [usuario, setUsuario] = useState(() => {
@@ -32,6 +33,7 @@ function App() {
     { id: 'facturas', label: '🧾 Facturas' },
     { id: 'pagos', label: '💰 Pagos' },
     { id: 'reportes', label: '📈 Reportes' },
+    { id: 'proveedores', label: '🏭 Proveedores' },
     { id: 'configuracion', label: '⚙️ Configuración' },
   ]
 
@@ -76,6 +78,7 @@ function App() {
         {pagina === 'facturas' && <Facturas />}
         {pagina === 'pagos' && <Pagos />}
         {pagina === 'reportes' && <Reportes />}
+        {pagina === 'proveedores' && <Proveedores />}
         {pagina === 'configuracion' && <Configuracion />}
       </div>
     </div>

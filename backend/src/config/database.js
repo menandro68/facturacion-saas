@@ -162,6 +162,24 @@ const createTables = async () => {
     `);
     console.log('✅ Tabla payments creada');
 
+    // 11. Tabla proveedores
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        nombre VARCHAR(150) NOT NULL,
+        rnc VARCHAR(20),
+        email VARCHAR(100),
+        telefono VARCHAR(20),
+        direccion TEXT,
+        contacto VARCHAR(100),
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla suppliers creada');
+
     console.log('🎉 Base de datos lista');
   } catch (error) {
     console.error('❌ Error creando tablas:', error.message);
