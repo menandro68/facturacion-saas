@@ -12,6 +12,8 @@ const productRoutes = require('./routes/products');
 const invoiceRoutes = require('./routes/invoices');
 const paymentRoutes = require('./routes/payments');
 const reportRoutes = require('./routes/reports');
+const supplierRoutes = require('./routes/suppliers');
+const inventoryRoutes = require('./routes/inventory');
 
 const app = express();
 
@@ -35,6 +37,8 @@ app.use('/products', productRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/payments', paymentRoutes);
 app.use('/reports', reportRoutes);
+app.use('/suppliers', supplierRoutes);
+app.use('/inventory', inventoryRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {

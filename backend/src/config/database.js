@@ -180,6 +180,39 @@ const createTables = async () => {
     `);
     console.log('✅ Tabla suppliers creada');
 
+    // 12. Tabla inventario
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inventory (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        stock_actual DECIMAL(12,2) DEFAULT 0,
+        stock_minimo DECIMAL(12,2) DEFAULT 0,
+        stock_maximo DECIMAL(12,2) DEFAULT 0,
+        unidad VARCHAR(30) DEFAULT 'unidad',
+        ubicacion VARCHAR(100),
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla inventory creada');
+
+    // 13. Tabla movimientos de inventario
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inventory_movements (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        inventory_id UUID NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
+        tipo VARCHAR(20) NOT NULL,
+        cantidad DECIMAL(12,2) NOT NULL,
+        stock_anterior DECIMAL(12,2) NOT NULL,
+        stock_nuevo DECIMAL(12,2) NOT NULL,
+        motivo VARCHAR(255),
+        creado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla inventory_movements creada');
+
     console.log('🎉 Base de datos lista');
   } catch (error) {
     console.error('❌ Error creando tablas:', error.message);
