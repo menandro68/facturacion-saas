@@ -94,6 +94,59 @@ const createTables = async () => {
     `);
     console.log('✅ Tabla products creada');
 
+    // 7. Tabla ncf_sequences
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ncf_sequences (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        tipo VARCHAR(10) NOT NULL,
+        prefijo VARCHAR(10) NOT NULL,
+        secuencia_actual INTEGER DEFAULT 0,
+        secuencia_max INTEGER DEFAULT 1000,
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla ncf_sequences creada');
+
+    // 8. Tabla invoices
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        customer_id UUID REFERENCES customers(id),
+        ncf VARCHAR(20),
+        ncf_tipo VARCHAR(10) DEFAULT 'B01',
+        estado VARCHAR(20) DEFAULT 'borrador',
+        subtotal DECIMAL(12,2) DEFAULT 0,
+        itbis DECIMAL(12,2) DEFAULT 0,
+        total DECIMAL(12,2) DEFAULT 0,
+        notas TEXT,
+        fecha_emision TIMESTAMP,
+        fecha_vencimiento TIMESTAMP,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla invoices creada');
+
+    // 9. Tabla invoice_items
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS invoice_items (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id),
+        descripcion VARCHAR(255) NOT NULL,
+        cantidad DECIMAL(12,2) NOT NULL DEFAULT 1,
+        precio_unitario DECIMAL(12,2) NOT NULL,
+        itbis_rate DECIMAL(5,2) DEFAULT 18.00,
+        itbis_monto DECIMAL(12,2) DEFAULT 0,
+        subtotal DECIMAL(12,2) DEFAULT 0,
+        total DECIMAL(12,2) DEFAULT 0
+      )
+    `);
+    console.log('✅ Tabla invoice_items creada');
+
     console.log('🎉 Base de datos lista');
   } catch (error) {
     console.error('❌ Error creando tablas:', error.message);

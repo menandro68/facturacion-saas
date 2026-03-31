@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const tenantRoutes = require('./routes/tenants');
 const customerRoutes = require('./routes/customers');
 const productRoutes = require('./routes/products');
+const invoiceRoutes = require('./routes/invoices');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/auth', authRoutes);
 app.use('/tenant', tenantRoutes);
 app.use('/customers', customerRoutes);
 app.use('/products', productRoutes);
+app.use('/invoices', invoiceRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
