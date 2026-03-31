@@ -147,6 +147,21 @@ const createTables = async () => {
     `);
     console.log('✅ Tabla invoice_items creada');
 
+    // 10. Tabla payments
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        monto DECIMAL(12,2) NOT NULL,
+        metodo VARCHAR(30) DEFAULT 'efectivo',
+        referencia VARCHAR(100),
+        notas TEXT,
+        creado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla payments creada');
+
     console.log('🎉 Base de datos lista');
   } catch (error) {
     console.error('❌ Error creando tablas:', error.message);

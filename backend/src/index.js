@@ -10,6 +10,7 @@ const tenantRoutes = require('./routes/tenants');
 const customerRoutes = require('./routes/customers');
 const productRoutes = require('./routes/products');
 const invoiceRoutes = require('./routes/invoices');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/tenant', tenantRoutes);
 app.use('/customers', customerRoutes);
 app.use('/products', productRoutes);
 app.use('/invoices', invoiceRoutes);
+app.use('/payments', paymentRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
