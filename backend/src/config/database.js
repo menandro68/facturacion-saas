@@ -213,6 +213,26 @@ const createTables = async () => {
     `);
     console.log('✅ Tabla inventory_movements creada');
 
+    // 14. Tabla cuentas por cobrar
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS accounts_receivable (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        customer_id UUID REFERENCES customers(id),
+        invoice_id UUID REFERENCES invoices(id),
+        descripcion VARCHAR(255) NOT NULL,
+        monto_total DECIMAL(12,2) NOT NULL,
+        monto_pagado DECIMAL(12,2) DEFAULT 0,
+        monto_pendiente DECIMAL(12,2) NOT NULL,
+        fecha_vencimiento DATE,
+        estado VARCHAR(20) DEFAULT 'pendiente',
+        notas TEXT,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla accounts_receivable creada');
+
     console.log('🎉 Base de datos lista');
   } catch (error) {
     console.error('❌ Error creando tablas:', error.message);

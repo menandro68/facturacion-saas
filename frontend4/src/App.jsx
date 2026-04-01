@@ -9,6 +9,7 @@ import Reportes from './pages/Reportes'
 import Configuracion from './pages/Configuracion'
 import Proveedores from './pages/Proveedores'
 import Inventario from './pages/Inventario'
+import CuentasCobrar from './pages/CuentasCobrar'
 
 function App() {
   const [usuario, setUsuario] = useState(() => {
@@ -36,6 +37,7 @@ function App() {
     { id: 'reportes', label: '📈 Reportes' },
     { id: 'proveedores', label: '🏭 Proveedores' },
     { id: 'inventario', label: '📋 Inventario' },
+    { id: 'cuentascobrar', label: '💵 Cuentas por Cobrar' },
     { id: 'configuracion', label: '⚙️ Configuración' },
   ]
 
@@ -82,6 +84,7 @@ function App() {
         {pagina === 'reportes' && <Reportes />}
         {pagina === 'proveedores' && <Proveedores />}
         {pagina === 'inventario' && <Inventario />}
+        {pagina === 'cuentascobrar' && <CuentasCobrar />}
         {pagina === 'configuracion' && <Configuracion />}
       </div>
     </div>

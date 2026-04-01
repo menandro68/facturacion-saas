@@ -14,6 +14,7 @@ const paymentRoutes = require('./routes/payments');
 const reportRoutes = require('./routes/reports');
 const supplierRoutes = require('./routes/suppliers');
 const inventoryRoutes = require('./routes/inventory');
+const arRoutes = require('./routes/accounts_receivable');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use('/payments', paymentRoutes);
 app.use('/reports', reportRoutes);
 app.use('/suppliers', supplierRoutes);
 app.use('/inventory', inventoryRoutes);
+app.use('/accounts-receivable', arRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
