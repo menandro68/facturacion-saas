@@ -232,6 +232,25 @@ const createTables = async () => {
       )
     `);
     console.log('✅ Tabla accounts_receivable creada');
+    
+    // 15. Tabla cuentas por pagar
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS accounts_payable (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        supplier_id UUID REFERENCES suppliers(id),
+        descripcion VARCHAR(255) NOT NULL,
+        monto_total DECIMAL(12,2) NOT NULL,
+        monto_pagado DECIMAL(12,2) DEFAULT 0,
+        monto_pendiente DECIMAL(12,2) NOT NULL,
+        fecha_vencimiento DATE,
+        estado VARCHAR(20) DEFAULT 'pendiente',
+        notas TEXT,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla accounts_payable creada');
 
     console.log('🎉 Base de datos lista');
   } catch (error) {
