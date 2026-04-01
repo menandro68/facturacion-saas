@@ -252,6 +252,57 @@ const createTables = async () => {
     `);
     console.log('✅ Tabla accounts_payable creada');
 
+    // 16. Tabla vendedores
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS vendedores (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        nombre VARCHAR(150) NOT NULL,
+        cedula VARCHAR(20),
+        email VARCHAR(100),
+        telefono VARCHAR(20),
+        zona_id UUID,
+        comision_pct DECIMAL(5,2) DEFAULT 0,
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla vendedores creada');
+
+    // 17. Tabla zonas
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS zonas (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        nombre VARCHAR(150) NOT NULL,
+        descripcion TEXT,
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla zonas creada');
+
+    // 18. Tabla choferes
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS choferes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        nombre VARCHAR(150) NOT NULL,
+        cedula VARCHAR(20),
+        licencia VARCHAR(30),
+        telefono VARCHAR(20),
+        email VARCHAR(100),
+        vehiculo VARCHAR(100),
+        placa VARCHAR(20),
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla choferes creada');
+
     console.log('🎉 Base de datos lista');
   } catch (error) {
     console.error('❌ Error creando tablas:', error.message);

@@ -16,6 +16,7 @@ const supplierRoutes = require('./routes/suppliers');
 const inventoryRoutes = require('./routes/inventory');
 const arRoutes = require('./routes/accounts_receivable');
 const apRoutes = require('./routes/accounts_payable');
+const mantenimientoRoutes = require('./routes/mantenimiento');
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/suppliers', supplierRoutes);
 app.use('/inventory', inventoryRoutes);
 app.use('/accounts-receivable', arRoutes);
 app.use('/accounts-payable', apRoutes);
+app.use('/mantenimiento', mantenimientoRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
