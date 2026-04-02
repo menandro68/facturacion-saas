@@ -15,7 +15,7 @@ import Mantenimiento from './pages/Mantenimiento'
 
 function App() {
   const [usuario, setUsuario] = useState(() => {
-    const u = localStorage.getItem('usuario')
+    const u = sessionStorage.getItem('usuario')  // ← MODIFICADO
     return u ? JSON.parse(u) : null
   })
   const [pagina, setPagina] = useState('dashboard')
@@ -23,8 +23,8 @@ function App() {
   const handleLogin = (user) => setUsuario(user)
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('usuario')
+    sessionStorage.removeItem('token')    // ← MODIFICADO
+    sessionStorage.removeItem('usuario')  // ← MODIFICADO
     setUsuario(null)
   }
 

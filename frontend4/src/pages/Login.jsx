@@ -16,8 +16,8 @@ export default function Login({ onLogin }) {
     setError('')
     try {
       const res = await API.post('/auth/login', form)
-      localStorage.setItem('token', res.data.token)
-      localStorage.setItem('usuario', JSON.stringify(res.data.usuario))
+      sessionStorage.setItem('token', res.data.token)           // ← MODIFICADO
+      sessionStorage.setItem('usuario', JSON.stringify(res.data.usuario)) // ← MODIFICADO
       onLogin(res.data.usuario)
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al iniciar sesión')
