@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -19,9 +20,10 @@ const apRoutes = require('./routes/accounts_payable');
 const mantenimientoRoutes = require('./routes/mantenimiento');
 
 const app = express();
+app.set('trust proxy', 1)
 
 // Seguridad
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
 
@@ -31,6 +33,9 @@ const limiter = rateLimit({
   max: 100
 });
 app.use(limiter);
+
+// Archivos estáticos
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Rutas
 app.use('/auth', authRoutes);
@@ -48,7 +53,7 @@ app.use('/mantenimiento', mantenimientoRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
-  res.json({ mensaje: 'API de Facturación funcionando ✅' });
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Ruta de prueba de base de datos
