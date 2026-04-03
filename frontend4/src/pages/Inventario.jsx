@@ -97,26 +97,13 @@ export default function Inventario() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Inventario</h2>
-        <button onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-          + Agregar Producto
+        <button onClick={() => window.print()}
+          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
+          🖨️ Imprimir
         </button>
       </div>
 
-      {/* Filtro de fechas */}
-      <div className="flex gap-4 items-end mb-4 bg-white p-4 rounded-lg shadow">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
-          <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
-            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
-          <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
-            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Buscar</button>
-      </div>
+      {/* Filtro de fechas - oculto */}
 
       {/* Tabs */}
       <div className="flex gap-2 border-b mb-6">
@@ -124,6 +111,7 @@ export default function Inventario() {
           { id: 'inventario', label: 'Inventario' },
           { id: 'valor', label: 'Valor de Inventario' },
           { id: 'stock_minimo', label: 'Stock Mínimo' },
+          { id: 'orden_compra', label: 'Crear Orden de Compra' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -136,7 +124,14 @@ export default function Inventario() {
         ))}
       </div>
 
-      {tab !== 'inventario' && (
+      {tab === 'orden_compra' && (
+        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+          <p className="text-lg">Orden de Compra</p>
+          <p className="text-sm mt-2">Módulo en desarrollo... Próximamente disponible</p>
+        </div>
+      )}
+
+      {tab !== 'inventario' && tab !== 'orden_compra' && (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
           <p className="text-lg">Módulo en desarrollo...</p>
           <p className="text-sm mt-2">Próximamente disponible</p>

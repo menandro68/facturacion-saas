@@ -10,6 +10,8 @@ export default function Clientes() {
     nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: ''
   })
   const [error, setError] = useState('')
+  const [zonas, setZonas] = useState([])
+  const [vendedores, setVendedores] = useState([])
 
   const fetchClientes = async () => {
     try {
@@ -22,7 +24,11 @@ export default function Clientes() {
     }
   }
 
-  useEffect(() => { fetchClientes() }, [])
+  useEffect(() => {
+    fetchClientes()
+    API.get('/mantenimiento/zonas').then(r => setZonas(r.data.data)).catch(() => {})
+    API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
+  }, [])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -132,6 +138,7 @@ export default function Clientes() {
               <select name="vendedor_id" value={form.vendedor_id || ''} onChange={handleChange}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">-- Sin asignar --</option>
+                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
             </div>
             <div>
@@ -139,6 +146,7 @@ export default function Clientes() {
               <select name="zona_id" value={form.zona_id || ''} onChange={handleChange}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">-- Sin asignar --</option>
+                {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
               </select>
             </div>
             <div>

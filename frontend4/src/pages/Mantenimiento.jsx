@@ -145,7 +145,7 @@ export default function Mantenimiento() {
                 {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
               </select>
             </div>
-            <div>
+            <div className="hidden">
               <label className="block text-sm font-medium text-gray-700 mb-1">Comisión %</label>
               <input type="number" step="0.01" value={formVendedor.comision_pct} onChange={e => setFormVendedor({...formVendedor, comision_pct: e.target.value})}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />

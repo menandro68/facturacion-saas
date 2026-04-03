@@ -85,9 +85,9 @@ export default function CuentasPagar() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Cuentas por Pagar</h2>
-        <button onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-          + Nueva Cuenta
+        <button onClick={() => window.print()}
+          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
+          🖨️ Imprimir
         </button>
       </div>
 

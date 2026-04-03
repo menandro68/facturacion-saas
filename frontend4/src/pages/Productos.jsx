@@ -24,8 +24,29 @@ export default function Productos() {
 
   useEffect(() => { fetchProductos() }, [])
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+const handleChange = (e) => {
+    const { name, value } = e.target
+    const updated = { ...form, [name]: value }
+
+// Auto-calcular precio de venta en función de costo y % beneficio
+    if (name === 'beneficio' || name === 'costo') {
+      const costo = parseFloat(name === 'costo' ? value : updated.costo) || 0
+      const beneficio = parseFloat(name === 'beneficio' ? value : updated.beneficio) || 0
+      if (costo > 0 && beneficio > 0) {
+        updated.precio = (costo + (costo * beneficio / 100)).toFixed(2)
+      }
+    }
+
+    // Auto-calcular % beneficio en función de precio de venta y costo
+    if (name === 'precio' || (name === 'costo' && updated.precio)) {
+      const costo = parseFloat(name === 'costo' ? value : updated.costo) || 0
+      const precio = parseFloat(name === 'precio' ? value : updated.precio) || 0
+      if (costo > 0 && precio > 0 && precio > costo) {
+        updated.beneficio = (((precio - costo) / costo) * 100).toFixed(2)
+      }
+    }
+
+    setForm(updated)
   }
 
   const handleNuevo = () => {
