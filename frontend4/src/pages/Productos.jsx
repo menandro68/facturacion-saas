@@ -7,7 +7,7 @@ export default function Productos() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    nombre: '', descripcion: '', precio: '', itbis_rate: '18', unidad: 'unidad'
+    codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: ''
   })
   const [error, setError] = useState('')
 
@@ -29,7 +29,7 @@ export default function Productos() {
   }
 
   const handleNuevo = () => {
-    setForm({ nombre: '', descripcion: '', precio: '', itbis_rate: '18', unidad: 'unidad' })
+    setForm({ codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '' })
     setEditando(null)
     setShowForm(true)
     setError('')
@@ -37,11 +37,18 @@ export default function Productos() {
 
   const handleEditar = (producto) => {
     setForm({
+      codigo: producto.codigo || '',
       nombre: producto.nombre,
       descripcion: producto.descripcion || '',
       precio: producto.precio,
+      costo: producto.costo || '',
       itbis_rate: producto.itbis_rate,
-      unidad: producto.unidad
+      unidad: producto.unidad,
+      comision_vendedor: producto.comision_vendedor || '',
+      beneficio: producto.beneficio || '',
+      suplidor: producto.suplidor || '',
+      stock_minimo: producto.stock_minimo || '',
+      stock_maximo: producto.stock_maximo || ''
     })
     setEditando(producto.id)
     setShowForm(true)
@@ -88,20 +95,31 @@ export default function Productos() {
         </button>
       </div>
 
-      {/* Formulario */}
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Producto' : 'Nuevo Producto'}</h3>
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-              <input name="nombre" value={form.nombre} onChange={handleChange} required
+              <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
+              <input name="codigo" value={form.codigo || ''} onChange={handleChange}
+                placeholder="Código del producto"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Precio *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto *</label>
+              <input name="nombre" value={form.nombre} onChange={handleChange} required
+                placeholder="Descripción"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta *</label>
               <input name="precio" type="number" step="0.01" value={form.precio} onChange={handleChange} required
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
+              <input name="costo" type="number" step="0.01" value={form.costo} onChange={handleChange}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
@@ -114,19 +132,33 @@ export default function Productos() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
-              <select name="unidad" value={form.unidad} onChange={handleChange}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="unidad">Unidad</option>
-                <option value="hora">Hora</option>
-                <option value="dia">Día</option>
-                <option value="mes">Mes</option>
-                <option value="servicio">Servicio</option>
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1">% del Vendedor</label>
+              <input name="comision_vendedor" type="number" step="0.01" min="0" max="100" value={form.comision_vendedor || ''} onChange={handleChange}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0.00" />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-              <input name="descripcion" value={form.descripcion} onChange={handleChange}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">% de Beneficio</label>
+              <input name="beneficio" type="number" step="0.01" min="0" max="100" value={form.beneficio || ''} onChange={handleChange}
+                placeholder="0.00"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Suplidor</label>
+              <input name="suplidor" value={form.suplidor || ''} onChange={handleChange}
+                placeholder="Nombre del suplidor"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo</label>
+              <input name="stock_minimo" type="number" step="1" min="0" value={form.stock_minimo || ''} onChange={handleChange}
+                placeholder="0"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Máximo</label>
+              <input name="stock_maximo" type="number" step="1" min="0" value={form.stock_maximo || ''} onChange={handleChange}
+                placeholder="0"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2 flex gap-3 justify-end">
@@ -141,30 +173,33 @@ export default function Productos() {
         </div>
       )}
 
-      {/* Tabla */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-4 py-3 text-left text-gray-600">Código</th>
               <th className="px-4 py-3 text-left text-gray-600">Nombre</th>
-              <th className="px-4 py-3 text-left text-gray-600">Descripción</th>
+              <th className="px-4 py-3 text-left text-gray-600">% Beneficio</th>
               <th className="px-4 py-3 text-left text-gray-600">Precio</th>
+              <th className="px-4 py-3 text-left text-gray-600">Costo</th>
               <th className="px-4 py-3 text-left text-gray-600">ITBIS</th>
-              <th className="px-4 py-3 text-left text-gray-600">Unidad</th>
+              <th className="px-4 py-3 text-left text-gray-600">% Vendedor</th>
               <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {productos.length === 0 ? (
-              <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay productos registrados</td></tr>
+              <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay productos registrados</td></tr>
             ) : (
               productos.map((p) => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-3">{p.codigo || '-'}</td>
                   <td className="px-4 py-3 font-medium">{p.nombre}</td>
-                  <td className="px-4 py-3">{p.descripcion || '-'}</td>
+                  <td className="px-4 py-3">{p.beneficio ? `${p.beneficio}%` : '-'}</td>
                   <td className="px-4 py-3">RD${parseFloat(p.precio).toLocaleString()}</td>
+                  <td className="px-4 py-3">{p.costo ? `RD$${parseFloat(p.costo).toLocaleString()}` : '-'}</td>
                   <td className="px-4 py-3">{p.itbis_rate}%</td>
-                  <td className="px-4 py-3 capitalize">{p.unidad}</td>
+                  <td className="px-4 py-3">{p.comision_vendedor ? `${p.comision_vendedor}%` : '-'}</td>
                   <td className="px-4 py-3 flex gap-2">
                     <button onClick={() => handleEditar(p)}
                       className="text-blue-600 hover:underline text-xs">Editar</button>

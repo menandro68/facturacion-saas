@@ -7,7 +7,7 @@ export default function Clientes() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final'
+    nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: ''
   })
   const [error, setError] = useState('')
 
@@ -29,7 +29,7 @@ export default function Clientes() {
   }
 
   const handleNuevo = () => {
-    setForm({ nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final' })
+    setForm({ nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '' })
     setEditando(null)
     setShowForm(true)
     setError('')
@@ -42,7 +42,9 @@ export default function Clientes() {
       email: cliente.email || '',
       telefono: cliente.telefono || '',
       direccion: cliente.direccion || '',
-      tipo: cliente.tipo
+      tipo: cliente.tipo,
+      vendedor_id: cliente.vendedor_id || '',
+      zona_id: cliente.zona_id || ''
     })
     setEditando(cliente.id)
     setShowForm(true)
@@ -106,8 +108,8 @@ export default function Clientes() {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input name="email" type="email" value={form.email} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Negocio</label>
+              <input name="email" type="text" value={form.email} onChange={handleChange}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
@@ -122,6 +124,21 @@ export default function Clientes() {
                 <option value="consumidor_final">Consumidor Final</option>
                 <option value="credito_fiscal">Crédito Fiscal</option>
                 <option value="gubernamental">Gubernamental</option>
+                <option value="factura_electronica">Factura Electrónica</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+              <select name="vendedor_id" value={form.vendedor_id || ''} onChange={handleChange}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-- Sin asignar --</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Zona</label>
+              <select name="zona_id" value={form.zona_id || ''} onChange={handleChange}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-- Sin asignar --</option>
               </select>
             </div>
             <div>
@@ -150,7 +167,7 @@ export default function Clientes() {
             <tr>
               <th className="px-4 py-3 text-left text-gray-600">Nombre</th>
               <th className="px-4 py-3 text-left text-gray-600">RNC/Cédula</th>
-              <th className="px-4 py-3 text-left text-gray-600">Email</th>
+              <th className="px-4 py-3 text-left text-gray-600">Nombre del Negocio</th>
               <th className="px-4 py-3 text-left text-gray-600">Teléfono</th>
               <th className="px-4 py-3 text-left text-gray-600">Tipo</th>
               <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
