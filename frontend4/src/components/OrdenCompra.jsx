@@ -27,7 +27,7 @@ export default function OrdenCompra() {
 
   useEffect(() => { fetchData() }, [])
 
-  const handleItemChange = (idx, field, value) => {
+const handleItemChange = async (idx, field, value) => {
     const updated = [...items]
     updated[idx][field] = value
     if (field === 'product_id' && value) {
@@ -35,6 +35,19 @@ export default function OrdenCompra() {
       if (prod) {
         updated[idx].descripcion = prod.nombre
         updated[idx].precio_unitario = prod.costo || prod.precio || ''
+        setItems([...updated])
+        // Buscar último precio desde el backend
+        try {
+          const res = await API.get(`/purchase-orders/ultimo-precio/${value}`)
+          if (res.data.data) {
+            const u = [...items]
+            u[idx].precio_unitario = res.data.data.precio
+            setItems([...u])
+          }
+        } catch (err) {
+          console.error(err)
+        }
+        return
       }
     }
     setItems(updated)
