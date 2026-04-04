@@ -99,10 +99,7 @@ export default function Inventario() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Inventario</h2>
-        <button onClick={() => window.print()}
-          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
-          🖨️ Imprimir
-        </button>
+      
       </div>
 
       {/* Filtro de fechas - oculto */}

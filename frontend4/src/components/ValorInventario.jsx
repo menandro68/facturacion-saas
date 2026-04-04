@@ -16,9 +16,21 @@ export default function ValorInventario() {
       const inventario = inv.data.data
       const productos = prod.data.data
 
-      const resultado = inventario.map(item => {
+      // Buscar último precio de compra para cada producto
+      const resultadoPromises = inventario.map(async item => {
         const producto = productos.find(p => p.id === item.product_id)
-        const costo = parseFloat(producto?.costo || 0)
+        let costo = parseFloat(producto?.costo || 0)
+
+        // Si el costo es 0, buscar el último precio de compra
+        if (costo === 0 && item.product_id) {
+          try {
+            const res = await API.get(`/purchase-orders/ultimo-precio/${item.product_id}`)
+            if (res.data.data) {
+              costo = parseFloat(res.data.data.precio || 0)
+            }
+          } catch (e) {}
+        }
+
         const precio = parseFloat(producto?.precio || 0)
         const stock = parseFloat(item.stock_actual || 0)
         const valorCosto = costo * stock
@@ -37,6 +49,8 @@ export default function ValorInventario() {
           beneficio
         }
       })
+
+      const resultado = await Promise.all(resultadoPromises)
 
       const totalCosto = resultado.reduce((s, r) => s + r.valorCosto, 0)
       const totalVenta = resultado.reduce((s, r) => s + r.valorVenta, 0)
