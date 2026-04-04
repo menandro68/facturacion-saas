@@ -70,6 +70,12 @@ export default function ValorInventario() {
 
   return (
     <div>
+      <div className="flex justify-end mb-4">
+        <button onClick={() => window.print()}
+          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
+          🖨️ Imprimir Valor de Inventario
+        </button>
+      </div>
       {/* Tarjetas resumen */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
