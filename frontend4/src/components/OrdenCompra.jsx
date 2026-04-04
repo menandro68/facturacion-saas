@@ -57,7 +57,7 @@ export default function OrdenCompra() {
       setError('Agrega al menos un producto')
       return
     }
- const itemsValidos = items.filter(i => i.descripcion && i.cantidad && i.precio_unitario)
+    const itemsValidos = items.filter(i => i.descripcion && i.cantidad && i.precio_unitario)
     if (itemsValidos.length === 0) {
       setError('Agrega al menos un producto con descripción, cantidad y precio')
       return
@@ -87,6 +87,52 @@ export default function OrdenCompra() {
     try {
       await API.delete(`/purchase-orders/${id}`)
       fetchData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const [verOrden, setVerOrden] = useState(null)
+  const [editarOrden, setEditarOrden] = useState(null)
+  const [formEditar, setFormEditar] = useState({ supplier_id: '', fecha_entrega: '', notas: '' })
+  const [itemsEditar, setItemsEditar] = useState([])
+
+  const handleEditar = async (id) => {
+    try {
+      const res = await API.get(`/purchase-orders/${id}`)
+      setEditarOrden(res.data.data)
+      setFormEditar({
+        supplier_id: res.data.data.supplier_id || '',
+        fecha_entrega: res.data.data.fecha_entrega ? res.data.data.fecha_entrega.substring(0, 10) : '',
+        notas: res.data.data.notas || ''
+      })
+      setItemsEditar(res.data.data.items?.map(i => ({
+        product_id: i.product_id || '',
+        descripcion: i.descripcion,
+        cantidad: i.cantidad,
+        precio_unitario: i.precio_unitario
+      })) || [{ product_id: '', descripcion: '', cantidad: '', precio_unitario: '' }])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleGuardarEdicion = async () => {
+    const itemsValidos = itemsEditar.filter(i => i.descripcion && i.cantidad && i.precio_unitario)
+    if (itemsValidos.length === 0) return
+    try {
+      await API.put(`/purchase-orders/${editarOrden.id}/editar`, { ...formEditar, items: itemsValidos })
+      setEditarOrden(null)
+      fetchData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleVer = async (id) => {
+    try {
+      const res = await API.get(`/purchase-orders/${id}`)
+      setVerOrden(res.data.data)
     } catch (err) {
       console.error(err)
     }
@@ -207,18 +253,146 @@ export default function OrdenCompra() {
                   </span>
                 </td>
                 <td className="px-4 py-3 flex gap-2">
+                  <button onClick={() => handleVer(o.id)}
+                    className="text-blue-600 hover:underline text-xs">👁️ Ver</button>
+                  <button onClick={() => o.estado === 'recibida' ? alert('❌ Esta orden ya fue recibida y no puede editarse.') : handleEditar(o.id)}
+                    className={`hover:underline text-xs ${o.estado === 'recibida' ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600'}`}>
+                    Editar</button>
                   {o.estado === 'pendiente' && (
                     <button onClick={() => handleEstado(o.id, 'recibida')}
                       className="text-green-600 hover:underline text-xs">Recibida</button>
                   )}
-                  <button onClick={() => handleEliminar(o.id)}
-                    className="text-red-500 hover:underline text-xs">Eliminar</button>
+                  <button onClick={() => o.estado === 'recibida' ? alert('❌ Esta orden ya fue recibida y no puede eliminarse.') : handleEliminar(o.id)}
+                    className={`hover:underline text-xs ${o.estado === 'recibida' ? 'text-gray-400 cursor-not-allowed' : 'text-red-500'}`}>
+                    Eliminar</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {editarOrden && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-screen overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Editar Orden — {editarOrden.numero}</h3>
+              <button onClick={() => setEditarOrden(null)} className="text-gray-500 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+                <select value={formEditar.supplier_id} onChange={e => setFormEditar({...formEditar, supplier_id: e.target.value})}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">-- Sin proveedor --</option>
+                  {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Entrega</label>
+                <input type="date" value={formEditar.fecha_entrega} onChange={e => setFormEditar({...formEditar, fecha_entrega: e.target.value})}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                <input value={formEditar.notas} onChange={e => setFormEditar({...formEditar, notas: e.target.value})}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <h5 className="font-medium text-gray-700 mb-2">Productos</h5>
+            <div className="space-y-2 mb-4">
+              {itemsEditar.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-3">
+                    <select value={item.product_id} onChange={e => {
+                      const updated = [...itemsEditar]
+                      updated[idx].product_id = e.target.value
+                      const prod = productos.find(p => p.id === e.target.value)
+                      if (prod) { updated[idx].descripcion = prod.nombre; updated[idx].precio_unitario = prod.costo || prod.precio || '' }
+                      setItemsEditar(updated)
+                    }} className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Seleccionar</option>
+                      {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-4">
+                    <input value={item.descripcion} onChange={e => { const u = [...itemsEditar]; u[idx].descripcion = e.target.value; setItemsEditar(u) }}
+                      placeholder="Descripción" className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="col-span-2">
+                    <input type="number" value={item.cantidad} onChange={e => { const u = [...itemsEditar]; u[idx].cantidad = e.target.value; setItemsEditar(u) }}
+                      placeholder="Cant." className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="col-span-2">
+                    <input type="number" value={item.precio_unitario} onChange={e => { const u = [...itemsEditar]; u[idx].precio_unitario = e.target.value; setItemsEditar(u) }}
+                      placeholder="Precio" className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <button onClick={() => setItemsEditar(itemsEditar.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 text-lg">×</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <button onClick={() => setItemsEditar([...itemsEditar, { product_id: '', descripcion: '', cantidad: '', precio_unitario: '' }])}
+                className="text-blue-600 hover:underline text-sm">+ Agregar línea</button>
+              <p className="font-semibold text-gray-800">Total: RD${itemsEditar.reduce((s, i) => s + ((parseFloat(i.cantidad)||0)*(parseFloat(i.precio_unitario)||0)), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setEditarOrden(null)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button onClick={handleGuardarEdicion} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {verOrden && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-screen overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Orden — {verOrden.numero}</h3>
+              <button onClick={() => setVerOrden(null)} className="text-gray-500 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+              <div><span className="font-medium text-gray-600">Proveedor:</span> {verOrden.proveedor_nombre || '-'}</div>
+              <div><span className="font-medium text-gray-600">Estado:</span> {verOrden.estado?.toUpperCase()}</div>
+              <div><span className="font-medium text-gray-600">Fecha:</span> {new Date(verOrden.creado_en).toLocaleDateString()}</div>
+              <div><span className="font-medium text-gray-600">Entrega:</span> {verOrden.fecha_entrega ? new Date(verOrden.fecha_entrega).toLocaleDateString() : '-'}</div>
+              <div><span className="font-medium text-gray-600">Notas:</span> {verOrden.notas || '-'}</div>
+              <div><span className="font-medium text-gray-600">Total:</span> RD${parseFloat(verOrden.total).toLocaleString()}</div>
+            </div>
+            <h4 className="font-medium text-gray-700 mb-2">Productos</h4>
+            <table className="w-full text-sm border rounded">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-gray-600">Descripción</th>
+                  <th className="px-3 py-2 text-left text-gray-600">Cantidad</th>
+                  <th className="px-3 py-2 text-left text-gray-600">Precio Unit.</th>
+                  <th className="px-3 py-2 text-left text-gray-600">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {verOrden.items?.map((item, idx) => (
+                  <tr key={idx} className="border-t">
+                    <td className="px-3 py-2">{item.descripcion}</td>
+                    <td className="px-3 py-2">{item.cantidad}</td>
+                    <td className="px-3 py-2">RD${parseFloat(item.precio_unitario).toLocaleString()}</td>
+                    <td className="px-3 py-2">RD${parseFloat(item.subtotal).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => window.print()}
+                className="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 flex items-center gap-2">
+                🖨️ Exportar PDF
+              </button>
+              <button onClick={() => setVerOrden(null)}
+                className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
