@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import API from '../services/api'
+import OrdenCompra from '../components/OrdenCompra'
 
 export default function Inventario() {
   const [inventario, setInventario] = useState([])
@@ -125,10 +126,7 @@ export default function Inventario() {
       </div>
 
       {tab === 'orden_compra' && (
-        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
-          <p className="text-lg">Orden de Compra</p>
-          <p className="text-sm mt-2">Módulo en desarrollo... Próximamente disponible</p>
-        </div>
+        <OrdenCompra />
       )}
 
       {tab !== 'inventario' && tab !== 'orden_compra' && (
