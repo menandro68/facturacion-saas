@@ -299,7 +299,7 @@ export default function Facturas() {
                     className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
                   <button type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                    Guardar Borrador
+                    Guardar 
                   </button>
                 </div>
               </form>
