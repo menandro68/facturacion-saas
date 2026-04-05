@@ -32,7 +32,7 @@ export default function StockMinimo() {
           estado,
           suplidor: producto?.suplidor || '-'
         }
-      }).filter(item => item.stock_minimo > 0)
+    }).filter(item => item.stock_minimo > 0 && item.estado !== 'normal')
         .sort((a, b) => {
           const orden = { critico: 0, bajo: 1, normal: 2 }
           return orden[a.estado] - orden[b.estado]
