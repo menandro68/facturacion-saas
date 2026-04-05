@@ -12,6 +12,7 @@ export default function Facturas() {
   const [showForm, setShowForm] = useState(false)
   const [buscarCliente, setBuscarCliente] = useState('')
   const [mostrarDropdown, setMostrarDropdown] = useState(false)
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: ''
@@ -19,6 +20,9 @@ export default function Facturas() {
   const [items, setItems] = useState([
     { descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }
   ])
+
+  const [vendedores, setVendedores] = useState([])
+  const [zonas, setZonas] = useState([])
 
   const fetchData = async () => {
     try {
@@ -30,6 +34,8 @@ export default function Facturas() {
       setFacturas(f.data.data)
       setClientes(c.data.data)
       setProductos(p.data.data)
+      API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
+      API.get('/mantenimiento/zonas').then(r => setZonas(r.data.data)).catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -221,8 +227,8 @@ export default function Facturas() {
                       type="text"
                       placeholder="Buscar cliente..."
                       value={buscarCliente}
-                      onChange={e => { setBuscarCliente(e.target.value); setMostrarDropdown(true) }}
-                      onFocus={() => { if (buscarCliente.length > 0) setMostrarDropdown(true) }}
+                   onChange={e => { setBuscarCliente(e.target.value); setMostrarDropdown(e.target.value.length > 0) }}
+                      onBlur={() => setTimeout(() => setMostrarDropdown(false), 200)}
                       className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {mostrarDropdown && (
@@ -230,10 +236,11 @@ export default function Facturas() {
                         <div
                           className="px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer text-gray-500"
                           onMouseDown={() => {
-                            setForm({...form, customer_id: ''})
-                            setBuscarCliente('')
-                            setMostrarDropdown(false)
-                          }}>
+                                setForm({...form, customer_id: ''})
+                                setBuscarCliente('')
+                                setMostrarDropdown(false)
+                                setClienteSeleccionado(null)
+                              }}>
                           Consumidor Final
                         </div>
                         {clientes
@@ -245,6 +252,7 @@ export default function Facturas() {
                                 setForm({...form, customer_id: c.id})
                                 setBuscarCliente(c.nombre)
                                 setMostrarDropdown(false)
+                                setClienteSeleccionado(c)
                               }}>
                               {c.nombre} {c.telefono ? `- ${c.telefono}` : ''}
                             </div>
@@ -252,20 +260,29 @@ export default function Facturas() {
                       </div>
                     )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo NCF</label>
-                    <select name="ncf_tipo" value={form.ncf_tipo} onChange={handleFormChange}
-                      className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="B01">B01 - Consumidor Final</option>
-                      <option value="B14">B14 - Régimen Especial</option>
-                      <option value="B15">B15 - Gubernamental</option>
-                    </select>
+                </div>
+
+                {/* Info del cliente seleccionado */}
+                {clienteSeleccionado && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    <div><span className="font-medium text-gray-600">RNC/Cédula:</span> {clienteSeleccionado.rnc_cedula || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Teléfono:</span> {clienteSeleccionado.telefono || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Negocio:</span> {clienteSeleccionado.email || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Tipo:</span> {clienteSeleccionado.tipo?.replace(/_/g, ' ') || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Condiciones:</span> {clienteSeleccionado.condiciones?.replace(/_/g, ' ') || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Dirección:</span> {clienteSeleccionado.direccion || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Vendedor:</span> {vendedores.find(v => v.id === clienteSeleccionado.vendedor_id)?.nombre || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Zona:</span> {zonas.find(z => z.id === clienteSeleccionado.zona_id)?.nombre || '-'}</div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento</label>
-                    <input type="date" name="fecha_vencimiento" value={form.fecha_vencimiento} onChange={handleFormChange}
-                      className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
+                )}
+
+                <div className="hidden">
+                  <select name="ncf_tipo" value={form.ncf_tipo} onChange={handleFormChange}>
+                    <option value="B01">B01 - Consumidor Final</option>
+                    <option value="B14">B14 - Régimen Especial</option>
+                    <option value="B15">B15 - Gubernamental</option>
+                  </select>
+                  <input type="date" name="fecha_vencimiento" value={form.fecha_vencimiento} onChange={handleFormChange} />
                 </div>
 
                 {/* Items */}
