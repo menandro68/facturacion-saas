@@ -7,7 +7,7 @@ export default function Clientes() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: ''
+    nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: ''
   })
   const [error, setError] = useState('')
   const [zonas, setZonas] = useState([])
@@ -35,7 +35,7 @@ export default function Clientes() {
   }
 
   const handleNuevo = () => {
-    setForm({ nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '' })
+    setForm({ nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: '' })
     setEditando(null)
     setShowForm(true)
     setError('')
@@ -50,7 +50,8 @@ export default function Clientes() {
       direccion: cliente.direccion || '',
       tipo: cliente.tipo,
       vendedor_id: cliente.vendedor_id || '',
-      zona_id: cliente.zona_id || ''
+      zona_id: cliente.zona_id || '',
+      condiciones: cliente.condiciones || ''
     })
     setEditando(cliente.id)
     setShowForm(true)
@@ -147,6 +148,19 @@ export default function Clientes() {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">-- Sin asignar --</option>
                 {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Condiciones</label>
+              <select name="condiciones" value={form.condiciones || ''} onChange={handleChange}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-- Sin condición --</option>
+                <option value="contado">Contado</option>
+                <option value="7_dias">7 Días</option>
+                <option value="15_dias">15 Días</option>
+                <option value="30_dias">30 Días</option>
+                <option value="45_dias">45 Días</option>
+                <option value="60_dias">60 Días</option>
               </select>
             </div>
             <div>
