@@ -10,6 +10,8 @@ export default function Facturas() {
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [buscarCliente, setBuscarCliente] = useState('')
+  const [mostrarDropdown, setMostrarDropdown] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: ''
@@ -132,14 +134,12 @@ export default function Facturas() {
   ]
 
   const tabsFila2 = [
-
     { id: 'cobro_vendedor', label: 'Cobro por Vendedor' },
     { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
     { id: 'pedidos', label: 'Pedidos' },
     { id: 'cotizacion', label: 'Cotización' },
     { id: 'nota_credito', label: 'Nota de Crédito' },
   ]
-  
 
   if (loading) return <p className="text-gray-500 p-6">Cargando facturas...</p>
 
@@ -215,13 +215,42 @@ export default function Facturas() {
               {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
+                  <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-                    <select name="customer_id" value={form.customer_id} onChange={handleFormChange}
-                      className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">Consumidor Final</option>
-                      {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                    </select>
+                    <input
+                      type="text"
+                      placeholder="Buscar cliente..."
+                      value={buscarCliente}
+                      onChange={e => { setBuscarCliente(e.target.value); setMostrarDropdown(true) }}
+                      onFocus={() => { if (buscarCliente.length > 0) setMostrarDropdown(true) }}
+                      className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {mostrarDropdown && (
+                      <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto">
+                        <div
+                          className="px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer text-gray-500"
+                          onMouseDown={() => {
+                            setForm({...form, customer_id: ''})
+                            setBuscarCliente('')
+                            setMostrarDropdown(false)
+                          }}>
+                          Consumidor Final
+                        </div>
+                        {clientes
+                          .filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
+                          .map(c => (
+                            <div key={c.id}
+                              className="px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer"
+                              onMouseDown={() => {
+                                setForm({...form, customer_id: c.id})
+                                setBuscarCliente(c.nombre)
+                                setMostrarDropdown(false)
+                              }}>
+                              {c.nombre} {c.telefono ? `- ${c.telefono}` : ''}
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tipo NCF</label>
