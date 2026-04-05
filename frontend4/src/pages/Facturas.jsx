@@ -287,10 +287,8 @@ export default function Facturas() {
 
                 {/* Items */}
                 <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="mb-2">
                     <label className="text-sm font-medium text-gray-700">Items</label>
-                    <button type="button" onClick={agregarItem}
-                      className="text-blue-600 text-sm hover:underline">+ Agregar item</button>
                   </div>
                   {items.map((item, index) => (
                     <div key={index} className="grid grid-cols-12 gap-2 mb-2">
@@ -329,6 +327,8 @@ export default function Facturas() {
                       </div>
                     </div>
                   ))}
+                  <button type="button" onClick={agregarItem}
+                    className="text-blue-600 text-sm hover:underline mt-1">+ Agregar item</button>
                 </div>
 
                 {/* Totales */}
