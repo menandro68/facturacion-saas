@@ -77,7 +77,7 @@ export default function Facturas() {
     e.preventDefault()
     setError('')
     try {
-      await API.post('/invoices', { ...form, items })
+       await API.post('/invoices', { ...form, items, estado: 'emitida' })
       setShowForm(false)
       setForm({ customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: '' })
       setItems([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
