@@ -17,15 +17,20 @@ export default function StockMinimo() {
 
       const resultado = inventario.map(item => {
         const producto = productosList.find(p => p.id === item.product_id)
+        const stock_actual = parseFloat(item.stock_actual || 0)
+        const stock_minimo = parseFloat(producto?.stock_minimo || item.stock_minimo || 0)
+        const stock_maximo = parseFloat(producto?.stock_maximo || item.stock_maximo || 0)
+        const estado = stock_actual <= stock_minimo ? 'critico' :
+                       stock_actual <= stock_minimo * 1.5 ? 'bajo' : 'normal'
         return {
           id: item.id,
           nombre: item.producto_nombre,
-          stock_actual: parseFloat(item.stock_actual || 0),
-          stock_minimo: parseFloat(item.stock_minimo || producto?.stock_minimo || 0),
-          stock_maximo: parseFloat(item.stock_maximo || producto?.stock_maximo || 0),
+          stock_actual,
+          stock_minimo,
+          stock_maximo,
           unidad: item.unidad,
-          estado: parseFloat(item.stock_actual) <= parseFloat(item.stock_minimo) ? 'critico' :
-                  parseFloat(item.stock_actual) <= parseFloat(item.stock_minimo) * 1.5 ? 'bajo' : 'normal'
+          estado,
+          suplidor: producto?.suplidor || '-'
         }
       }).filter(item => item.stock_minimo > 0)
         .sort((a, b) => {
@@ -57,6 +62,7 @@ export default function StockMinimo() {
         <head>
           <title>Stock Mínimo</title>
           <style>
+            @page { size: landscape; margin: 15px; }
             body { font-family: Arial, sans-serif; padding: 20px; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
@@ -112,11 +118,12 @@ export default function StockMinimo() {
               <th className="px-4 py-3 text-left text-gray-600">Stock Máximo</th>
               <th className="px-4 py-3 text-left text-gray-600">Diferencia</th>
               <th className="px-4 py-3 text-left text-gray-600">Estado</th>
+              <th className="px-4 py-3 text-left text-gray-600">Suplidor</th>
             </tr>
           </thead>
           <tbody>
             {productos.length === 0 ? (
-              <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">
+              <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">
                 No hay productos con stock mínimo definido
               </td></tr>
             ) : productos.map(p => (
@@ -137,6 +144,7 @@ export default function StockMinimo() {
                   {p.estado === 'bajo' && <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-700">🟡 BAJO</span>}
                   {p.estado === 'normal' && <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">🟢 NORMAL</span>}
                 </td>
+                <td className="px-4 py-3 text-gray-600">{p.suplidor}</td>
               </tr>
             ))}
           </tbody>
