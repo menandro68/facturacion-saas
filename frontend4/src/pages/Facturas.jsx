@@ -328,7 +328,7 @@ export default function Facturas() {
                     </div>
                   ))}
                   <button type="button" onClick={agregarItem}
-                    className="text-blue-600 text-sm hover:underline mt-1">+ Agregar item</button>
+                    className="text-blue-600 text-sm hover:underline mt-1">+ Agregar línea</button>
                 </div>
 
                 {/* Totales */}
