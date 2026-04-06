@@ -17,6 +17,8 @@ export default function Facturas() {
   const buscarClienteRef = useRef(null)
   const buscarProductoRef = useRef(null)
   const cantidadRefs = useRef({})
+  const agregarLineaRef = useRef(null)
+  const guardarRef = useRef(null)
   const [buscarProducto, setBuscarProducto] = useState({})
   const [mostrarDropdownProducto, setMostrarDropdownProducto] = useState({})
   const [productoIndex, setProductoIndex] = useState({})
@@ -401,12 +403,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
-                              agregarItem()
-                              setTimeout(() => {
-                                const nextIndex = index + 1
-                                const inputs = document.querySelectorAll('input[placeholder="🔍 Buscar producto..."]')
-                                if (inputs[nextIndex]) inputs[nextIndex].focus()
-                              }, 100)
+                              agregarLineaRef.current?.focus()
                             }
                           }}
                           className="w-full border rounded px-2 py-1.5 text-sm" min="1" required />
@@ -432,10 +429,17 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                     </div>
                   ))}
                   <div className="flex items-center gap-4 mt-1">
-                    <button type="button" onClick={agregarItem}
-                      className="text-blue-600 text-sm hover:underline">+ Agregar línea</button>
-                    <button type="submit"
-                      className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                    <button type="button" ref={agregarLineaRef} onClick={agregarItem}
+                      onKeyDown={e => {
+                        if (e.key === 'ArrowRight') { e.preventDefault(); guardarRef.current?.focus() }
+                        if (e.key === 'Enter') { e.preventDefault(); agregarItem(); setTimeout(() => buscarProductoRef.current?.focus(), 150) }
+                      }}
+                      className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
+                    <button type="submit" ref={guardarRef}
+                      onKeyDown={e => {
+                        if (e.key === 'ArrowLeft') { e.preventDefault(); agregarLineaRef.current?.focus() }
+                      }}
+                      className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                       Guardar
                     </button>
                   </div>
