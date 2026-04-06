@@ -15,6 +15,7 @@ export default function Facturas() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [clienteIndex, setClienteIndex] = useState(-1)
   const buscarClienteRef = useRef(null)
+  const buscarProductoRef = useRef(null)
   const [buscarProducto, setBuscarProducto] = useState({})
   const [mostrarDropdownProducto, setMostrarDropdownProducto] = useState({})
   const [productoIndex, setProductoIndex] = useState({})
@@ -253,6 +254,7 @@ onKeyDown={e => {
       setForm({...form, customer_id: c.id}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
     }
     setClienteIndex(-1)
+    setTimeout(() => buscarProductoRef.current?.focus(), 100)
   } else if (e.key === 'Escape') {
     setMostrarDropdown(false); setClienteIndex(-1)
   }
@@ -326,6 +328,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                         <input
                           type="text"
                           placeholder="🔍 Buscar producto..."
+                          ref={index === 0 ? buscarProductoRef : null}
                           value={buscarProducto[index] || ''}
                           onChange={e => {
                             setBuscarProducto(prev => ({...prev, [index]: e.target.value}))
