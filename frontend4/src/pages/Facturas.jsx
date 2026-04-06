@@ -420,8 +420,14 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                       </div>
                     </div>
                   ))}
-                  <button type="button" onClick={agregarItem}
-                    className="text-blue-600 text-sm hover:underline mt-1">+ Agregar línea</button>
+                  <div className="flex items-center gap-4 mt-1">
+                    <button type="button" onClick={agregarItem}
+                      className="text-blue-600 text-sm hover:underline">+ Agregar línea</button>
+                    <button type="submit"
+                      className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                      Guardar
+                    </button>
+                  </div>
                 </div>
 
                 {/* Totales */}
