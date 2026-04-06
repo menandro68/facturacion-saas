@@ -398,6 +398,17 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                       <div className="col-span-2">
                         <input name="cantidad" type="number" placeholder="Cant." value={item.cantidad} onChange={(e) => handleItemChange(index, e)}
                           ref={el => cantidadRefs.current[index] = el}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              agregarItem()
+                              setTimeout(() => {
+                                const nextIndex = index + 1
+                                const inputs = document.querySelectorAll('input[placeholder="🔍 Buscar producto..."]')
+                                if (inputs[nextIndex]) inputs[nextIndex].focus()
+                              }, 100)
+                            }
+                          }}
                           className="w-full border rounded px-2 py-1.5 text-sm" min="1" required />
                       </div>
                       <div className="col-span-2">
