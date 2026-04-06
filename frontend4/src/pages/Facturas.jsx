@@ -16,6 +16,7 @@ export default function Facturas() {
   const [clienteIndex, setClienteIndex] = useState(-1)
   const buscarClienteRef = useRef(null)
   const buscarProductoRef = useRef(null)
+  const buscarProductoRefs = useRef({})
   const cantidadRefs = useRef({})
   const agregarLineaRef = useRef(null)
   const guardarRef = useRef(null)
@@ -331,7 +332,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                         <input
                           type="text"
                           placeholder="🔍 Buscar producto..."
-                          ref={index === 0 ? buscarProductoRef : null}
+                          ref={el => { buscarProductoRefs.current[index] = el; if (index === 0) buscarProductoRef.current = el }}
                           value={buscarProducto[index] || ''}
                           onChange={e => {
                             setBuscarProducto(prev => ({...prev, [index]: e.target.value}))
@@ -432,7 +433,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                     <button type="button" ref={agregarLineaRef} onClick={agregarItem}
                       onKeyDown={e => {
                         if (e.key === 'ArrowRight') { e.preventDefault(); guardarRef.current?.focus() }
-                        if (e.key === 'Enter') { e.preventDefault(); agregarItem(); setTimeout(() => buscarProductoRef.current?.focus(), 150) }
+                        if (e.key === 'Enter') { e.preventDefault(); agregarItem(); setTimeout(() => { const nextIndex = items.length; buscarProductoRefs.current[nextIndex]?.focus() }, 150) }
                       }}
                       className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
                     <button type="submit" ref={guardarRef}
