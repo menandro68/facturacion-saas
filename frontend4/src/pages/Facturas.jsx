@@ -95,11 +95,20 @@ export default function Facturas() {
     e.preventDefault()
     setError('')
     try {
-       await API.post('/invoices', { ...form, items, estado: 'emitida' })
+      const res = await API.post('/invoices', { ...form, items, estado: 'emitida' })
       setShowForm(false)
       setForm({ customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: '' })
       setItems([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
+      setBuscarCliente('')
+      setClienteSeleccionado(null)
+      setBuscarProducto({})
       fetchData()
+      const imprimir = window.confirm('¿Desea imprimir la factura?')
+      if (imprimir) {
+        const token = sessionStorage.getItem('token')
+        const id = res.data.data?.id
+        if (id) window.open(`https://facturacion-saas-production.up.railway.app/invoices/${id}/pdf?token=${token}`, '_blank')
+      }
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al crear factura')
     }
