@@ -23,6 +23,8 @@ export default function Facturas() {
   const [buscarProducto, setBuscarProducto] = useState({})
   const [mostrarDropdownProducto, setMostrarDropdownProducto] = useState({})
   const [productoIndex, setProductoIndex] = useState({})
+  const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
+  const [facturaGuardadaId, setFacturaGuardadaId] = useState(null)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: ''
@@ -93,6 +95,11 @@ export default function Facturas() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setMostrarConfirmar(true)
+  }
+
+  const handleConfirmarSi = async () => {
+    setMostrarConfirmar(false)
     setError('')
     try {
       const res = await API.post('/invoices', { ...form, items, estado: 'emitida' })
@@ -110,8 +117,13 @@ export default function Facturas() {
         if (id) window.open(`https://facturacion-saas-production.up.railway.app/invoices/${id}/pdf?token=${token}`, '_blank')
       }
     } catch (err) {
-      setError(err.response?.data?.mensaje || 'Error al crear factura')
+      setError(err.response?.data?.mensaje || 'Error al guardar')
     }
+  }
+
+  const handleConfirmarVolver = () => {
+    setMostrarConfirmar(false)
+    setTimeout(() => buscarProductoRef.current?.focus(), 100)
   }
 
   const handleEmitir = async (id) => {
@@ -228,6 +240,37 @@ export default function Facturas() {
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
           <p className="text-lg">Módulo en desarrollo...</p>
           <p className="text-sm mt-2">Próximamente disponible</p>
+        </div>
+      )}
+
+      {/* Modal confirmar guardar */}
+      {mostrarConfirmar && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desear Grabar Esta Factura?</p>
+            <div className="flex justify-center gap-6">
+              <button
+                autoFocus
+                onClick={handleConfirmarSi}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-volver')?.focus() }
+                  if (e.key === 'Enter') handleConfirmarSi()
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
+                Sí
+              </button>
+              <button
+                id="btn-volver"
+                onClick={handleConfirmarVolver}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); document.querySelector('[autoFocus]')?.focus() }
+                  if (e.key === 'Enter') handleConfirmarVolver()
+                }}
+                className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
+                Volver
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
