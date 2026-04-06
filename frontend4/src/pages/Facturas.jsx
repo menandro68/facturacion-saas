@@ -13,6 +13,10 @@ export default function Facturas() {
   const [buscarCliente, setBuscarCliente] = useState('')
   const [mostrarDropdown, setMostrarDropdown] = useState(false)
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
+  const [clienteIndex, setClienteIndex] = useState(-1)
+  const [buscarProducto, setBuscarProducto] = useState({})
+  const [mostrarDropdownProducto, setMostrarDropdownProducto] = useState({})
+  const [productoIndex, setProductoIndex] = useState({})
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: ''
@@ -228,13 +232,36 @@ export default function Facturas() {
                       placeholder="Buscar cliente..."
                       value={buscarCliente}
                    onChange={e => { setBuscarCliente(e.target.value); setMostrarDropdown(e.target.value.length > 0) }}
-                      onBlur={() => setTimeout(() => setMostrarDropdown(false), 200)}
+                      onBlur={() => setTimeout(() => { setMostrarDropdown(false); setClienteIndex(-1) }, 200)}
+onKeyDown={e => {
+  const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    setClienteIndex(i => Math.min(i + 1, filtrados.length))
+    setMostrarDropdown(true)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    setClienteIndex(i => Math.max(i - 1, -1))
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    if (clienteIndex === 0) {
+      setForm({...form, customer_id: ''}); setBuscarCliente(''); setMostrarDropdown(false); setClienteSeleccionado(null)
+    } else if (clienteIndex > 0 && filtrados[clienteIndex - 1]) {
+      const c = filtrados[clienteIndex - 1]
+      setForm({...form, customer_id: c.id}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
+    }
+    setClienteIndex(-1)
+  } else if (e.key === 'Escape') {
+    setMostrarDropdown(false); setClienteIndex(-1)
+  }
+}}
                       className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {mostrarDropdown && (
                       <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto">
                         <div
-                          className="px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer text-gray-500"
+                          className={`px-3 py-2 text-sm cursor-pointer text-gray-500 ${clienteIndex === 0 ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
+onMouseEnter={() => setClienteIndex(0)}
                           onMouseDown={() => {
                                 setForm({...form, customer_id: ''})
                                 setBuscarCliente('')
@@ -247,7 +274,11 @@ export default function Facturas() {
                           .filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
                           .map(c => (
                             <div key={c.id}
-                              className="px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer"
+                              className={`px-3 py-2 text-sm cursor-pointer ${
+  clienteIndex === clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1
+    ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'
+}`}
+onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1)}
                               onMouseDown={() => {
                                 setForm({...form, customer_id: c.id})
                                 setBuscarCliente(c.nombre)
@@ -292,12 +323,69 @@ export default function Facturas() {
                   </div>
                   {items.map((item, index) => (
                     <div key={index} className="grid grid-cols-12 gap-2 mb-2">
-                      <div className="col-span-3">
-                        <select name="product_id" value={item.product_id} onChange={(e) => handleItemChange(index, e)}
-                          className="w-full border rounded px-2 py-1.5 text-sm">
-                          <option value="">Seleccionar producto</option>
-                          {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                        </select>
+                      <div className="col-span-3 relative">
+                        <input
+                          type="text"
+                          placeholder="🔍 Buscar producto..."
+                          value={buscarProducto[index] || ''}
+                          onChange={e => {
+                            setBuscarProducto(prev => ({...prev, [index]: e.target.value}))
+                            setMostrarDropdownProducto(prev => ({...prev, [index]: e.target.value.length > 0}))
+                          }}
+                          onBlur={() => setTimeout(() => { setMostrarDropdownProducto(prev => ({...prev, [index]: false})); setProductoIndex(prev => ({...prev, [index]: -1})) }, 200)}
+                          onKeyDown={e => {
+  const filtrados = productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase()))
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    setProductoIndex(prev => ({...prev, [index]: Math.min((prev[index] ?? -1) + 1, filtrados.length - 1)}))
+    setMostrarDropdownProducto(prev => ({...prev, [index]: true}))
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    setProductoIndex(prev => ({...prev, [index]: Math.max((prev[index] ?? 0) - 1, -1)}))
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    const idx = productoIndex[index] ?? -1
+    if (idx >= 0 && filtrados[idx]) {
+      const p = filtrados[idx]
+      const newItems = [...items]
+      newItems[index].product_id = p.id
+      newItems[index].descripcion = p.nombre
+      newItems[index].precio_unitario = p.precio
+      newItems[index].itbis_rate = p.itbis_rate
+      setItems(newItems)
+      setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
+      setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+      setProductoIndex(prev => ({...prev, [index]: -1}))
+    }
+  } else if (e.key === 'Escape') {
+    setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+  }
+}}
+                          className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {mostrarDropdownProducto[index] && (
+                          <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto">
+                            {productos
+                              .filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase()))
+                              .map(p => (
+                                <div key={p.id}
+                                  className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
+                                  onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
+                                  onMouseDown={() => {
+                                    const newItems = [...items]
+                                    newItems[index].product_id = p.id
+                                    newItems[index].descripcion = p.nombre
+                                    newItems[index].precio_unitario = p.precio
+                                    newItems[index].itbis_rate = p.itbis_rate
+                                    setItems(newItems)
+                                    setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
+                                    setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+                                  }}>
+                                  {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
+                                </div>
+                              ))}
+                          </div>
+                        )}
                       </div>
                       <div className="col-span-3">
                         <input name="descripcion" placeholder="Descripción" value={item.descripcion} onChange={(e) => handleItemChange(index, e)}
@@ -328,7 +416,7 @@ export default function Facturas() {
                     </div>
                   ))}
                   <button type="button" onClick={agregarItem}
-                    className="text-blue-600 text-sm hover:underline mt-1">+ Agregar línea</button>
+                    className="text-blue-600 text-sm hover:underline mt-1">+ Agregar item</button>
                 </div>
 
                 {/* Totales */}
