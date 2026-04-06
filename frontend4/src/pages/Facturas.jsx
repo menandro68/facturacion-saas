@@ -16,6 +16,7 @@ export default function Facturas() {
   const [clienteIndex, setClienteIndex] = useState(-1)
   const buscarClienteRef = useRef(null)
   const buscarProductoRef = useRef(null)
+  const cantidadRefs = useRef({})
   const [buscarProducto, setBuscarProducto] = useState({})
   const [mostrarDropdownProducto, setMostrarDropdownProducto] = useState({})
   const [productoIndex, setProductoIndex] = useState({})
@@ -358,6 +359,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
       setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
       setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
       setProductoIndex(prev => ({...prev, [index]: -1}))
+      setTimeout(() => cantidadRefs.current[index]?.focus(), 100)
     }
   } else if (e.key === 'Escape') {
     setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
@@ -395,6 +397,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                       </div>
                       <div className="col-span-2">
                         <input name="cantidad" type="number" placeholder="Cant." value={item.cantidad} onChange={(e) => handleItemChange(index, e)}
+                          ref={el => cantidadRefs.current[index] = el}
                           className="w-full border rounded px-2 py-1.5 text-sm" min="1" required />
                       </div>
                       <div className="col-span-2">
