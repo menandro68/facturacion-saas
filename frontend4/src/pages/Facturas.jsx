@@ -93,6 +93,9 @@ export default function Facturas() {
       setShowForm(false)
       setForm({ customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: '' })
       setItems([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
+      setBuscarCliente('')
+      setClienteSeleccionado(null)
+      setBuscarProducto({})
       fetchData()
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al crear factura')
@@ -231,43 +234,43 @@ export default function Facturas() {
                       type="text"
                       placeholder="Buscar cliente..."
                       value={buscarCliente}
-                   onChange={e => { setBuscarCliente(e.target.value); setMostrarDropdown(e.target.value.length > 0) }}
+                      onChange={e => { setBuscarCliente(e.target.value); setMostrarDropdown(e.target.value.length > 0) }}
                       onBlur={() => setTimeout(() => { setMostrarDropdown(false); setClienteIndex(-1) }, 200)}
-onKeyDown={e => {
-  const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    setClienteIndex(i => Math.min(i + 1, filtrados.length))
-    setMostrarDropdown(true)
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    setClienteIndex(i => Math.max(i - 1, -1))
-  } else if (e.key === 'Enter') {
-    e.preventDefault()
-    if (clienteIndex === 0) {
-      setForm({...form, customer_id: ''}); setBuscarCliente(''); setMostrarDropdown(false); setClienteSeleccionado(null)
-    } else if (clienteIndex > 0 && filtrados[clienteIndex - 1]) {
-      const c = filtrados[clienteIndex - 1]
-      setForm({...form, customer_id: c.id}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
-    }
-    setClienteIndex(-1)
-  } else if (e.key === 'Escape') {
-    setMostrarDropdown(false); setClienteIndex(-1)
-  }
-}}
+                      onKeyDown={e => {
+                        const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          setClienteIndex(i => Math.min(i + 1, filtrados.length))
+                          setMostrarDropdown(true)
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          setClienteIndex(i => Math.max(i - 1, -1))
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (clienteIndex === 0) {
+                            setForm({...form, customer_id: ''}); setBuscarCliente(''); setMostrarDropdown(false); setClienteSeleccionado(null)
+                          } else if (clienteIndex > 0 && filtrados[clienteIndex - 1]) {
+                            const c = filtrados[clienteIndex - 1]
+                            setForm({...form, customer_id: c.id}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
+                          }
+                          setClienteIndex(-1)
+                        } else if (e.key === 'Escape') {
+                          setMostrarDropdown(false); setClienteIndex(-1)
+                        }
+                      }}
                       className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {mostrarDropdown && (
                       <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto">
                         <div
                           className={`px-3 py-2 text-sm cursor-pointer text-gray-500 ${clienteIndex === 0 ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
-onMouseEnter={() => setClienteIndex(0)}
+                          onMouseEnter={() => setClienteIndex(0)}
                           onMouseDown={() => {
-                                setForm({...form, customer_id: ''})
-                                setBuscarCliente('')
-                                setMostrarDropdown(false)
-                                setClienteSeleccionado(null)
-                              }}>
+                            setForm({...form, customer_id: ''})
+                            setBuscarCliente('')
+                            setMostrarDropdown(false)
+                            setClienteSeleccionado(null)
+                          }}>
                           Consumidor Final
                         </div>
                         {clientes
@@ -275,10 +278,10 @@ onMouseEnter={() => setClienteIndex(0)}
                           .map(c => (
                             <div key={c.id}
                               className={`px-3 py-2 text-sm cursor-pointer ${
-  clienteIndex === clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1
-    ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'
-}`}
-onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1)}
+                                clienteIndex === clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1
+                                  ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'
+                              }`}
+                              onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1)}
                               onMouseDown={() => {
                                 setForm({...form, customer_id: c.id})
                                 setBuscarCliente(c.nombre)
@@ -318,9 +321,6 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
 
                 {/* Items */}
                 <div className="mb-4">
-                  <div className="mb-2">
-                    <label className="text-sm font-medium text-gray-700">Items</label>
-                  </div>
                   {items.map((item, index) => (
                     <div key={index} className="grid grid-cols-12 gap-2 mb-2">
                       <div className="col-span-3 relative">
@@ -334,33 +334,33 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                           }}
                           onBlur={() => setTimeout(() => { setMostrarDropdownProducto(prev => ({...prev, [index]: false})); setProductoIndex(prev => ({...prev, [index]: -1})) }, 200)}
                           onKeyDown={e => {
-  const filtrados = productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase()))
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    setProductoIndex(prev => ({...prev, [index]: Math.min((prev[index] ?? -1) + 1, filtrados.length - 1)}))
-    setMostrarDropdownProducto(prev => ({...prev, [index]: true}))
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    setProductoIndex(prev => ({...prev, [index]: Math.max((prev[index] ?? 0) - 1, -1)}))
-  } else if (e.key === 'Enter') {
-    e.preventDefault()
-    const idx = productoIndex[index] ?? -1
-    if (idx >= 0 && filtrados[idx]) {
-      const p = filtrados[idx]
-      const newItems = [...items]
-      newItems[index].product_id = p.id
-      newItems[index].descripcion = p.nombre
-      newItems[index].precio_unitario = p.precio
-      newItems[index].itbis_rate = p.itbis_rate
-      setItems(newItems)
-      setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
-      setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
-      setProductoIndex(prev => ({...prev, [index]: -1}))
-    }
-  } else if (e.key === 'Escape') {
-    setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
-  }
-}}
+                            const filtrados = productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase()))
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault()
+                              setProductoIndex(prev => ({...prev, [index]: Math.min((prev[index] ?? -1) + 1, filtrados.length - 1)}))
+                              setMostrarDropdownProducto(prev => ({...prev, [index]: true}))
+                            } else if (e.key === 'ArrowUp') {
+                              e.preventDefault()
+                              setProductoIndex(prev => ({...prev, [index]: Math.max((prev[index] ?? 0) - 1, -1)}))
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault()
+                              const idx = productoIndex[index] ?? -1
+                              if (idx >= 0 && filtrados[idx]) {
+                                const p = filtrados[idx]
+                                const newItems = [...items]
+                                newItems[index].product_id = p.id
+                                newItems[index].descripcion = p.nombre
+                                newItems[index].precio_unitario = p.precio
+                                newItems[index].itbis_rate = p.itbis_rate
+                                setItems(newItems)
+                                setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
+                                setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+                                setProductoIndex(prev => ({...prev, [index]: -1}))
+                              }
+                            } else if (e.key === 'Escape') {
+                              setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+                            }
+                          }}
                           className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         {mostrarDropdownProducto[index] && (
@@ -369,8 +369,8 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                               .filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase()))
                               .map(p => (
                                 <div key={p.id}
-                                  className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
-                                  onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
+                                  className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(x => x.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
+                                  onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(x => x.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
                                   onMouseDown={() => {
                                     const newItems = [...items]
                                     newItems[index].product_id = p.id
@@ -416,7 +416,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                     </div>
                   ))}
                   <button type="button" onClick={agregarItem}
-                    className="text-blue-600 text-sm hover:underline mt-1">+ Agregar item</button>
+                    className="text-blue-600 text-sm hover:underline mt-1">+ Agregar línea</button>
                 </div>
 
                 {/* Totales */}
@@ -433,7 +433,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                     className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
                   <button type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                    Guardar 
+                    Guardar
                   </button>
                 </div>
               </form>
