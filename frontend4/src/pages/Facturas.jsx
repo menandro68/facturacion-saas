@@ -123,7 +123,7 @@ export default function Facturas() {
 
   const handleConfirmarVolver = () => {
     setMostrarConfirmar(false)
-    setTimeout(() => buscarProductoRef.current?.focus(), 100)
+    setTimeout(() => agregarLineaRef.current?.focus(), 100)
   }
 
   const handleEmitir = async (id) => {
