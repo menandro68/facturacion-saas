@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import API from '../services/api'
 
 export default function Facturas() {
@@ -155,7 +155,15 @@ export default function Facturas() {
     window.open(`https://facturacion-saas-production.up.railway.app/invoices/${id}/pdf?token=${token}`, '_blank')
   }
 
-  const { subtotal, itbis, total } = calcularTotales()
+  const { subtotal, itbis, total } = useMemo(() => {
+    let subtotal = 0, itbis = 0
+    items.forEach(item => {
+      const s = parseFloat(item.cantidad || 0) * parseFloat(item.precio_unitario || 0)
+      subtotal += s
+      itbis += s * (parseFloat(item.itbis_rate || 0) / 100)
+    })
+    return { subtotal, itbis, total: subtotal + itbis }
+  }, [items])
 
   const estadoColor = (estado) => {
     if (estado === 'pagada') return 'bg-green-100 text-green-700'
