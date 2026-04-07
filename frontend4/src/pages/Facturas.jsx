@@ -337,44 +337,44 @@ export default function Facturas() {
                       placeholder="Buscar cliente..."
                       ref={buscarClienteRef}
                       value={buscarCliente}
-                   onChange={e => { setBuscarCliente(e.target.value); setMostrarDropdown(e.target.value.length > 0) }}
+                      onChange={e => { setBuscarCliente(e.target.value); setMostrarDropdown(e.target.value.length > 0) }}
                       onBlur={() => setTimeout(() => { setMostrarDropdown(false); setClienteIndex(-1) }, 200)}
-onKeyDown={e => {
-  const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    setClienteIndex(i => Math.min(i + 1, filtrados.length))
-    setMostrarDropdown(true)
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    setClienteIndex(i => Math.max(i - 1, -1))
-  } else if (e.key === 'Enter') {
-    e.preventDefault()
-    if (clienteIndex === 0) {
-      setForm({...form, customer_id: ''}); setBuscarCliente(''); setMostrarDropdown(false); setClienteSeleccionado(null)
-    } else if (clienteIndex > 0 && filtrados[clienteIndex - 1]) {
-      const c = filtrados[clienteIndex - 1]
-      setForm({...form, customer_id: c.id}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
-    }
-    setClienteIndex(-1)
-    setTimeout(() => buscarProductoRef.current?.focus(), 100)
-  } else if (e.key === 'Escape') {
-    setMostrarDropdown(false); setClienteIndex(-1)
-  }
-}}
+                      onKeyDown={e => {
+                        const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          setClienteIndex(i => Math.min(i + 1, filtrados.length))
+                          setMostrarDropdown(true)
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          setClienteIndex(i => Math.max(i - 1, -1))
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (clienteIndex === 0) {
+                            setForm({...form, customer_id: ''}); setBuscarCliente(''); setMostrarDropdown(false); setClienteSeleccionado(null)
+                          } else if (clienteIndex > 0 && filtrados[clienteIndex - 1]) {
+                            const c = filtrados[clienteIndex - 1]
+                            setForm({...form, customer_id: c.id}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
+                          }
+                          setClienteIndex(-1)
+                          setTimeout(() => buscarProductoRef.current?.focus(), 100)
+                        } else if (e.key === 'Escape') {
+                          setMostrarDropdown(false); setClienteIndex(-1)
+                        }
+                      }}
                       className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {mostrarDropdown && (
                       <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto">
                         <div
                           className={`px-3 py-2 text-sm cursor-pointer text-gray-500 ${clienteIndex === 0 ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
-onMouseEnter={() => setClienteIndex(0)}
+                          onMouseEnter={() => setClienteIndex(0)}
                           onMouseDown={() => {
-                                setForm({...form, customer_id: ''})
-                                setBuscarCliente('')
-                                setMostrarDropdown(false)
-                                setClienteSeleccionado(null)
-                              }}>
+                            setForm({...form, customer_id: ''})
+                            setBuscarCliente('')
+                            setMostrarDropdown(false)
+                            setClienteSeleccionado(null)
+                          }}>
                           Consumidor Final
                         </div>
                         {clientes
@@ -382,10 +382,10 @@ onMouseEnter={() => setClienteIndex(0)}
                           .map(c => (
                             <div key={c.id}
                               className={`px-3 py-2 text-sm cursor-pointer ${
-  clienteIndex === clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1
-    ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'
-}`}
-onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1)}
+                                clienteIndex === clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1
+                                  ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'
+                              }`}
+                              onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1)}
                               onMouseDown={() => {
                                 setForm({...form, customer_id: c.id})
                                 setBuscarCliente(c.nombre)
@@ -439,29 +439,29 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                           }}
                           onBlur={() => setTimeout(() => { setMostrarDropdownProducto(prev => ({...prev, [index]: false})); setProductoIndex(prev => ({...prev, [index]: -1})) }, 200)}
                           onKeyDown={e => {
-  const filtrados = productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase()))
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    setProductoIndex(prev => ({...prev, [index]: Math.min((prev[index] ?? -1) + 1, filtrados.length - 1)}))
-    setMostrarDropdownProducto(prev => ({...prev, [index]: true}))
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    setProductoIndex(prev => ({...prev, [index]: Math.max((prev[index] ?? 0) - 1, -1)}))
-  } else if (e.key === 'Enter') {
-    e.preventDefault()
-    const idx = productoIndex[index] ?? -1
-    if (idx >= 0 && filtrados[idx]) {
-      const p = filtrados[idx]
-      setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
-      setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
-      setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
-      setProductoIndex(prev => ({...prev, [index]: -1}))
-      setTimeout(() => cantidadRefs.current[index]?.focus(), 100)
-    }
-  } else if (e.key === 'Escape') {
-    setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
-  }
-}}
+                            const filtrados = productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase()))
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault()
+                              setProductoIndex(prev => ({...prev, [index]: Math.min((prev[index] ?? -1) + 1, filtrados.length - 1)}))
+                              setMostrarDropdownProducto(prev => ({...prev, [index]: true}))
+                            } else if (e.key === 'ArrowUp') {
+                              e.preventDefault()
+                              setProductoIndex(prev => ({...prev, [index]: Math.max((prev[index] ?? 0) - 1, -1)}))
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault()
+                              const idx = productoIndex[index] ?? -1
+                              if (idx >= 0 && filtrados[idx]) {
+                                const p = filtrados[idx]
+                                setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
+                                setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
+                                setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+                                setProductoIndex(prev => ({...prev, [index]: -1}))
+                                setTimeout(() => cantidadRefs.current[index]?.focus(), 100)
+                              }
+                            } else if (e.key === 'Escape') {
+                              setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+                            }
+                          }}
                           className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         {mostrarDropdownProducto[index] && (
@@ -501,6 +501,12 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                       <div className="col-span-2">
                         <input name="precio_unitario" type="number" placeholder="Precio" value={item.precio_unitario} onChange={(e) => handleItemChange(index, e)}
                           className="w-full border rounded px-2 py-1.5 text-sm" required />
+                      </div>
+                      <div className="col-span-2">
+                        <input type="text" readOnly
+                          value={item.precio_unitario && item.cantidad ? 'RD$' + (parseFloat(item.cantidad||0)*parseFloat(item.precio_unitario||0)).toLocaleString('es-DO',{minimumFractionDigits:2}) : ''}
+                          placeholder="Subtotal"
+                          className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-right font-medium text-gray-700" />
                       </div>
                       <div className="col-span-1">
                         <select name="itbis_rate" value={item.itbis_rate} onChange={(e) => handleItemChange(index, e)}
