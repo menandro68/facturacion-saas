@@ -24,6 +24,7 @@ export default function Facturas() {
   const [mostrarDropdownProducto, setMostrarDropdownProducto] = useState({})
   const [productoIndex, setProductoIndex] = useState({})
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
+  const [mostrarImprimir, setMostrarImprimir] = useState(false)
   const [facturaGuardadaId, setFacturaGuardadaId] = useState(null)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
@@ -110,11 +111,11 @@ export default function Facturas() {
       setClienteSeleccionado(null)
       setBuscarProducto({})
       fetchData()
-      const imprimir = window.confirm('¿Desea imprimir la factura?')
-      if (imprimir) {
-        const token = sessionStorage.getItem('token')
-        const id = res.data.data?.id
-        if (id) window.open(`https://facturacion-saas-production.up.railway.app/invoices/${id}/pdf?token=${token}`, '_blank')
+      const id = res.data.data?.id || res.data.id
+      console.log('Factura guardada ID:', id, 'Response:', res.data)
+      if (id) {
+        setFacturaGuardadaId(id)
+        setMostrarImprimir(true)
       }
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al guardar')
@@ -240,6 +241,41 @@ export default function Facturas() {
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
           <p className="text-lg">Módulo en desarrollo...</p>
           <p className="text-sm mt-2">Próximamente disponible</p>
+        </div>
+      )}
+
+      {/* Modal imprimir */}
+      {mostrarImprimir && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la factura?</p>
+            <div className="flex justify-center gap-6">
+              <button
+                autoFocus
+                onClick={() => {
+                  const token = sessionStorage.getItem('token')
+                  window.open(`https://facturacion-saas-production.up.railway.app/invoices/${facturaGuardadaId}/pdf?token=${token}`, '_blank')
+                  setMostrarImprimir(false)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-no-imprimir')?.focus() }
+                  if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); window.open(`https://facturacion-saas-production.up.railway.app/invoices/${facturaGuardadaId}/pdf?token=${token}`, '_blank'); setMostrarImprimir(false) }
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
+                Sí
+              </button>
+              <button
+                id="btn-no-imprimir"
+                onClick={() => setMostrarImprimir(false)}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); document.querySelector('[autoFocus]')?.focus() }
+                  if (e.key === 'Enter') setMostrarImprimir(false)
+                }}
+                className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
+                No
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
