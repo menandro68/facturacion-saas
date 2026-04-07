@@ -63,16 +63,19 @@ export default function Facturas() {
   }
 
   const handleItemChange = (index, e) => {
-    const newItems = [...items]
-    newItems[index][e.target.name] = e.target.value
-    if (e.target.name === 'product_id' && e.target.value) {
-      const prod = productos.find(p => p.id === e.target.value)
-      if (prod) {
-        newItems[index].descripcion = prod.nombre
-        newItems[index].precio_unitario = prod.precio
-        newItems[index].itbis_rate = prod.itbis_rate
+    const newItems = items.map((item, i) => {
+      if (i !== index) return item
+      const updated = { ...item, [e.target.name]: e.target.value }
+      if (e.target.name === 'product_id' && e.target.value) {
+        const prod = productos.find(p => p.id === e.target.value)
+        if (prod) {
+          updated.descripcion = prod.nombre
+          updated.precio_unitario = prod.precio
+          updated.itbis_rate = prod.itbis_rate
+        }
       }
-    }
+      return updated
+    })
     setItems(newItems)
   }
 
@@ -441,12 +444,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
     const idx = productoIndex[index] ?? -1
     if (idx >= 0 && filtrados[idx]) {
       const p = filtrados[idx]
-      const newItems = [...items]
-      newItems[index].product_id = p.id
-      newItems[index].descripcion = p.nombre
-      newItems[index].precio_unitario = p.precio
-      newItems[index].itbis_rate = p.itbis_rate
-      setItems(newItems)
+      setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
       setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
       setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
       setProductoIndex(prev => ({...prev, [index]: -1}))
@@ -467,12 +465,7 @@ onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().
                                   className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                                   onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
                                   onMouseDown={() => {
-                                    const newItems = [...items]
-                                    newItems[index].product_id = p.id
-                                    newItems[index].descripcion = p.nombre
-                                    newItems[index].precio_unitario = p.precio
-                                    newItems[index].itbis_rate = p.itbis_rate
-                                    setItems(newItems)
+                                    setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
                                     setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
                                     setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
                                   }}>
