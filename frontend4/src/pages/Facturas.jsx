@@ -14,6 +14,7 @@ export default function Facturas() {
   const [vendedorSeleccionado, setVendedorSeleccionado] = useState('')
   const [facturasVendedor, setFacturasVendedor] = useState([])
   const [resumenVendedor, setResumenVendedor] = useState(null)
+  const [productosReporte, setProductosReporte] = useState([])
   const [clientes, setClientes] = useState([])
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -443,6 +444,192 @@ export default function Facturas() {
         </div>
       )}
 
+      {tab === 'producto' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Venta por Producto</h3>
+          <div className="flex gap-4 items-end mb-6 flex-wrap">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+              <select id="prod-vendedor" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
+                <option value="">-- Todos --</option>
+                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+              </select>
+            </div>
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+              <input
+                id="prod-cliente-input"
+                type="text"
+                placeholder="🔍 Buscar cliente..."
+                autoComplete="off"
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
+                onChange={e => {
+                  document.getElementById('prod-cliente').value = e.target.value
+                  const val = e.target.value.toLowerCase()
+                  const list = document.getElementById('prod-cliente-list')
+                  list.innerHTML = ''
+                  if (val) {
+                    const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val)).slice(0, 10)
+                    filtrados.forEach(c => {
+                      const div = document.createElement('div')
+                      div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                      div.textContent = c.nombre
+                      div.onmousedown = () => {
+                        document.getElementById('prod-cliente-input').value = c.nombre
+                        document.getElementById('prod-cliente').value = c.id
+                        list.innerHTML = ''
+                      }
+                      list.appendChild(div)
+                    })
+                  }
+                }}
+                onBlur={() => setTimeout(() => { document.getElementById('prod-cliente-list').innerHTML = '' }, 200)}
+              />
+              <input type="hidden" id="prod-cliente" value="" />
+              <div id="prod-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+            </div>
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+              <input
+                id="prod-producto-input"
+                type="text"
+                placeholder="-- Todos --"
+                autoComplete="off"
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
+                onChange={e => {
+                  document.getElementById('prod-producto').value = e.target.value
+                  const val = e.target.value.toLowerCase()
+                  const list = document.getElementById('prod-producto-list')
+                  list.innerHTML = ''
+                  if (val) {
+                    const filtrados = productos.filter(p => p.nombre.toLowerCase().includes(val)).slice(0, 10)
+                    filtrados.forEach(p => {
+                      const div = document.createElement('div')
+                      div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                      div.textContent = p.nombre
+                      div.onmousedown = () => {
+                        document.getElementById('prod-producto-input').value = p.nombre
+                        document.getElementById('prod-producto').value = p.nombre
+                        list.innerHTML = ''
+                      }
+                      list.appendChild(div)
+                    })
+                  }
+                }}
+                onBlur={() => setTimeout(() => { document.getElementById('prod-producto-list').innerHTML = '' }, 200)}
+              />
+              <input type="hidden" id="prod-producto" value="" />
+              <div id="prod-producto-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+            </div>
+            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+              onClick={async () => {
+                const vendedorId = document.getElementById('prod-vendedor').value
+                const clienteId = document.getElementById('prod-cliente').value
+                const productoNombre = document.getElementById('prod-producto').value
+                const qs = []
+                if (fechaInicio) qs.push(`fecha_inicio=${fechaInicio}`)
+                if (fechaFin) qs.push(`fecha_fin=${fechaFin}`)
+                if (vendedorId) qs.push(`vendedor_id=${vendedorId}`)
+                if (clienteId) qs.push(`customer_id=${clienteId}`)
+                if (productoNombre) qs.push(`producto=${encodeURIComponent(productoNombre)}`)
+                let url = '/invoices/reporte/productos'
+                if (qs.length) url += '?' + qs.join('&')
+                try {
+                  const res = await API.get(url)
+                  setProductosReporte(res.data.data)
+                } catch (e) { console.error(e) }
+              }}>
+              Buscar
+            </button>
+            {productosReporte.length > 0 && (
+              <button onClick={() => {
+                const vendedorNombre = vendedores.find(v => v.id === document.getElementById('prod-vendedor').value)?.nombre || 'Todos'
+                const clienteNombre = clientes.find(c => c.id === document.getElementById('prod-cliente').value)?.nombre || 'Todos'
+                const printW = window.open('', '_blank')
+                const filas = productosReporte.map(p => `
+                  <tr>
+                    <td>${p.descripcion}</td>
+                    <td style="text-align:right">${parseFloat(p.total_cantidad).toFixed(0)}</td>
+                    <td style="text-align:right">RD$${parseFloat(p.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:right">RD$${parseFloat(p.total_subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:right">RD$${parseFloat(p.total_costo).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:right;color:#16a34a;font-weight:bold">RD$${parseFloat(p.beneficio).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                  </tr>`).join('')
+                const totalVenta = productosReporte.reduce((s, p) => s + parseFloat(p.total_venta||0), 0)
+                const totalCosto = productosReporte.reduce((s, p) => s + parseFloat(p.total_costo||0), 0)
+                const totalBeneficio = productosReporte.reduce((s, p) => s + parseFloat(p.beneficio||0), 0)
+                printW.document.write(`
+                  <!DOCTYPE html><html><head><title>Reporte por Producto</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.sub{color:#64748b;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:24px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
+                    .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
+                    .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
+                    .resumen-fila.beneficio{font-weight:bold;font-size:14px;color:#16a34a;border-bottom:none}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Reporte de Venta por Producto</h2>
+                  <p class="sub">Período: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} | Vendedor: ${vendedorNombre} | Cliente: ${clienteNombre}</p>
+                  <table>
+                    <thead><tr>
+                      <th>Producto</th>
+                      <th style="text-align:right">Cant.</th>
+                      <th style="text-align:right">P. Unit</th>
+                      <th style="text-align:right">Subtotal</th>
+                      <th style="text-align:right">Costo</th>
+                      <th style="text-align:right">Beneficio</th>
+                    </tr></thead>
+                    <tbody>${filas}</tbody>
+                  </table>
+                  <div class="resumen">
+                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${totalVenta.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila"><span>Total Costo:</span><span>RD$${totalCosto.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila beneficio"><span>Beneficio Neto:</span><span>RD$${totalBeneficio.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  </div>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                printW.document.close()
+              }}
+              className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
+              🖨️ Imprimir Reporte
+            </button>
+            )}
+          </div>
+          {productosReporte.length > 0 && (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">Producto</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Cant.</th>
+                  <th className="px-4 py-3 text-right text-gray-600">P. Unit</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Subtotal</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Costo</th>
+                  <th className="px-4 py-3 text-right text-gray-600 text-green-700">Beneficio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productosReporte.map((p, i) => (
+                  <tr key={i} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3">{p.descripcion}</td>
+                    <td className="px-4 py-3 text-right">{parseFloat(p.total_cantidad).toFixed(0)}</td>
+                    <td className="px-4 py-3 text-right">RD${parseFloat(p.precio_unitario).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">RD${parseFloat(p.total_subtotal).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">RD${parseFloat(p.total_costo).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-medium text-green-700">RD${parseFloat(p.beneficio).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {tab === 'vendedor' && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Venta por Vendedor</h3>
@@ -559,7 +746,7 @@ export default function Facturas() {
         </div>
       )}
 
-      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && (
+      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && tab !== 'producto' && (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
           <p className="text-lg">Módulo en desarrollo...</p>
           <p className="text-sm mt-2">Próximamente disponible</p>
