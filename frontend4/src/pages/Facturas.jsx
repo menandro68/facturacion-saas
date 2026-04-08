@@ -11,6 +11,9 @@ export default function Facturas() {
   const [zonaSeleccionada, setZonaSeleccionada] = useState('')
   const [facturasZona, setFacturasZona] = useState([])
   const [resumenZona, setResumenZona] = useState(null)
+  const [vendedorSeleccionado, setVendedorSeleccionado] = useState('')
+  const [facturasVendedor, setFacturasVendedor] = useState([])
+  const [resumenVendedor, setResumenVendedor] = useState(null)
   const [clientes, setClientes] = useState([])
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -440,7 +443,123 @@ export default function Facturas() {
         </div>
       )}
 
-      {tab !== 'fecha' && tab !== 'zona' && (
+      {tab === 'vendedor' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Venta por Vendedor</h3>
+          <div className="flex gap-4 items-end mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+              <select value={vendedorSeleccionado} onChange={e => setVendedorSeleccionado(e.target.value)}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
+                <option value="">-- Seleccionar vendedor --</option>
+                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+              </select>
+            </div>
+            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+              onClick={() => {
+                if (!vendedorSeleccionado) return
+                const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorSeleccionado)
+                const idsClientes = clientesVendedor.map(c => c.id)
+                const filtradas = facturas.filter(f => {
+                  if (!idsClientes.includes(f.customer_id)) return false
+                  const d = new Date(f.creado_en)
+                  const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                  if (fechaInicio && fecha < fechaInicio) return false
+                  if (fechaFin && fecha > fechaFin) return false
+                  return true
+                })
+                setFacturasVendedor(filtradas)
+                const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+                const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
+                const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
+                setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+              }}>
+              Buscar
+            </button>
+            {resumenVendedor && (
+              <button onClick={() => {
+                const vendedor = vendedores.find(v => v.id === vendedorSeleccionado)
+                const printW = window.open('', '_blank')
+                const filas = facturasVendedor.map(f => `
+                  <tr>
+                    <td>${f.ncf || 'BORRADOR'}</td>
+                    <td>${f.cliente_nombre || 'Consumidor Final'}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
+                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('')
+                printW.document.write(`
+                  <!DOCTYPE html><html><head><title>Reporte por Vendedor</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.periodo{color:#64748b;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
+                    .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
+                    .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Reporte de Ventas por Vendedor: ${vendedor?.nombre || ''}</h2>
+                  <p class="periodo">Período: ${fechaInicio || 'Inicio'} al ${fechaFin || 'Hoy'} — Total facturas: ${facturasVendedor.length}</p>
+                  <table>
+                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
+                    <tbody>${filas}</tbody>
+                  </table>
+                  <div class="resumen">
+                    <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenVendedor.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenVendedor.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenVendedor.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  </div>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                printW.document.close()
+              }}
+              className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
+              🖨️ Imprimir Reporte
+            </button>
+            )}
+          </div>
+          {facturasVendedor.length > 0 && (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">NCF</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Total</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Estado</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {facturasVendedor.map(f => (
+                  <tr key={f.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
+                    <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
+                    <td className="px-4 py-3">RD${parseFloat(f.total).toLocaleString()}</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
+                    <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {resumenVendedor && (
+            <div className="flex justify-end mt-4">
+              <div className="text-sm text-right bg-gray-50 p-4 rounded-lg">
+                <p className="text-gray-600">Subtotal: <span className="font-medium">RD${resumenVendedor.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                <p className="text-gray-600">ITBIS: <span className="font-medium">RD${resumenVendedor.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                <p className="text-lg font-bold text-gray-800">Total: RD${resumenVendedor.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
           <p className="text-lg">Módulo en desarrollo...</p>
           <p className="text-sm mt-2">Próximamente disponible</p>
