@@ -6,6 +6,8 @@ export default function Facturas() {
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
   const [facturas, setFacturas] = useState([])
+  const [facturasFiltradas, setFacturasFiltradas] = useState([])
+  const [resumen, setResumen] = useState(null)
   const [clientes, setClientes] = useState([])
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -45,6 +47,7 @@ export default function Facturas() {
         API.get('/products')
       ])
       setFacturas(f.data.data)
+      setFacturasFiltradas(f.data.data)
       setClientes(c.data.data)
       setProductos(p.data.data)
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
@@ -214,9 +217,79 @@ export default function Facturas() {
           <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+        <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+          onClick={async () => {
+            const filtradas = facturas.filter(f => {
+              const d = new Date(f.creado_en)
+              const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+              if (fechaInicio && fecha < fechaInicio) return false
+              if (fechaFin && fecha > fechaFin) return false
+              return true
+            })
+            setFacturasFiltradas(filtradas)
+            // Cargar resumen
+            try {
+              const params = []
+              let url = '/invoices/reporte/resumen'
+              const qs = []
+              if (fechaInicio) qs.push(`fecha_inicio=${fechaInicio}`)
+              if (fechaFin) qs.push(`fecha_fin=${fechaFin}`)
+              if (qs.length) url += '?' + qs.join('&')
+              const res = await API.get(url)
+              setResumen(res.data.data)
+            } catch (e) { console.error(e) }
+          }}>
           Buscar
         </button>
+        {resumen && (
+          <button
+            onClick={() => {
+              const printW = window.open('', '_blank')
+              const filas = facturasFiltradas.map(f => `
+                <tr>
+                  <td>${f.ncf || 'BORRADOR'}</td>
+                  <td>${f.cliente_nombre || 'Consumidor Final'}</td>
+                  <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                  <td style="text-align:center">${f.estado.toUpperCase()}</td>
+                  <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                </tr>`).join('')
+              printW.document.write(`
+                <!DOCTYPE html><html><head><title>Reporte de Ventas</title>
+                <style>
+                  body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                  h2{color:#1e40af;margin-bottom:4px}
+                  p.periodo{color:#64748b;font-size:13px;margin-bottom:16px}
+                  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
+                  th{background:#1e40af;color:white;padding:8px;text-align:left}
+                  td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                  tr:nth-child(even){background:#f8fafc}
+                  .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
+                  .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
+                  .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
+                  .resumen-fila.beneficio{font-weight:bold;font-size:14px;color:#16a34a;border-bottom:none}
+                  @media print{button{display:none}}
+                </style></head><body>
+                <h2>Reporte de Ventas</h2>
+                <p class="periodo">Período: ${fechaInicio || 'Inicio'} al ${fechaFin || 'Hoy'}</p>
+                <table>
+                  <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
+                  <tbody>${filas}</tbody>
+                </table>
+                <div class="resumen">
+                  <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumen.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumen.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumen.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  <div class="resumen-fila"><span>Costo Total:</span><span>RD$${resumen.total_costo.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  <div class="resumen-fila beneficio"><span>Beneficio Neto:</span><span>RD$${resumen.beneficio_neto.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                </div>
+                <script>window.onload=()=>window.print()</script>
+                </body></html>`)
+              printW.document.close()
+            }}
+            className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
+            🖨️ Imprimir Reporte
+          </button>
+        )}
       </div>
 
       {/* Tabs fila 1 */}
@@ -576,10 +649,10 @@ export default function Facturas() {
                 </tr>
               </thead>
               <tbody>
-                {facturas.length === 0 ? (
+                {facturasFiltradas.length === 0 ? (
                   <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay facturas</td></tr>
                 ) : (
-                  facturas.map((f) => (
+                  facturasFiltradas.map((f) => (
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
