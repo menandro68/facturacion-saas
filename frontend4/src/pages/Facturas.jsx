@@ -1397,6 +1397,28 @@ export default function Facturas() {
               </div>
             </div>
           )}
+          <div className="flex gap-4 items-end mb-4 flex-wrap">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por Vendedor</label>
+              <select id="ped-vendedor-filtro"
+                onChange={async e => {
+                  const vendedorId = e.target.value
+                  if (!vendedorId) {
+                    const res = await API.get('/invoices/pedidos/lista')
+                    setPedidos(res.data.data)
+                    return
+                  }
+                  const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId).map(c => c.id)
+                  const res = await API.get('/invoices/pedidos/lista')
+                  setPedidos(res.data.data.filter(p => clientesVendedor.includes(p.customer_id)))
+                }}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
+                <option value="">-- Todos los vendedores --</option>
+                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+              </select>
+            </div>
+          </div>
+
           {pedidos.length > 0 && (
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
