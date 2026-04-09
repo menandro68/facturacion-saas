@@ -1377,7 +1377,14 @@ export default function Facturas() {
                   onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); pedGuardarRef.current?.focus() } }}
                   className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
                 <button ref={pedGuardarRef} onClick={async () => {
-                  const customer_id = document.getElementById('ped-cliente').value
+                  let customer_id = document.getElementById('ped-cliente').value
+                  if (!customer_id) {
+                    const inputVal = document.getElementById('ped-cliente-input').value.toLowerCase().trim()
+                    if (inputVal) {
+                      const match = clientes.find(c => c.nombre.toLowerCase() === inputVal)
+                      if (match) customer_id = match.id
+                    }
+                  }
                   const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   try {
