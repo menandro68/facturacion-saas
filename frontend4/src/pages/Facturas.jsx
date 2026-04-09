@@ -26,6 +26,13 @@ export default function Facturas() {
   const [dropdownCot, setDropdownCot] = useState({})
   const [cotClienteIndex, setCotClienteIndex] = useState(-1)
   const [cotClienteFiltrados, setCotClienteFiltrados] = useState([])
+  const [cotProductoIndex, setCotProductoIndex] = useState({})
+  const cotClienteInputRef = useRef(null)
+  const cotProductoRefs = useRef({})
+  const cotCantidadRefs = useRef({})
+  const cotPrecioRefs = useRef({})
+  const cotAgregarRef = useRef(null)
+  const cotGuardarRef = useRef(null)
   const [clientes, setClientes] = useState([])
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1152,6 +1159,7 @@ export default function Facturas() {
               <div className="relative mb-4 max-w-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
                 <input type="text" placeholder="Buscar cliente..." id="cot-cliente-input" autoComplete="off"
+                  ref={cotClienteInputRef}
                   className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                   onChange={e => {
                     document.getElementById('cot-cliente').value = ''
@@ -1179,6 +1187,11 @@ export default function Facturas() {
                   }}
                   onKeyDown={e => {
                     const list = document.getElementById('cot-cliente-list')
+                    if (e.key === 'Enter' && !list.children.length) {
+                      e.preventDefault()
+                      setTimeout(() => cotProductoRefs.current[0]?.focus(), 100)
+                      return
+                    }
                     if (!list.children.length) return
                     if (e.key === 'ArrowDown') {
                       e.preventDefault()
@@ -1199,6 +1212,7 @@ export default function Facturas() {
                         list.innerHTML = ''
                         setCotClienteIndex(-1)
                       }
+                      setTimeout(() => cotProductoRefs.current[0]?.focus(), 100)
                     } else if (e.key === 'Escape') {
                       list.innerHTML = ''
                       setCotClienteIndex(-1)
@@ -1213,22 +1227,49 @@ export default function Facturas() {
                 <div key={index} className="grid grid-cols-12 gap-2 mb-2">
                   <div className="col-span-3 relative">
                     <input type="text" placeholder="🔍 Buscar producto..."
+                      ref={el => cotProductoRefs.current[index] = el}
                       value={buscarProductoCot[index] || ''}
                       onChange={e => {
                         setBuscarProductoCot(prev => ({...prev, [index]: e.target.value}))
                         setDropdownCot(prev => ({...prev, [index]: e.target.value.length > 0}))
+                        setCotProductoIndex(prev => ({...prev, [index]: -1}))
                       }}
-                      onBlur={() => setTimeout(() => setDropdownCot(prev => ({...prev, [index]: false})), 200)}
+                      onBlur={() => setTimeout(() => { setDropdownCot(prev => ({...prev, [index]: false})); setCotProductoIndex(prev => ({...prev, [index]: -1})) }, 200)}
+                      onKeyDown={e => {
+                        const filtrados = productos.filter(p => p.nombre.toLowerCase().includes((buscarProductoCot[index]||'').toLowerCase()))
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          setCotProductoIndex(prev => ({...prev, [index]: Math.min((prev[index]??-1)+1, filtrados.length-1)}))
+                          setDropdownCot(prev => ({...prev, [index]: true}))
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          setCotProductoIndex(prev => ({...prev, [index]: Math.max((prev[index]??0)-1, -1)}))
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const idx = cotProductoIndex[index] ?? -1
+                          if (idx >= 0 && filtrados[idx]) {
+                            const p = filtrados[idx]
+                            setItemsCot(prev => prev.map((it, i) => i === index ? {...it, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : it))
+                            setBuscarProductoCot(prev => ({...prev, [index]: p.nombre}))
+                            setDropdownCot(prev => ({...prev, [index]: false}))
+                            setCotProductoIndex(prev => ({...prev, [index]: -1}))
+                          }
+                          setTimeout(() => cotCantidadRefs.current[index]?.focus(), 100)
+                        } else if (e.key === 'Escape') {
+                          setDropdownCot(prev => ({...prev, [index]: false}))
+                        }
+                      }}
                       className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {dropdownCot[index] && (
                       <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
-                        {productos.filter(p => p.nombre.toLowerCase().includes((buscarProductoCot[index]||'').toLowerCase())).map(p => (
-                          <div key={p.id} className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50"
+                        {productos.filter(p => p.nombre.toLowerCase().includes((buscarProductoCot[index]||'').toLowerCase())).map((p, pidx) => (
+                          <div key={p.id} className={`px-3 py-2 text-sm cursor-pointer ${(cotProductoIndex[index]??-1) === pidx ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                             onMouseDown={() => {
                               setItemsCot(prev => prev.map((it, i) => i === index ? {...it, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : it))
                               setBuscarProductoCot(prev => ({...prev, [index]: p.nombre}))
                               setDropdownCot(prev => ({...prev, [index]: false}))
+                              setTimeout(() => cotCantidadRefs.current[index]?.focus(), 100)
                             }}>
                             {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
                           </div>
@@ -1243,12 +1284,26 @@ export default function Facturas() {
                   </div>
                   <div className="col-span-2">
                     <input type="number" placeholder="Cant." value={item.cantidad} min="1"
+                      ref={el => cotCantidadRefs.current[index] = el}
                       onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, cantidad: e.target.value} : it))}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); cotPrecioRefs.current[index]?.focus() } }}
                       className="w-full border rounded px-2 py-1.5 text-sm" />
                   </div>
                   <div className="col-span-2">
                     <input type="number" placeholder="Precio" value={item.precio_unitario}
+                      ref={el => cotPrecioRefs.current[index] = el}
                       onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: e.target.value} : it))}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const nextIndex = index + 1
+                          if (cotProductoRefs.current[nextIndex]) {
+                            cotProductoRefs.current[nextIndex]?.focus()
+                          } else {
+                            cotAgregarRef.current?.focus()
+                          }
+                        }
+                      }}
                       className="w-full border rounded px-2 py-1.5 text-sm" />
                   </div>
                   <div className="col-span-1">
@@ -1292,9 +1347,13 @@ export default function Facturas() {
                 </div>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setItemsCot(prev => [...prev, {descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])}
-                  className="text-blue-600 text-sm hover:underline">+ Agregar línea</button>
-                <button onClick={async () => {
+                <button ref={cotAgregarRef} onClick={() => {
+                  setItemsCot(prev => [...prev, {descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
+                  setTimeout(() => cotProductoRefs.current[itemsCot.length]?.focus(), 150)
+                }}
+                  onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); cotGuardarRef.current?.focus() } }}
+                  className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
+                <button ref={cotGuardarRef} onClick={async () => {
                   const customer_id = document.getElementById('cot-cliente').value
                   const itemsValidos = itemsCot.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
