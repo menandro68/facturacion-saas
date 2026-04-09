@@ -1404,6 +1404,16 @@ export default function Facturas() {
           )}
           <div className="flex gap-4 items-end mb-4 flex-wrap">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
+              <input type="date" id="ped-fecha-inicio"
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
+              <input type="date" id="ped-fecha-fin"
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por Vendedor</label>
               <select id="ped-vendedor-filtro"
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
@@ -1414,8 +1424,14 @@ export default function Facturas() {
             <button
               onClick={async () => {
                 const vendedorId = document.getElementById('ped-vendedor-filtro').value
+                const fechaInicio = document.getElementById('ped-fecha-inicio').value
+                const fechaFin = document.getElementById('ped-fecha-fin').value
+                const qs = []
+                if (vendedorId) qs.push(`vendedor_id=${vendedorId}`)
+                if (fechaInicio) qs.push(`fecha_inicio=${fechaInicio}`)
+                if (fechaFin) qs.push(`fecha_fin=${fechaFin}`)
                 let url = '/invoices/pedidos/lista'
-                if (vendedorId) url += `?vendedor_id=${vendedorId}`
+                if (qs.length) url += '?' + qs.join('&')
                 const res = await API.get(url)
                 setPedidos(res.data.data)
               }}
