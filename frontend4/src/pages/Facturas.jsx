@@ -19,6 +19,13 @@ export default function Facturas() {
   const [resumenCliente, setResumenCliente] = useState(null)
   const [facturasChofer, setFacturasChofer] = useState([])
   const [relacionVendedor, setRelacionVendedor] = useState([])
+  const [cotizaciones, setCotizaciones] = useState([])
+  const [showCotizacion, setShowCotizacion] = useState(false)
+  const [itemsCot, setItemsCot] = useState([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
+  const [buscarProductoCot, setBuscarProductoCot] = useState({})
+  const [dropdownCot, setDropdownCot] = useState({})
+  const [cotClienteIndex, setCotClienteIndex] = useState(-1)
+  const [cotClienteFiltrados, setCotClienteFiltrados] = useState([])
   const [clientes, setClientes] = useState([])
   const [productos, setProductos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -63,6 +70,7 @@ export default function Facturas() {
       setProductos(p.data.data)
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
       API.get('/mantenimiento/zonas').then(r => setZonas(r.data.data)).catch(() => {})
+      API.get('/invoices/cotizaciones/lista').then(r => setCotizaciones(r.data.data)).catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -1130,7 +1138,234 @@ export default function Facturas() {
         </div>
       )}
 
-      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && tab !== 'producto' && tab !== 'cliente' && tab !== 'chofer' && tab !== 'relacion_vendedor' && (
+      {tab === 'cotizacion' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Cotización</h3>
+          {!showCotizacion ? (
+            <button onClick={() => setShowCotizacion(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 mb-4">
+              + Nueva Cotización
+            </button>
+          ) : (
+            <div className="mb-6 border rounded-lg p-4">
+              <h4 className="font-medium mb-3 text-gray-700">Nueva Cotización</h4>
+              <div className="relative mb-4 max-w-sm">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                <input type="text" placeholder="Buscar cliente..." id="cot-cliente-input" autoComplete="off"
+                  className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={e => {
+                    document.getElementById('cot-cliente').value = ''
+                    const val = e.target.value.toLowerCase()
+                    const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val)).slice(0,10)
+                    setCotClienteFiltrados(filtrados)
+                    setCotClienteIndex(-1)
+                    const list = document.getElementById('cot-cliente-list')
+                    list.innerHTML = ''
+                    if (val) {
+                      filtrados.forEach((c, idx) => {
+                        const div = document.createElement('div')
+                        div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                        div.id = `cot-cli-opt-${idx}`
+                        div.textContent = c.nombre
+                        div.onmousedown = () => {
+                          document.getElementById('cot-cliente-input').value = c.nombre
+                          document.getElementById('cot-cliente').value = c.id
+                          list.innerHTML = ''
+                          setCotClienteIndex(-1)
+                        }
+                        list.appendChild(div)
+                      })
+                    }
+                  }}
+                  onKeyDown={e => {
+                    const list = document.getElementById('cot-cliente-list')
+                    if (!list.children.length) return
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      const newIdx = Math.min(cotClienteIndex + 1, cotClienteFiltrados.length - 1)
+                      setCotClienteIndex(newIdx)
+                      Array.from(list.children).forEach((el, i) => el.style.background = i === newIdx ? '#BFDBFE' : '')
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      const newIdx = Math.max(cotClienteIndex - 1, 0)
+                      setCotClienteIndex(newIdx)
+                      Array.from(list.children).forEach((el, i) => el.style.background = i === newIdx ? '#BFDBFE' : '')
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (cotClienteIndex >= 0 && cotClienteFiltrados[cotClienteIndex]) {
+                        const c = cotClienteFiltrados[cotClienteIndex]
+                        document.getElementById('cot-cliente-input').value = c.nombre
+                        document.getElementById('cot-cliente').value = c.id
+                        list.innerHTML = ''
+                        setCotClienteIndex(-1)
+                      }
+                    } else if (e.key === 'Escape') {
+                      list.innerHTML = ''
+                      setCotClienteIndex(-1)
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => { document.getElementById('cot-cliente-list').innerHTML = ''; setCotClienteIndex(-1) }, 200)}
+                />
+                <input type="hidden" id="cot-cliente" value="" />
+                <div id="cot-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+              </div>
+              {itemsCot.map((item, index) => (
+                <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+                  <div className="col-span-3 relative">
+                    <input type="text" placeholder="🔍 Buscar producto..."
+                      value={buscarProductoCot[index] || ''}
+                      onChange={e => {
+                        setBuscarProductoCot(prev => ({...prev, [index]: e.target.value}))
+                        setDropdownCot(prev => ({...prev, [index]: e.target.value.length > 0}))
+                      }}
+                      onBlur={() => setTimeout(() => setDropdownCot(prev => ({...prev, [index]: false})), 200)}
+                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {dropdownCot[index] && (
+                      <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
+                        {productos.filter(p => p.nombre.toLowerCase().includes((buscarProductoCot[index]||'').toLowerCase())).map(p => (
+                          <div key={p.id} className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50"
+                            onMouseDown={() => {
+                              setItemsCot(prev => prev.map((it, i) => i === index ? {...it, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : it))
+                              setBuscarProductoCot(prev => ({...prev, [index]: p.nombre}))
+                              setDropdownCot(prev => ({...prev, [index]: false}))
+                            }}>
+                            {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="col-span-3">
+                    <input placeholder="Descripción" value={item.descripcion}
+                      onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, descripcion: e.target.value} : it))}
+                      className="w-full border rounded px-2 py-1.5 text-sm" />
+                  </div>
+                  <div className="col-span-2">
+                    <input type="number" placeholder="Cant." value={item.cantidad} min="1"
+                      onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, cantidad: e.target.value} : it))}
+                      className="w-full border rounded px-2 py-1.5 text-sm" />
+                  </div>
+                  <div className="col-span-2">
+                    <input type="number" placeholder="Precio" value={item.precio_unitario}
+                      onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: e.target.value} : it))}
+                      className="w-full border rounded px-2 py-1.5 text-sm" />
+                  </div>
+                  <div className="col-span-1">
+                    <input type="text" readOnly
+                      value={item.precio_unitario && item.cantidad ? 'RD$' + (parseFloat(item.cantidad||0)*parseFloat(item.precio_unitario||0)).toLocaleString('es-DO',{minimumFractionDigits:2}) : ''}
+                      placeholder="Subtotal"
+                      className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-right font-medium text-gray-700" />
+                  </div>
+                  <div className="col-span-1">
+                    <select value={item.itbis_rate}
+                      onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, itbis_rate: e.target.value} : it))}
+                      className="w-full border rounded px-2 py-1.5 text-sm">
+                      <option value="18">18%</option>
+                      <option value="16">16%</option>
+                      <option value="0">0%</option>
+                    </select>
+                  </div>
+                  <div className="col-span-0 flex items-center justify-center">
+                    {itemsCot.length > 1 && (
+                      <button onClick={() => setItemsCot(prev => prev.filter((_,i) => i !== index))}
+                        className="text-red-500 hover:text-red-700 text-lg">×</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-end mb-3">
+                <div className="text-sm text-right">
+                  {(() => {
+                    let sub = 0, itb = 0
+                    itemsCot.forEach(it => {
+                      const s = parseFloat(it.cantidad||0) * parseFloat(it.precio_unitario||0)
+                      sub += s
+                      itb += s * (parseFloat(it.itbis_rate||0) / 100)
+                    })
+                    return <>
+                      <p className="text-gray-600">Subtotal: <span className="font-medium">RD${sub.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                      <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itb.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                      <p className="text-lg font-bold text-gray-800">Total: RD${(sub+itb).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                    </>
+                  })()}
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setItemsCot(prev => [...prev, {descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])}
+                  className="text-blue-600 text-sm hover:underline">+ Agregar línea</button>
+                <button onClick={async () => {
+                  const customer_id = document.getElementById('cot-cliente').value
+                  const itemsValidos = itemsCot.filter(i => i.descripcion && i.precio_unitario)
+                  if (!itemsValidos.length) return alert('Agrega al menos un producto')
+                  try {
+                    await API.post('/invoices/cotizacion', { customer_id: customer_id || null, items: itemsValidos })
+                    setShowCotizacion(false)
+                    setItemsCot([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
+                    setBuscarProductoCot({})
+                    document.getElementById('cot-cliente-input').value = ''
+                    document.getElementById('cot-cliente').value = ''
+                    const res = await API.get('/invoices/cotizaciones/lista')
+                    setCotizaciones(res.data.data)
+                  } catch(e) { alert('Error al guardar cotización') }
+                }}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar Cotización</button>
+                <button onClick={() => setShowCotizacion(false)}
+                  className="px-4 py-1.5 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              </div>
+            </div>
+          )}
+          {cotizaciones.length > 0 && (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">ID</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cotizaciones.map(c => (
+                  <tr key={c.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-xs">{c.id.slice(0,8)}...</td>
+                    <td className="px-4 py-3">{c.cliente_nombre || 'Consumidor Final'}</td>
+                    <td className="px-4 py-3 text-right">RD${parseFloat(c.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td className="px-4 py-3">{new Date(c.creado_en).toLocaleDateString('es-DO')}</td>
+                    <td className="px-4 py-3 flex gap-2">
+                      <button onClick={() => handlePDF(c.id)} className="text-blue-600 hover:underline text-xs">PDF</button>
+                      <button onClick={async () => {
+                        if (!confirm('¿Convertir esta cotización a factura?')) return
+                        try {
+                          await API.put(`/invoices/cotizacion/${c.id}/convertir`)
+                          const res = await API.get('/invoices/cotizaciones/lista')
+                          setCotizaciones(res.data.data)
+                          fetchData()
+                          alert('¡Factura emitida exitosamente!')
+                        } catch(e) { alert('Error al convertir') }
+                      }} className="text-green-600 hover:underline text-xs">Convertir a Factura</button>
+                      <button onClick={async () => {
+                        if (!confirm('¿Eliminar esta cotización?')) return
+                        try {
+                          await API.put(`/invoices/${c.id}/anular`)
+                          const res = await API.get('/invoices/cotizaciones/lista')
+                          setCotizaciones(res.data.data)
+                        } catch(e) { alert('Error') }
+                      }} className="text-red-500 hover:underline text-xs">Eliminar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {cotizaciones.length === 0 && !showCotizacion && (
+            <p className="text-gray-400 text-sm text-center py-8">No hay cotizaciones</p>
+          )}
+        </div>
+      )}
+
+      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && tab !== 'producto' && tab !== 'cliente' && tab !== 'chofer' && tab !== 'relacion_vendedor' && tab !== 'cotizacion' && (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
           <p className="text-lg">Módulo en desarrollo...</p>
           <p className="text-sm mt-2">Próximamente disponible</p>
