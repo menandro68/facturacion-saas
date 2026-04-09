@@ -1409,13 +1409,10 @@ export default function Facturas() {
             <button
               onClick={async () => {
                 const vendedorId = document.getElementById('ped-vendedor-filtro').value
-                const res = await API.get('/invoices/pedidos/lista')
-                if (!vendedorId) {
-                  setPedidos(res.data.data)
-                  return
-                }
-                const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId).map(c => c.id)
-                setPedidos(res.data.data.filter(p => clientesVendedor.includes(p.customer_id)))
+                let url = '/invoices/pedidos/lista'
+                if (vendedorId) url += `?vendedor_id=${vendedorId}`
+                const res = await API.get(url)
+                setPedidos(res.data.data)
               }}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
               Buscar
