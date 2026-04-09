@@ -27,6 +27,7 @@ export default function Facturas() {
   const [dropdownPed, setDropdownPed] = useState({})
   const [pedClienteIndex, setPedClienteIndex] = useState(-1)
   const [pedClienteFiltrados, setPedClienteFiltrados] = useState([])
+  const [pedClienteSeleccionadoId, setPedClienteSeleccionadoId] = useState('')
   const [pedProductoIndex, setPedProductoIndex] = useState({})
   const pedClienteInputRef = useRef(null)
   const pedProductoRefs = useRef({})
@@ -1187,6 +1188,7 @@ export default function Facturas() {
                   className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                   onChange={e => {
                     document.getElementById('ped-cliente').value = ''
+                    setPedClienteSeleccionadoId('')
                     const val = e.target.value.toLowerCase()
                     const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val)).slice(0,10)
                     setPedClienteFiltrados(filtrados)
@@ -1201,6 +1203,7 @@ export default function Facturas() {
                         div.onmousedown = () => {
                           document.getElementById('ped-cliente-input').value = c.nombre
                           document.getElementById('ped-cliente').value = c.id
+                          setPedClienteSeleccionadoId(c.id)
                           list.innerHTML = ''
                           setPedClienteIndex(-1)
                         }
@@ -1232,6 +1235,7 @@ export default function Facturas() {
                         const c = pedClienteFiltrados[pedClienteIndex]
                         document.getElementById('ped-cliente-input').value = c.nombre
                         document.getElementById('ped-cliente').value = c.id
+                        setPedClienteSeleccionadoId(c.id)
                         list.innerHTML = ''
                         setPedClienteIndex(-1)
                       }
@@ -1377,14 +1381,7 @@ export default function Facturas() {
                   onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); pedGuardarRef.current?.focus() } }}
                   className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
                 <button ref={pedGuardarRef} onClick={async () => {
-                  let customer_id = document.getElementById('ped-cliente').value
-                  if (!customer_id) {
-                    const inputVal = document.getElementById('ped-cliente-input').value.toLowerCase().trim()
-                    if (inputVal) {
-                      const match = clientes.find(c => c.nombre.toLowerCase() === inputVal)
-                      if (match) customer_id = match.id
-                    }
-                  }
+                  const customer_id = pedClienteSeleccionadoId
                   const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   try {
@@ -1394,6 +1391,7 @@ export default function Facturas() {
                     setBuscarProductoPed({})
                     document.getElementById('ped-cliente-input').value = ''
                     document.getElementById('ped-cliente').value = ''
+                    setPedClienteSeleccionadoId('')
                     const res = await API.get('/invoices/pedidos/lista')
                     setPedidos(res.data.data)
                   } catch(e) { alert('Error al guardar pedido') }
