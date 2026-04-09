@@ -20,6 +20,14 @@ export default function Facturas() {
   const [facturasChofer, setFacturasChofer] = useState([])
   const [relacionVendedor, setRelacionVendedor] = useState([])
   const [cotizaciones, setCotizaciones] = useState([])
+  const [notasCredito, setNotasCredito] = useState([])
+  const [showNotaCredito, setShowNotaCredito] = useState(false)
+  const [ncFacturaBuscar, setNcFacturaBuscar] = useState('')
+  const [ncFacturaEncontrada, setNcFacturaEncontrada] = useState(null)
+  const [ncItemsSeleccionados, setNcItemsSeleccionados] = useState([])
+  const [ncMotivo, setNcMotivo] = useState('')
+  const [mostrarImprimirNC, setMostrarImprimirNC] = useState(false)
+  const [ncGuardadaId, setNcGuardadaId] = useState(null)
   const [showCotizacion, setShowCotizacion] = useState(false)
   const [itemsCot, setItemsCot] = useState([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
   const [buscarProductoCot, setBuscarProductoCot] = useState({})
@@ -78,6 +86,7 @@ export default function Facturas() {
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
       API.get('/mantenimiento/zonas').then(r => setZonas(r.data.data)).catch(() => {})
       API.get('/invoices/cotizaciones/lista').then(r => setCotizaciones(r.data.data)).catch(() => {})
+      API.get('/invoices/nota-credito/lista').then(r => setNotasCredito(r.data.data)).catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -1424,10 +1433,226 @@ export default function Facturas() {
         </div>
       )}
 
-      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && tab !== 'producto' && tab !== 'cliente' && tab !== 'chofer' && tab !== 'relacion_vendedor' && tab !== 'cotizacion' && (
+      {tab === 'nota_credito' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Nota de Crédito</h3>
+          {!showNotaCredito ? (
+            <button onClick={() => { setShowNotaCredito(true); setNcFacturaEncontrada(null); setNcItemsSeleccionados([]); setNcMotivo('') }}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 mb-4">
+              + Nueva Nota de Crédito
+            </button>
+          ) : (
+            <div className="mb-6 border rounded-lg p-4">
+              <h4 className="font-medium mb-3 text-gray-700">Nueva Nota de Crédito</h4>
+              <div className="flex gap-3 items-end mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">NCF de Factura Original</label>
+                  <input type="text" placeholder="Ej: B0100000001"
+                    value={ncFacturaBuscar}
+                    onChange={e => setNcFacturaBuscar(e.target.value.toUpperCase())}
+                    className="border rounded px-3 py-2 text-sm w-56 uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <button onClick={async () => {
+                  const factura = facturas.find(f => (f.ncf||'').toUpperCase() === ncFacturaBuscar.trim())
+                  if (!factura) { alert('Factura no encontrada'); return }
+                  if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crédito a facturas emitidas'); return }
+                  try {
+                    const res = await API.get(`/invoices/${factura.id}`)
+                    const data = res.data.data
+                    setNcFacturaEncontrada(data)
+                    setNcItemsSeleccionados(data.items.map(it => ({
+                      ...it,
+                      seleccionado: true,
+                      cantidad_nc: parseFloat(it.cantidad)
+                    })))
+                  } catch(e) { alert('Error al cargar factura') }
+                }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                  Buscar
+                </button>
+              </div>
+
+              {ncFacturaEncontrada && (
+                <>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
+                    <p><span className="font-medium">Cliente:</span> {ncFacturaEncontrada.cliente_nombre || 'Consumidor Final'}</p>
+                    <p><span className="font-medium">NCF:</span> {ncFacturaEncontrada.ncf}</p>
+                    <p><span className="font-medium">Total factura:</span> RD${parseFloat(ncFacturaEncontrada.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                  </div>
+
+                  <p className="text-sm font-medium text-gray-700 mb-2">Selecciona los productos a devolver:</p>
+                  <table className="w-full text-sm mb-4">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-gray-600">✓</th>
+                        <th className="px-3 py-2 text-left text-gray-600">Producto</th>
+                        <th className="px-3 py-2 text-right text-gray-600">Cant. Orig.</th>
+                        <th className="px-3 py-2 text-right text-gray-600">Cant. Devolver</th>
+                        <th className="px-3 py-2 text-right text-gray-600">Precio</th>
+                        <th className="px-3 py-2 text-right text-gray-600">Subtotal NC</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ncItemsSeleccionados.map((item, idx) => (
+                        <tr key={idx} className="border-t">
+                          <td className="px-3 py-2">
+                            <input type="checkbox" checked={item.seleccionado}
+                              onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, seleccionado: e.target.checked} : it))} />
+                          </td>
+                          <td className="px-3 py-2">{item.descripcion}</td>
+                          <td className="px-3 py-2 text-right">{parseFloat(item.cantidad).toFixed(0)}</td>
+                          <td className="px-3 py-2 text-right">
+                            <input type="number" value={item.cantidad_nc} min="0.01"
+                              max={parseFloat(item.cantidad)}
+                              step="0.01"
+                              disabled={!item.seleccionado}
+                              onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_nc: e.target.value} : it))}
+                              className="border rounded px-2 py-1 text-sm w-20 text-right disabled:bg-gray-100" />
+                          </td>
+                          <td className="px-3 py-2 text-right">RD${parseFloat(item.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                          <td className="px-3 py-2 text-right font-medium">
+                            {item.seleccionado ? 'RD$' + (parseFloat(item.cantidad_nc||0) * parseFloat(item.precio_unitario)).toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="flex justify-end mb-4">
+                    <div className="text-sm text-right bg-gray-50 p-3 rounded-lg">
+                      {(() => {
+                        let sub = 0, itb = 0
+                        ncItemsSeleccionados.filter(i => i.seleccionado).forEach(it => {
+                          const s = parseFloat(it.cantidad_nc||0) * parseFloat(it.precio_unitario)
+                          sub += s
+                          itb += s * (parseFloat(it.itbis_rate||0) / 100)
+                        })
+                        return <>
+                          <p className="text-gray-600">Subtotal NC: <span className="font-medium">RD${sub.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                          <p className="text-gray-600">ITBIS NC: <span className="font-medium">RD${itb.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                          <p className="text-lg font-bold text-red-600">Total NC: RD${(sub+itb).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                        </>
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
+                    <input type="text" placeholder="Ej: Devolución de mercancía..."
+                      value={ncMotivo} onChange={e => setNcMotivo(e.target.value)}
+                      className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button onClick={async () => {
+                      const itemsNC = ncItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_nc) > 0)
+                      if (!itemsNC.length) { alert('Selecciona al menos un producto'); return }
+                      if (!confirm('¿Emitir esta Nota de Crédito?')) return
+                      try {
+                        const resPost = await API.post('/invoices/nota-credito', {
+                          factura_id: ncFacturaEncontrada.id,
+                          motivo: ncMotivo,
+                          items: itemsNC.map(it => ({
+                            product_id: it.product_id,
+                            descripcion: it.descripcion,
+                            cantidad: parseFloat(it.cantidad_nc),
+                            precio_unitario: parseFloat(it.precio_unitario),
+                            itbis_rate: parseFloat(it.itbis_rate || 0)
+                          }))
+                        })
+                        setShowNotaCredito(false)
+                        setNcFacturaBuscar('')
+                        setNcFacturaEncontrada(null)
+                        setNcItemsSeleccionados([])
+                        setNcMotivo('')
+                        const resLista = await API.get('/invoices/nota-credito/lista')
+                        setNotasCredito(resLista.data.data)
+                        setNcGuardadaId(resPost.data.data?.id)
+                        setMostrarImprimirNC(true)
+                      } catch(e) { alert(e.response?.data?.mensaje || 'Error al emitir nota de crédito') }
+                    }}
+                      className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+                      Emitir Nota de Crédito
+                    </button>
+                    <button onClick={() => setShowNotaCredito(false)}
+                      className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {notasCredito.length > 0 && (
+            <table className="w-full text-sm mt-4">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">Número NC</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {notasCredito.map(n => (
+                  <tr key={n.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-red-600 font-medium">{n.ncf}</td>
+                    <td className="px-4 py-3">{n.cliente_nombre || 'Consumidor Final'}</td>
+                    <td className="px-4 py-3 text-right text-red-600 font-medium">-RD${parseFloat(n.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td className="px-4 py-3">{new Date(n.creado_en).toLocaleDateString('es-DO')}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => handlePDF(n.id)} className="text-blue-600 hover:underline text-xs">PDF</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {notasCredito.length === 0 && !showNotaCredito && (
+            <p className="text-gray-400 text-sm text-center py-8">No hay notas de crédito</p>
+          )}
+        </div>
+      )}
+
+      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && tab !== 'producto' && tab !== 'cliente' && tab !== 'chofer' && tab !== 'relacion_vendedor' && tab !== 'cotizacion' && tab !== 'nota_credito' && (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
           <p className="text-lg">Módulo en desarrollo...</p>
           <p className="text-sm mt-2">Próximamente disponible</p>
+        </div>
+      )}
+
+      {/* Modal imprimir Nota de Crédito */}
+      {mostrarImprimirNC && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la Nota de Crédito?</p>
+            <div className="flex justify-center gap-6">
+              <button
+                autoFocus
+                onClick={() => {
+                  const token = sessionStorage.getItem('token')
+                  window.open(`https://facturacion-saas-production.up.railway.app/invoices/${ncGuardadaId}/pdf?token=${token}`, '_blank')
+                  setMostrarImprimirNC(false)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-no-nc')?.focus() }
+                  if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); window.open(`https://facturacion-saas-production.up.railway.app/invoices/${ncGuardadaId}/pdf?token=${token}`, '_blank'); setMostrarImprimirNC(false) }
+                }}
+                className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 text-sm font-medium">
+                Sí
+              </button>
+              <button
+                id="btn-no-nc"
+                onClick={() => setMostrarImprimirNC(false)}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); document.querySelector('[autoFocus]')?.focus() }
+                  if (e.key === 'Enter') setMostrarImprimirNC(false)
+                }}
+                className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
+                No
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
