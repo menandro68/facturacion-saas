@@ -1401,22 +1401,25 @@ export default function Facturas() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por Vendedor</label>
               <select id="ped-vendedor-filtro"
-                onChange={async e => {
-                  const vendedorId = e.target.value
-                  if (!vendedorId) {
-                    const res = await API.get('/invoices/pedidos/lista')
-                    setPedidos(res.data.data)
-                    return
-                  }
-                  const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId).map(c => c.id)
-                  const res = await API.get('/invoices/pedidos/lista')
-                  setPedidos(res.data.data.filter(p => clientesVendedor.includes(p.customer_id)))
-                }}
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
                 <option value="">-- Todos los vendedores --</option>
                 {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
             </div>
+            <button
+              onClick={async () => {
+                const vendedorId = document.getElementById('ped-vendedor-filtro').value
+                const res = await API.get('/invoices/pedidos/lista')
+                if (!vendedorId) {
+                  setPedidos(res.data.data)
+                  return
+                }
+                const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId).map(c => c.id)
+                setPedidos(res.data.data.filter(p => clientesVendedor.includes(p.customer_id)))
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+              Buscar
+            </button>
           </div>
 
           {pedidos.length > 0 && (
