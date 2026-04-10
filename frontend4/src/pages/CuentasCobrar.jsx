@@ -169,6 +169,7 @@ export default function CuentasCobrar() {
           { id: 'cobro_vendedor', label: 'Cobro por Vendedor' },
           { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
           { id: 'estado_cuenta', label: 'Estado de Cuenta x Cliente' },
+          { id: 'historial', label: 'Historial' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -634,6 +635,91 @@ export default function CuentasCobrar() {
             </thead>
             <tbody id="ec-tbody">
               <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">Busca un cliente para ver su estado de cuenta</td></tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+      {tab === 'historial' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Historial de Cliente</h3>
+          <div className="relative mb-6 max-w-md">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente</label>
+            <input type="text" placeholder="🔍 Escriba el nombre del cliente..." autoComplete="off"
+              className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={e => {
+                const val = e.target.value.toLowerCase()
+                const list = document.getElementById('hist-cliente-list')
+                list.innerHTML = ''
+                document.getElementById('hist-tbody').innerHTML = ''
+                document.getElementById('hist-titulo').innerHTML = ''
+                if (val.length < 2) return
+                const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val)).slice(0, 10)
+                filtrados.forEach(c => {
+                  const div = document.createElement('div')
+                  div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 border-b'
+                  div.textContent = c.nombre
+                  div.onmousedown = () => {
+                    e.target.value = c.nombre
+                    list.innerHTML = ''
+                    // Mapeo de condiciones a días
+                    const condDias = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
+                    const diasCondicion = condDias[c.condiciones] || 0
+                    // Últimas 10 facturas (emitidas + pagadas)
+                    const facturasCliente = todasFacturas
+                      .filter(f => f.customer_id === c.id && (f.estado === 'emitida' || f.estado === 'pagada'))
+                      .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
+                      .slice(0, 10)
+                    const hoy = new Date()
+                    document.getElementById('hist-titulo').innerHTML = `
+                      <div class="mb-3 p-3 bg-blue-50 rounded-lg text-sm">
+                        <span class="font-medium text-gray-700">Cliente: </span><span class="text-blue-700 font-bold">${c.nombre}</span>
+                        <span class="ml-4 font-medium text-gray-700">Condición: </span><span class="text-gray-600">${c.condiciones?.replace(/_/g, ' ') || 'contado'} (${diasCondicion} días)</span>
+                      </div>`
+                    const filas = facturasCliente.map(f => {
+                      const fechaEmitida = new Date(f.creado_en)
+                      const fechaVencimientoCondicion = new Date(fechaEmitida)
+                      fechaVencimientoCondicion.setDate(fechaVencimientoCondicion.getDate() + diasCondicion)
+                      // Fecha de pago: si está pagada usamos actualizado_en, si no hoy
+                      const fechaPago = f.estado === 'pagada' ? new Date(f.actualizado_en) : null
+                      const fechaRef = fechaPago || hoy
+                      const diasVencido = Math.max(0, Math.floor((fechaRef - fechaVencimientoCondicion) / (1000*60*60*24)))
+                      const vencidoColor = diasVencido === 0 ? 'color:#16a34a' : diasVencido <= 30 ? 'color:#f97316' : 'color:#dc2626;font-weight:bold'
+                      return `<tr class="border-t hover:bg-gray-50">
+                        <td class="px-4 py-3 font-mono text-sm">${f.ncf || 'N/A'}</td>
+                        <td class="px-4 py-3 text-right text-sm font-medium">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td class="px-4 py-3 text-sm">${fechaEmitida.toLocaleDateString('es-DO')}</td>
+                        <td class="px-4 py-3 text-sm">${fechaPago ? fechaPago.toLocaleDateString('es-DO') : '-'}</td>
+                        <td class="px-4 py-3 text-sm text-center" style="${vencidoColor}">${diasVencido > 0 ? diasVencido+' días' : 'Al día'}</td>
+                        <td class="px-4 py-3 text-sm">
+                          <span class="px-2 py-1 rounded text-xs font-medium ${f.estado === 'pagada' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                            ${f.estado.toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>`
+                    }).join('')
+                    document.getElementById('hist-tbody').innerHTML = filas || '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No hay facturas</td></tr>'
+                  }
+                  list.appendChild(div)
+                })
+              }}
+              onBlur={() => setTimeout(() => { document.getElementById('hist-cliente-list').innerHTML = '' }, 200)}
+            />
+            <div id="hist-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+          </div>
+          <div id="hist-titulo"></div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-gray-600">FACTURA</th>
+                <th className="px-4 py-3 text-right text-gray-600">VALOR</th>
+                <th className="px-4 py-3 text-left text-gray-600">FECHA EMITIDA</th>
+                <th className="px-4 py-3 text-left text-gray-600">FECHA PAGO</th>
+                <th className="px-4 py-3 text-center text-gray-600">DÍAS VENCIDO</th>
+                <th className="px-4 py-3 text-left text-gray-600">ESTADO</th>
+              </tr>
+            </thead>
+            <tbody id="hist-tbody">
+              <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Busca un cliente para ver su historial</td></tr>
             </tbody>
           </table>
         </div>
