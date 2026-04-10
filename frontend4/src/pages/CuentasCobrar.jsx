@@ -143,7 +143,7 @@ export default function CuentasCobrar() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-lg shadow p-4">
                   <p className="text-sm text-gray-500">Total Cuentas</p>
-                  <p className="text-2xl font-bold text-blue-600">{emitidas.length}</p>
+                  <p className="text-2xl font-bold text-blue-600">RD$ {(totalPendiente + totalCobrado).toLocaleString('es-DO', {minimumFractionDigits:2})}</p>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4">
                   <p className="text-sm text-gray-500">Total Pendiente</p>
@@ -155,7 +155,7 @@ export default function CuentasCobrar() {
                 </div>
                 <div className="bg-white rounded-lg shadow p-4">
                   <p className="text-sm text-gray-500">Vencidas</p>
-                  <p className="text-2xl font-bold text-red-600">{vencidas.length}</p>
+                  <p className="text-2xl font-bold text-red-600">RD$ {vencidas.reduce((s,f) => s + parseFloat(f.total||0), 0).toLocaleString('es-DO', {minimumFractionDigits:2})}</p>
                 </div>
               </div>
             )
