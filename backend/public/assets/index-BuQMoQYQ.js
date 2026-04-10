@@ -314,7 +314,7 @@ Error generating stack: `+e.message+`
                     <td>${e.cliente_nombre||`Consumidor Final`}</td>
                     <td style="text-align:center">${t.toLocaleDateString(`es-DO`)}</td>
                     <td style="text-align:right">${parseFloat(e.total).toLocaleString(`es-DO`,{minimumFractionDigits:2})}</td>
-                    <td style="text-align:center">${i}</td>
+                    <td style="text-align:center;${i>60?`color:#dc2626;font-weight:bold`:``}">${i}</td>
                     <td style="text-align:right">${a>0?a.toLocaleString(`es-DO`,{minimumFractionDigits:2}):`-`}</td>
                     <td style="text-align:right">${o>0?o.toLocaleString(`es-DO`,{minimumFractionDigits:2}):`-`}</td>
                     <td style="text-align:right;font-weight:bold">${s.toLocaleString(`es-DO`,{minimumFractionDigits:2})}</td>

@@ -420,7 +420,7 @@ export default function CuentasCobrar() {
                     <td>${f.cliente_nombre || 'Consumidor Final'}</td>
                     <td style="text-align:center">${fechaEmitida.toLocaleDateString('es-DO')}</td>
                     <td style="text-align:right">${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td style="text-align:center">${diasVencido}</td>
+                    <td style="text-align:center;${diasVencido > 60 ? 'color:#dc2626;font-weight:bold' : ''}">${diasVencido}</td>
                     <td style="text-align:right">${montoNc > 0 ? montoNc.toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}</td>
                     <td style="text-align:right">${abono > 0 ? abono.toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}</td>
                     <td style="text-align:right;font-weight:bold">${balance.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
