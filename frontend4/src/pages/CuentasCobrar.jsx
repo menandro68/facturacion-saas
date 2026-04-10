@@ -19,6 +19,7 @@ export default function CuentasCobrar() {
   const [abonoMonto, setAbonoMonto] = useState('')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
+  const [cxcFiltradas, setCxcFiltradas] = useState([])
 
   const fetchData = async () => {
     try {
@@ -383,6 +384,7 @@ export default function CuentasCobrar() {
                   <p class="text-sm text-gray-600">ITBIS: <span class="font-medium">RD$${totalItbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                   <p class="text-lg font-bold text-red-600 mt-1">Total Pendiente: RD$${totalPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>`
                 const tbody = document.getElementById('cxc-tbody')
+                setCxcFiltradas(filtradas)
                 tbody.innerHTML = filtradas.length === 0
                   ? '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No hay cuentas por cobrar</td></tr>'
                   : filtradas.map(f => `
@@ -402,25 +404,61 @@ export default function CuentasCobrar() {
                 const resumenHtml = document.getElementById('cxc-resultado').innerHTML
                 const tbodyHtml = document.getElementById('cxc-tbody').innerHTML
                 const printW = window.open('', '_blank')
+                const hoy = new Date()
+                const filas = cxcFiltradas.map(f => {
+                  const fechaEmitida = new Date(f.creado_en)
+                  const diasVencido = f.fecha_vencimiento
+                    ? Math.max(0, Math.floor((hoy - new Date(f.fecha_vencimiento)) / (1000*60*60*24)))
+                    : 0
+                  const abono = parseFloat(f.monto_pagado || 0)
+                  const balance = parseFloat(f.total) - abono
+                  return `<tr>
+                    <td>${f.ncf || 'N/A'}</td>
+                    <td>${f.cliente_nombre || 'Consumidor Final'}</td>
+                    <td style="text-align:center">${fechaEmitida.toLocaleDateString('es-DO')}</td>
+                    <td style="text-align:right">${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">${diasVencido}</td>
+                    <td style="text-align:right">-</td>
+                    <td style="text-align:right">${abono > 0 ? abono.toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}</td>
+                    <td style="text-align:right;font-weight:bold">${balance.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                  </tr>`
+                }).join('')
+                const totalBalance = cxcFiltradas.reduce((s,f) => s + parseFloat(f.total||0), 0)
                 printW.document.write(`
                   <!DOCTYPE html><html><head><title>CXC Vendedor</title>
                   <style>
                     body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
                     h2{color:#1e40af;margin-bottom:4px}
-                    p.sub{color:#64748b;font-size:13px;margin-bottom:16px}
-                    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
-                    th{background:#1e40af;color:white;padding:8px;text-align:left}
-                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    p.sub{color:#64748b;font-size:12px;margin-bottom:12px}
+                    table{width:100%;border-collapse:collapse;font-size:12px}
+                    th{background:#1e40af;color:white;padding:7px 8px;text-align:left;border:1px solid #1e3a8a}
+                    td{padding:6px 8px;border:1px solid #cbd5e1}
                     tr:nth-child(even){background:#f8fafc}
-                    .resumen{background:#fef2f2;border-radius:8px;padding:12px;text-align:right;margin-bottom:12px}
+                    .total-row{font-weight:bold;background:#f1f5f9}
                     @media print{button{display:none}}
                   </style></head><body>
                   <h2>Cuenta por Cobrar — Vendedor: ${vendedorNombre}</h2>
-                  <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
-                  <div class="resumen">${resumenHtml}</div>
+                  <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
                   <table>
-                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total Pendiente</th><th>Vencimiento</th><th>Fecha</th></tr></thead>
-                    <tbody>${tbodyHtml}</tbody>
+                    <thead><tr>
+                      <th>FACTURA</th>
+                      <th>CLIENTE</th>
+                      <th style="text-align:center">FECHA EMITIDA</th>
+                      <th style="text-align:right">VALOR</th>
+                      <th style="text-align:center">DÍAS VENCIDO</th>
+                      <th style="text-align:right">NOTA DE CRÉDITO</th>
+                      <th style="text-align:right">ABONO</th>
+                      <th style="text-align:right">BALANCE</th>
+                    </tr></thead>
+                    <tbody>
+                      ${filas}
+                      <tr class="total-row">
+                        <td colspan="3">TOTAL</td>
+                        <td style="text-align:right">${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td colspan="3"></td>
+                        <td style="text-align:right">${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      </tr>
+                    </tbody>
                   </table>
                   <script>window.onload=()=>window.print()</script>
                   </body></html>`)
