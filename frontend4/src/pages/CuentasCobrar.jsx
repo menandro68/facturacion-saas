@@ -107,9 +107,58 @@ export default function CuentasCobrar() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Cuentas por Cobrar</h2>
-        <button onClick={() => window.print()}
+        <button onClick={() => {
+          const hoy = new Date()
+          const emitidas = todasFacturas.filter(f => f.estado === 'emitida')
+          const pagadas = todasFacturas.filter(f => f.estado === 'pagada')
+          const vencidas = emitidas.filter(f => f.fecha_vencimiento && new Date(f.fecha_vencimiento) < hoy)
+          const totalPendiente = emitidas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+          const totalCobrado = pagadas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+          const totalCuentas = totalPendiente + totalCobrado
+          const totalVencidas = vencidas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+          const printW = window.open('', '_blank')
+          printW.document.write(`
+            <!DOCTYPE html><html><head><title>Resumen Cuentas por Cobrar</title>
+            <style>
+              body{font-family:Arial,sans-serif;padding:30px;color:#1e293b}
+              h2{color:#1e40af;margin-bottom:4px}
+              p.sub{color:#64748b;font-size:13px;margin-bottom:24px}
+              .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:600px}
+              .card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px}
+              .card p.label{font-size:13px;color:#64748b;margin:0 0 6px}
+              .card p.valor{font-size:22px;font-weight:bold;margin:0}
+              .pendiente{color:#f97316}
+              .cobrado{color:#16a34a}
+              .vencidas{color:#dc2626}
+              .total{color:#1e40af}
+              @media print{button{display:none}}
+            </style></head><body>
+            <h2>Resumen — Cuentas por Cobrar</h2>
+            <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
+            <div class="grid">
+              <div class="card">
+                <p class="label">Total Cuentas</p>
+                <p class="valor total">RD$ ${totalCuentas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+              </div>
+              <div class="card">
+                <p class="label">Total Pendiente</p>
+                <p class="valor pendiente">RD$ ${totalPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+              </div>
+              <div class="card">
+                <p class="label">Cobrado Total</p>
+                <p class="valor cobrado">RD$ ${totalCobrado.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+              </div>
+              <div class="card">
+                <p class="label">Vencidas</p>
+                <p class="valor vencidas">RD$ ${totalVencidas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+              </div>
+            </div>
+            <script>window.onload=()=>window.print()</script>
+            </body></html>`)
+          printW.document.close()
+        }}
           className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
-          🖨️ Imprimir
+          🖨️ Imprimir Resumen
         </button>
       </div>
 
