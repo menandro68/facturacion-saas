@@ -168,6 +168,7 @@ export default function CuentasCobrar() {
           { id: 'cuentas', label: 'Cuentas por Cobrar' },
           { id: 'cobro_vendedor', label: 'Cobro por Vendedor' },
           { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
+          { id: 'estado_cuenta', label: 'Estado de Cuenta x Cliente' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -540,6 +541,88 @@ export default function CuentasCobrar() {
             </thead>
             <tbody id="cxc-tbody">
               <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-400">Selecciona un vendedor y presiona Buscar</td></tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+      {tab === 'estado_cuenta' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Estado de Cuenta por Cliente</h3>
+          <div className="relative mb-6 max-w-md">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente</label>
+            <input type="text" placeholder="🔍 Escriba el nombre del cliente..." autoComplete="off"
+              className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={e => {
+                const val = e.target.value.toLowerCase()
+                const list = document.getElementById('ec-cliente-list')
+                list.innerHTML = ''
+                document.getElementById('ec-resultado').innerHTML = ''
+                document.getElementById('ec-tbody').innerHTML = ''
+                if (val.length < 2) return
+                const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val)).slice(0, 10)
+                filtrados.forEach(c => {
+                  const div = document.createElement('div')
+                  div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 border-b'
+                  div.textContent = c.nombre
+                  div.onmousedown = () => {
+                    e.target.value = c.nombre
+                    list.innerHTML = ''
+                    const facturasCliente = todasFacturas.filter(f => f.customer_id === c.id && f.estado === 'emitida')
+                    const notasCliente = todasFacturas.filter(f => f.customer_id === c.id && f.estado === 'nota_credito')
+                    const hoy = new Date()
+                    let totalFacturas = 0, totalNc = 0, totalAbono = 0, totalBalance = 0
+                    const filas = facturasCliente.map(f => {
+                      const nc = notasCliente.filter(n => n.referencia_id === f.id)
+                      const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                      const abono = parseFloat(f.monto_pagado || 0)
+                      const balance = parseFloat(f.total) - montoNc - abono
+                      const diasVencido = f.fecha_vencimiento ? Math.max(0, Math.floor((hoy - new Date(f.fecha_vencimiento)) / (1000*60*60*24))) : 0
+                      totalFacturas += parseFloat(f.total)
+                      totalNc += montoNc
+                      totalAbono += abono
+                      totalBalance += balance
+                      return `<tr class="border-t hover:bg-gray-50">
+                        <td class="px-4 py-3 font-mono text-sm">${f.ncf || 'N/A'}</td>
+                        <td class="px-4 py-3 text-sm">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                        <td class="px-4 py-3 text-right text-sm">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td class="px-4 py-3 text-right text-sm ${diasVencido > 60 ? 'text-red-600 font-bold' : ''}">${diasVencido}</td>
+                        <td class="px-4 py-3 text-right text-sm text-blue-600">${montoNc > 0 ? 'RD$'+montoNc.toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}</td>
+                        <td class="px-4 py-3 text-right text-sm text-green-600">${abono > 0 ? 'RD$'+abono.toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}</td>
+                        <td class="px-4 py-3 text-right text-sm font-bold ${balance > 0 ? 'text-red-600' : 'text-green-600'}">RD$${balance.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      </tr>`
+                    }).join('')
+                    document.getElementById('ec-resultado').innerHTML = `
+                      <div class="flex gap-4 flex-wrap mb-4">
+                        <div class="bg-gray-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Facturas</p><p class="text-lg font-bold text-gray-800">${facturasCliente.length}</p></div>
+                        <div class="bg-orange-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Total Facturado</p><p class="text-lg font-bold text-orange-600">RD$${totalFacturas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                        <div class="bg-blue-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Nota Crédito</p><p class="text-lg font-bold text-blue-600">RD$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                        <div class="bg-green-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Abonado</p><p class="text-lg font-bold text-green-600">RD$${totalAbono.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                        <div class="bg-red-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Balance</p><p class="text-lg font-bold text-red-600">RD$${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                      </div>`
+                    document.getElementById('ec-tbody').innerHTML = filas || '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No hay facturas pendientes</td></tr>'
+                  }
+                  list.appendChild(div)
+                })
+              }}
+              onBlur={() => setTimeout(() => { document.getElementById('ec-cliente-list').innerHTML = '' }, 200)}
+            />
+            <div id="ec-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+          </div>
+          <div id="ec-resultado"></div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-gray-600">FACTURA</th>
+                <th className="px-4 py-3 text-left text-gray-600">FECHA</th>
+                <th className="px-4 py-3 text-right text-gray-600">VALOR</th>
+                <th className="px-4 py-3 text-right text-gray-600">DÍAS VEN.</th>
+                <th className="px-4 py-3 text-right text-gray-600">NOTA CR.</th>
+                <th className="px-4 py-3 text-right text-gray-600">ABONO</th>
+                <th className="px-4 py-3 text-right text-gray-600">BALANCE</th>
+              </tr>
+            </thead>
+            <tbody id="ec-tbody">
+              <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">Busca un cliente para ver su estado de cuenta</td></tr>
             </tbody>
           </table>
         </div>
