@@ -405,20 +405,23 @@ export default function CuentasCobrar() {
                 const tbodyHtml = document.getElementById('cxc-tbody').innerHTML
                 const printW = window.open('', '_blank')
                 const hoy = new Date()
+                const notasCredito = todasFacturas.filter(x => x.estado === 'nota_credito')
                 const filas = cxcFiltradas.map(f => {
                   const fechaEmitida = new Date(f.creado_en)
                   const diasVencido = f.fecha_vencimiento
                     ? Math.max(0, Math.floor((hoy - new Date(f.fecha_vencimiento)) / (1000*60*60*24)))
                     : 0
+                  const nc = notasCredito.filter(n => n.referencia_id === f.id)
+                  const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                   const abono = parseFloat(f.monto_pagado || 0)
-                  const balance = parseFloat(f.total) - abono
+                  const balance = parseFloat(f.total) - montoNc - abono
                   return `<tr>
                     <td>${f.ncf || 'N/A'}</td>
                     <td>${f.cliente_nombre || 'Consumidor Final'}</td>
                     <td style="text-align:center">${fechaEmitida.toLocaleDateString('es-DO')}</td>
                     <td style="text-align:right">${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                     <td style="text-align:center">${diasVencido}</td>
-                    <td style="text-align:right">-</td>
+                    <td style="text-align:right">${montoNc > 0 ? montoNc.toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}</td>
                     <td style="text-align:right">${abono > 0 ? abono.toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}</td>
                     <td style="text-align:right;font-weight:bold">${balance.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                   </tr>`
