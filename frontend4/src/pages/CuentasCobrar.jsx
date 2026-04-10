@@ -396,6 +396,38 @@ export default function CuentasCobrar() {
               }}>
               Buscar
             </button>
+            <button className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
+              onClick={() => {
+                const vendedorNombre = vendedores.find(v => v.id === document.getElementById('cxc-vendedor').value)?.nombre || ''
+                const resumenHtml = document.getElementById('cxc-resultado').innerHTML
+                const tbodyHtml = document.getElementById('cxc-tbody').innerHTML
+                const printW = window.open('', '_blank')
+                printW.document.write(`
+                  <!DOCTYPE html><html><head><title>CXC Vendedor</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.sub{color:#64748b;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    .resumen{background:#fef2f2;border-radius:8px;padding:12px;text-align:right;margin-bottom:12px}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Cuenta por Cobrar — Vendedor: ${vendedorNombre}</h2>
+                  <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
+                  <div class="resumen">${resumenHtml}</div>
+                  <table>
+                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total Pendiente</th><th>Vencimiento</th><th>Fecha</th></tr></thead>
+                    <tbody>${tbodyHtml}</tbody>
+                  </table>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                printW.document.close()
+              }}>
+              🖨️ Imprimir
+            </button>
           </div>
           <div id="cxc-resultado" className="mb-4 text-right bg-red-50 p-3 rounded-lg min-h-8"></div>
           <table className="w-full text-sm">
