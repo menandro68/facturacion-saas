@@ -132,26 +132,34 @@ export default function CuentasCobrar() {
       {/* Tab: Cuentas por Cobrar */}
       {tab === 'cuentas' && (
         <>
-          {resumen && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-lg shadow p-4">
-                <p className="text-sm text-gray-500">Total Cuentas</p>
-                <p className="text-2xl font-bold text-blue-600">{resumen.total_cuentas}</p>
+          {(() => {
+            const hoy = new Date()
+            const emitidas = todasFacturas.filter(f => f.estado === 'emitida')
+            const pagadas = todasFacturas.filter(f => f.estado === 'pagada')
+            const vencidas = emitidas.filter(f => f.fecha_vencimiento && new Date(f.fecha_vencimiento) < hoy)
+            const totalPendiente = emitidas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+            const totalCobrado = pagadas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white rounded-lg shadow p-4">
+                  <p className="text-sm text-gray-500">Total Cuentas</p>
+                  <p className="text-2xl font-bold text-blue-600">{emitidas.length}</p>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <p className="text-sm text-gray-500">Total Pendiente</p>
+                  <p className="text-2xl font-bold text-orange-500">RD$ {totalPendiente.toLocaleString('es-DO', {minimumFractionDigits:2})}</p>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <p className="text-sm text-gray-500">Cobrado total</p>
+                  <p className="text-2xl font-bold text-green-600">RD$ {totalCobrado.toLocaleString('es-DO', {minimumFractionDigits:2})}</p>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <p className="text-sm text-gray-500">Vencidas</p>
+                  <p className="text-2xl font-bold text-red-600">{vencidas.length}</p>
+                </div>
               </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <p className="text-sm text-gray-500">Total Pendiente</p>
-                <p className="text-2xl font-bold text-orange-500">RD$ {parseFloat(resumen.total_pendiente).toLocaleString()}</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <p className="text-sm text-gray-500">Cobrado total</p>
-                <p className="text-2xl font-bold text-green-600">RD$ {parseFloat(resumen.total_pagado).toLocaleString()}</p>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <p className="text-sm text-gray-500">Vencidas</p>
-                <p className="text-2xl font-bold text-red-600">{resumen.total_vencidas}</p>
-              </div>
-            </div>
-          )}
+            )
+          })()}
 
           {showForm && (
             <div className="bg-white rounded-lg shadow p-6 mb-6">
