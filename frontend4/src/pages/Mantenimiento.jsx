@@ -11,7 +11,7 @@ export default function Mantenimiento() {
   const [editando, setEditando] = useState(null)
   const [error, setError] = useState('')
 
-  const [formVendedor, setFormVendedor] = useState({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '' })
+  const [formVendedor, setFormVendedor] = useState({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '', usuario: '', password: '' })
   const [formZona, setFormZona] = useState({ nombre: '', descripcion: '' })
   const [formChofer, setFormChofer] = useState({ nombre: '', cedula: '', licencia: '', telefono: '', email: '', vehiculo: '', placa: '' })
 
@@ -38,7 +38,7 @@ export default function Mantenimiento() {
   const handleNuevo = () => {
     setEditando(null)
     setError('')
-    if (tab === 'vendedores') setFormVendedor({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '' })
+    if (tab === 'vendedores') setFormVendedor({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '', usuario: '', password: '' })
     if (tab === 'zonas') setFormZona({ nombre: '', descripcion: '' })
     if (tab === 'choferes') setFormChofer({ nombre: '', cedula: '', licencia: '', telefono: '', email: '', vehiculo: '', placa: '' })
     setShowForm(true)
@@ -148,6 +148,18 @@ export default function Mantenimiento() {
             <div className="hidden">
               <label className="block text-sm font-medium text-gray-700 mb-1">Comisión %</label>
               <input type="number" step="0.01" value={formVendedor.comision_pct} onChange={e => setFormVendedor({...formVendedor, comision_pct: e.target.value})}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+              <input value={formVendedor.usuario} onChange={e => setFormVendedor({...formVendedor, usuario: e.target.value})}
+                placeholder="Nombre de usuario para login"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+              <input type="password" value={formVendedor.password} onChange={e => setFormVendedor({...formVendedor, password: e.target.value})}
+                placeholder={editando ? 'Dejar vacío para no cambiar' : 'Contraseña de acceso'}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2 flex gap-3 justify-end">

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import API from '../services/api'
 
 export default function Login({ onLogin }) {
-  const [form, setForm] = useState({ email: 'menandro68@gmail.com', password: '132312ml' })
+  const [tipo, setTipo] = useState('admin')
+  const [form, setForm] = useState({ email: 'menandro68@gmail.com', password: '132312ml', usuario: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -15,9 +16,13 @@ export default function Login({ onLogin }) {
     setLoading(true)
     setError('')
     try {
-      const res = await API.post('/auth/login', form)
-      sessionStorage.setItem('token', res.data.token)           // ← MODIFICADO
-      sessionStorage.setItem('usuario', JSON.stringify(res.data.usuario)) // ← MODIFICADO
+      const payload = tipo === 'admin'
+        ? { email: form.email, password: form.password }
+        : { usuario: form.usuario, password: form.password }
+
+      const res = await API.post('/auth/login', payload)
+      sessionStorage.setItem('token', res.data.token)
+      sessionStorage.setItem('usuario', JSON.stringify(res.data.usuario))
       onLogin(res.data.usuario)
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al iniciar sesión')
@@ -34,6 +39,24 @@ export default function Login({ onLogin }) {
         </h1>
         <p className="text-gray-500 text-center mb-6">Inicia sesión para continuar</p>
 
+        {/* Selector Admin / Vendedor */}
+        <div className="flex mb-6 border border-gray-200 rounded overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setTipo('admin')}
+            className={`flex-1 py-2 text-sm font-medium ${tipo === 'admin' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            Administrador
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipo('vendedor')}
+            className={`flex-1 py-2 text-sm font-medium ${tipo === 'vendedor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            Vendedor
+          </button>
+        </div>
+
         {error && (
           <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">
             {error}
@@ -42,23 +65,35 @@ export default function Login({ onLogin }) {
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+            {tipo === 'admin' ? (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </>
+            ) : (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                <input
+                  type="text"
+                  name="usuario"
+                  value={form.usuario}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </>
+            )}
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contraseña
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
             <input
               type="password"
               name="password"
