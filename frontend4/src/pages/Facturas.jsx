@@ -1413,14 +1413,19 @@ export default function Facturas({ vendedor_id = null }) {
               <input type="date" id="ped-fecha-fin"
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por Vendedor</label>
-              <select id="ped-vendedor-filtro"
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                <option value="">-- Todos los vendedores --</option>
-                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-              </select>
-            </div>
+            {!vendedor_id && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por Vendedor</label>
+                <select id="ped-vendedor-filtro"
+                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
+                  <option value="">-- Todos los vendedores --</option>
+                  {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+                </select>
+              </div>
+            )}
+            {vendedor_id && (
+              <input type="hidden" id="ped-vendedor-filtro" value={vendedor_id} />
+            )}
             <button
               onClick={async () => {
                 const vendedorId = document.getElementById('ped-vendedor-filtro').value
@@ -1460,6 +1465,7 @@ export default function Facturas({ vendedor_id = null }) {
                     <td className="px-4 py-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</td>
                     <td className="px-4 py-3 flex gap-2">
                       <button onClick={async () => {
+                        if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
                         if (!confirm('¿Convertir este pedido a factura?')) return
                         try {
                           await API.put(`/invoices/pedido/${p.id}/convertir`)
