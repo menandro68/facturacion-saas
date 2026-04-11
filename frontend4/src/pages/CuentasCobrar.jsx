@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import API from '../services/api'
 
-export default function CuentasCobrar() {
-  const [tab, setTab] = useState('cuentas')
+export default function CuentasCobrar({ vendedor_id = null }) {
+  const [tab, setTab] = useState(vendedor_id ? 'cobro_vendedor' : 'cuentas')
   const [cuentas, setCuentas] = useState([])
   const [clientes, setClientes] = useState([])
   const [facturas, setFacturas] = useState([])
@@ -170,7 +170,8 @@ export default function CuentasCobrar() {
           { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
           { id: 'estado_cuenta', label: 'Estado de Cuenta x Cliente' },
           { id: 'historial', label: 'Historial' },
-        ].map(t => (
+        ].filter(t => !vendedor_id || t.id === 'cobro_vendedor')
+        .map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -352,11 +353,15 @@ export default function CuentasCobrar() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
-              <select id="cob-vendedor"
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                <option value="">-- Seleccionar vendedor --</option>
-                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-              </select>
+              {!vendedor_id ? (
+                <select id="cob-vendedor"
+                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
+                  <option value="">-- Seleccionar vendedor --</option>
+                  {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+                </select>
+              ) : (
+                <input type="hidden" id="cob-vendedor" value={vendedor_id} />
+              )}
             </div>
             <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
               onClick={() => {
@@ -396,6 +401,40 @@ export default function CuentasCobrar() {
             </button>
           </div>
           <div id="cob-resultado" className="mb-4 text-right bg-green-50 p-3 rounded-lg min-h-8"></div>
+        <div className="flex justify-end mb-4">
+          <button className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
+            onClick={() => {
+              const tbody = document.getElementById('cob-tbody')
+              if (!tbody || tbody.innerHTML.includes('No hay') || tbody.innerHTML.includes('Selecciona')) return alert('Primero realiza una búsqueda')
+              const resultado = document.getElementById('cob-resultado').innerHTML
+              const printW = window.open('', '_blank')
+              printW.document.write(`
+                <!DOCTYPE html><html><head><title>Cobro por Vendedor</title>
+                <style>
+                  body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                  h2{color:#1e40af;margin-bottom:4px}
+                  p.sub{color:#64748b;font-size:13px;margin-bottom:16px}
+                  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
+                  th{background:#1e40af;color:white;padding:8px;text-align:left}
+                  td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                  tr:nth-child(even){background:#f8fafc}
+                  .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
+                  @media print{button{display:none}}
+                </style></head><body>
+                <h2>Cobro por Vendedor</h2>
+                <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
+                <table>
+                  <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total Cobrado</th><th>Fecha</th></tr></thead>
+                  <tbody>${tbody.innerHTML}</tbody>
+                </table>
+                <div class="resumen">${resultado}</div>
+                <script>window.onload=()=>window.print()</script>
+                </body></html>`)
+              printW.document.close()
+            }}>
+            🖨️ Imprimir Reporte
+          </button>
+        </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>

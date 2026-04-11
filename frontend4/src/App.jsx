@@ -52,6 +52,8 @@ function App() {
 
   const menuVendedor = [
     { id: 'facturas', label: '📋 Pedidos' },
+    { id: 'pagos', label: '💰 Pagos' },
+    { id: 'cuentascobrar', label: '💵 Cuentas por Cobrar' },
   ]
 
   const menuItems = esVendedor ? menuVendedor : menuAdmin
@@ -102,7 +104,7 @@ function App() {
         {pagina === 'reportes' && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
         {pagina === 'proveedores' && !esVendedor && <Proveedores />}
         {pagina === 'inventario' && !esVendedor && <Inventario />}
-        {pagina === 'cuentascobrar' && !esVendedor && <CuentasCobrar />}
+        {pagina === 'cuentascobrar' && <CuentasCobrar vendedor_id={esVendedor ? usuario.id : null} />}
         {pagina === 'cuentaspagar' && !esVendedor && <CuentasPagar />}
         {pagina === 'mantenimiento' && !esVendedor && <Mantenimiento />}
         {pagina === 'configuracion' && !esVendedor && <Configuracion />}
