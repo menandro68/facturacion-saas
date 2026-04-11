@@ -68,16 +68,42 @@ export default function Pagos() {
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Factura *</label>
-              <select name="invoice_id" value={form.invoice_id} onChange={handleChange} required
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Seleccionar factura</option>
-                {facturas.map(f => (
-                  <option key={f.id} value={f.id}>
-                    {f.ncf} — {f.cliente_nombre || 'Consumidor Final'} — RD${parseFloat(f.total).toLocaleString()}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Factura * (NCF)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ej: B0100000001"
+                  id="pago-ncf-input"
+                  className="w-full border rounded px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={e => e.target.value = e.target.value.toUpperCase()}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const val = e.target.value.trim().toUpperCase()
+                      const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
+                      if (!factura) { setError('Factura no encontrada: ' + val); return }
+                      setError('')
+                      setForm(prev => ({ ...prev, invoice_id: factura.id, monto: factura.total }))
+                      document.getElementById('pago-ncf-resultado').innerHTML =
+                        `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${parseFloat(factura.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
+                    }
+                  }}
+                />
+                <button type="button"
+                  onClick={() => {
+                    const val = document.getElementById('pago-ncf-input').value.trim().toUpperCase()
+                    const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
+                    if (!factura) { setError('Factura no encontrada: ' + val); return }
+                    setError('')
+                    setForm(prev => ({ ...prev, invoice_id: factura.id, monto: factura.total }))
+                    document.getElementById('pago-ncf-resultado').innerHTML =
+                      `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${parseFloat(factura.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
+                  }}
+                  className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 whitespace-nowrap">
+                  Buscar
+                </button>
+              </div>
+              <div id="pago-ncf-resultado" className="mt-1 text-sm"></div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
