@@ -15,22 +15,27 @@ import Mantenimiento from './pages/Mantenimiento'
 
 function App() {
   const [usuario, setUsuario] = useState(() => {
-    const u = sessionStorage.getItem('usuario')  // ← MODIFICADO
+    const u = sessionStorage.getItem('usuario')
     return u ? JSON.parse(u) : null
   })
-  const [pagina, setPagina] = useState('dashboard')
+  const [pagina, setPagina] = useState('facturas')
 
-  const handleLogin = (user) => setUsuario(user)
+  const handleLogin = (user) => {
+    setUsuario(user)
+    setPagina(user.rol === 'vendedor' ? 'facturas' : 'dashboard')
+  }
 
   const handleLogout = () => {
-    sessionStorage.removeItem('token')    // ← MODIFICADO
-    sessionStorage.removeItem('usuario')  // ← MODIFICADO
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('usuario')
     setUsuario(null)
   }
 
   if (!usuario) return <Login onLogin={handleLogin} />
 
-  const menuItems = [
+  const esVendedor = usuario.rol === 'vendedor'
+
+  const menuAdmin = [
     { id: 'dashboard', label: '📊 Dashboard' },
     { id: 'clientes', label: '👥 Clientes' },
     { id: 'productos', label: '📦 Productos' },
@@ -45,12 +50,21 @@ function App() {
     { id: 'configuracion', label: '⚙️ Configuración' },
   ]
 
+  const menuVendedor = [
+    { id: 'facturas', label: '📋 Pedidos' },
+  ]
+
+  const menuItems = esVendedor ? menuVendedor : menuAdmin
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
       <div className="w-56 bg-white shadow-md flex flex-col">
         <div className="px-6 py-5 border-b">
           <h1 className="text-lg font-bold text-blue-600">Facturación</h1>
+          {esVendedor && (
+            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded mt-1 inline-block">Vendedor</span>
+          )}
         </div>
         <nav className="flex-1 p-4">
           {menuItems.map((item) => (
@@ -80,18 +94,18 @@ function App() {
 
       {/* Contenido */}
       <div className="flex-1 overflow-auto">
-        {pagina === 'dashboard' && <Dashboard />}
-        {pagina === 'clientes' && <Clientes />}
-        {pagina === 'productos' && <Productos />}
-        {pagina === 'facturas' && <Facturas />}
-        {pagina === 'pagos' && <Pagos />}
-        {pagina === 'reportes' && <Reportes />}
-        {pagina === 'proveedores' && <Proveedores />}
-        {pagina === 'inventario' && <Inventario />}
-        {pagina === 'cuentascobrar' && <CuentasCobrar />}
-        {pagina === 'cuentaspagar' && <CuentasPagar />}
-        {pagina === 'mantenimiento' && <Mantenimiento />}
-        {pagina === 'configuracion' && <Configuracion />}
+        {pagina === 'dashboard' && !esVendedor && <Dashboard />}
+        {pagina === 'clientes' && !esVendedor && <Clientes />}
+        {pagina === 'productos' && !esVendedor && <Productos />}
+        {pagina === 'facturas' && <Facturas vendedor_id={esVendedor ? usuario.id : null} />}
+        {pagina === 'pagos' && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
+        {pagina === 'reportes' && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
+        {pagina === 'proveedores' && !esVendedor && <Proveedores />}
+        {pagina === 'inventario' && !esVendedor && <Inventario />}
+        {pagina === 'cuentascobrar' && !esVendedor && <CuentasCobrar />}
+        {pagina === 'cuentaspagar' && !esVendedor && <CuentasPagar />}
+        {pagina === 'mantenimiento' && !esVendedor && <Mantenimiento />}
+        {pagina === 'configuracion' && !esVendedor && <Configuracion />}
       </div>
     </div>
   )

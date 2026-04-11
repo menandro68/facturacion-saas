@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import API from '../services/api'
 
-export default function Facturas() {
-  const [tab, setTab] = useState('fecha')
+export default function Facturas({ vendedor_id = null }) {
+  const [tab, setTab] = useState(vendedor_id ? 'pedidos' : 'fecha')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
   const [facturas, setFacturas] = useState([])
@@ -346,7 +346,7 @@ export default function Facturas() {
       {/* Tabs fila 1 */}
       <div className="flex gap-2 border-b mb-0">
         {tabsFila1.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+          <button key={t.id} onClick={() => { if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }; setTab(t.id) }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.id
                 ? 'border-blue-600 text-blue-600'
@@ -360,7 +360,7 @@ export default function Facturas() {
       {/* Tabs fila 2 */}
       <div className="flex gap-2 border-b mb-6">
         {tabsFila2.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+          <button key={t.id} onClick={() => { if (vendedor_id && t.id !== 'pedidos') { alert('Usted no tiene permiso para este módulo'); return }; setTab(t.id) }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.id
                 ? 'border-blue-600 text-blue-600'
