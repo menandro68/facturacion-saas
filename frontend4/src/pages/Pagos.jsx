@@ -15,6 +15,7 @@ export default function Pagos() {
     efectivo: '',
     transferencia: '',
     tarjeta: '',
+    cheque_valor: '',
     cheque_banco: '',
     cheque_numero: '',
   })
@@ -41,11 +42,10 @@ export default function Pagos() {
   }
 
   const handleEnviarMetodo = () => {
-    // Determinar método dominante y monto total
     const efectivo = parseFloat(metodos.efectivo || 0)
     const transferencia = parseFloat(metodos.transferencia || 0)
     const tarjeta = parseFloat(metodos.tarjeta || 0)
-    const cheque = parseFloat(metodos.cheque_numero || 0)
+    const cheque = parseFloat(metodos.cheque_valor || 0)
     const total = efectivo + transferencia + tarjeta + cheque
 
     let metodoLabel = 'efectivo'
@@ -54,7 +54,6 @@ export default function Pagos() {
     if (tarjeta > maxVal) { metodoLabel = 'tarjeta'; maxVal = tarjeta }
     if (cheque > maxVal) { metodoLabel = 'cheque'; maxVal = cheque }
 
-    // Referencia: banco + numero si hay cheque
     let ref = ''
     if (metodos.cheque_banco) ref += metodos.cheque_banco
     if (metodos.cheque_numero) ref += (ref ? ' #' : '#') + metodos.cheque_numero
@@ -73,7 +72,7 @@ export default function Pagos() {
     if (parseFloat(metodos.efectivo || 0) > 0) partes.push(`Efectivo: RD$${parseFloat(metodos.efectivo).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
     if (parseFloat(metodos.transferencia || 0) > 0) partes.push(`Transf: RD$${parseFloat(metodos.transferencia).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
     if (parseFloat(metodos.tarjeta || 0) > 0) partes.push(`Tarjeta: RD$${parseFloat(metodos.tarjeta).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
-    if (parseFloat(metodos.cheque_numero || 0) > 0) partes.push(`Cheque: RD$${parseFloat(metodos.cheque_numero).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    if (parseFloat(metodos.cheque_valor || 0) > 0) partes.push(`Cheque: RD$${parseFloat(metodos.cheque_valor).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
     return partes.length > 0 ? partes.join(' | ') : 'Seleccionar método...'
   }
 
@@ -84,7 +83,7 @@ export default function Pagos() {
       await API.post('/payments', form)
       setShowForm(false)
       setForm({ invoice_id: '', monto: '', metodo: 'efectivo', referencia: '', notas: '' })
-      setMetodos({ efectivo: '', transferencia: '', tarjeta: '', cheque_banco: '', cheque_numero: '' })
+      setMetodos({ efectivo: '', transferencia: '', tarjeta: '', cheque_valor: '', cheque_banco: '', cheque_numero: '' })
       fetchData()
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al registrar pago')
@@ -200,9 +199,11 @@ export default function Pagos() {
                   <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">TRANSFERENCIA</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">TARJETA</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">CHEQUES</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">CHEQUES</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">VALOR</th>
                 </tr>
                 <tr className="bg-gray-50">
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
                   <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
@@ -228,6 +229,12 @@ export default function Pagos() {
                     <input type="number" step="0.01" placeholder="0.00"
                       value={metodos.tarjeta}
                       onChange={e => setMetodos(prev => ({...prev, tarjeta: e.target.value}))}
+                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+                  </td>
+                  <td className="border border-gray-300 px-2 py-2">
+                    <input type="number" step="0.01" placeholder="0.00"
+                      value={metodos.cheque_valor}
+                      onChange={e => setMetodos(prev => ({...prev, cheque_valor: e.target.value}))}
                       className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
                   </td>
                   <td className="border border-gray-300 px-2 py-2">
