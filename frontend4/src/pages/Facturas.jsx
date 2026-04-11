@@ -237,8 +237,8 @@ export default function Facturas() {
   ]
 
   const tabsFila2 = [
-    { id: 'cobro_vendedor', label: 'Cobro por Vendedor' },
-    { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
+    // { id: 'cobro_vendedor', label: 'Cobro por Vendedor' },
+    // { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
     { id: 'pedidos', label: 'Pedidos' },
     { id: 'cotizacion', label: 'Cotización' },
     { id: 'nota_credito', label: 'Nota de Crédito' },
