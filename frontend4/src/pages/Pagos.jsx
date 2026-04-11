@@ -6,9 +6,17 @@ export default function Pagos() {
   const [facturas, setFacturas] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showMetodo, setShowMetodo] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     invoice_id: '', monto: '', metodo: 'efectivo', referencia: '', notas: ''
+  })
+  const [metodos, setMetodos] = useState({
+    efectivo: '',
+    transferencia: '',
+    tarjeta: '',
+    cheque_banco: '',
+    cheque_numero: '',
   })
 
   const fetchData = async () => {
@@ -30,10 +38,43 @@ export default function Pagos() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
-    if (e.target.name === 'invoice_id' && e.target.value) {
-      const factura = facturas.find(f => f.id === e.target.value)
-      if (factura) setForm(prev => ({ ...prev, invoice_id: e.target.value, monto: factura.total }))
-    }
+  }
+
+  const handleEnviarMetodo = () => {
+    // Determinar método dominante y monto total
+    const efectivo = parseFloat(metodos.efectivo || 0)
+    const transferencia = parseFloat(metodos.transferencia || 0)
+    const tarjeta = parseFloat(metodos.tarjeta || 0)
+    const cheque = parseFloat(metodos.cheque_numero || 0)
+    const total = efectivo + transferencia + tarjeta + cheque
+
+    let metodoLabel = 'efectivo'
+    let maxVal = efectivo
+    if (transferencia > maxVal) { metodoLabel = 'transferencia'; maxVal = transferencia }
+    if (tarjeta > maxVal) { metodoLabel = 'tarjeta'; maxVal = tarjeta }
+    if (cheque > maxVal) { metodoLabel = 'cheque'; maxVal = cheque }
+
+    // Referencia: banco + numero si hay cheque
+    let ref = ''
+    if (metodos.cheque_banco) ref += metodos.cheque_banco
+    if (metodos.cheque_numero) ref += (ref ? ' #' : '#') + metodos.cheque_numero
+
+    setForm(prev => ({
+      ...prev,
+      metodo: metodoLabel,
+      monto: total > 0 ? total : prev.monto,
+      referencia: ref || prev.referencia
+    }))
+    setShowMetodo(false)
+  }
+
+  const getMetodoLabel = () => {
+    const partes = []
+    if (parseFloat(metodos.efectivo || 0) > 0) partes.push(`Efectivo: RD$${parseFloat(metodos.efectivo).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    if (parseFloat(metodos.transferencia || 0) > 0) partes.push(`Transf: RD$${parseFloat(metodos.transferencia).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    if (parseFloat(metodos.tarjeta || 0) > 0) partes.push(`Tarjeta: RD$${parseFloat(metodos.tarjeta).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    if (parseFloat(metodos.cheque_numero || 0) > 0) partes.push(`Cheque: RD$${parseFloat(metodos.cheque_numero).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    return partes.length > 0 ? partes.join(' | ') : 'Seleccionar método...'
   }
 
   const handleSubmit = async (e) => {
@@ -43,6 +84,7 @@ export default function Pagos() {
       await API.post('/payments', form)
       setShowForm(false)
       setForm({ invoice_id: '', monto: '', metodo: 'efectivo', referencia: '', notas: '' })
+      setMetodos({ efectivo: '', transferencia: '', tarjeta: '', cheque_banco: '', cheque_numero: '' })
       fetchData()
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al registrar pago')
@@ -105,32 +147,35 @@ export default function Pagos() {
               </div>
               <div id="pago-ncf-resultado" className="mt-1 text-sm"></div>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
               <input name="monto" type="number" step="0.01" value={form.monto} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
+
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-              <select name="metodo" value={form.metodo} onChange={handleChange}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="efectivo">Efectivo</option>
-                <option value="transferencia">Transferencia</option>
-                <option value="tarjeta">Tarjeta</option>
-                <option value="cheque">Cheque</option>
-              </select>
+              <button type="button"
+                onClick={() => setShowMetodo(true)}
+                className="w-full border rounded px-3 py-2 text-sm text-left bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600">
+                💳 {getMetodoLabel()}
+              </button>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
               <input name="referencia" value={form.referencia} onChange={handleChange}
                 placeholder="Número de referencia"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div className="md:col-span-2">
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
               <input name="notas" value={form.notas} onChange={handleChange}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
+
             <div className="md:col-span-2 flex gap-3 justify-end">
               <button type="button" onClick={() => setShowForm(false)}
                 className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
@@ -140,6 +185,77 @@ export default function Pagos() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Modal Métodos de Pago */}
+      {showMetodo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
+            <h3 className="text-lg font-semibold text-center text-gray-800 mb-5">MÉTODOS DE PAGO</h3>
+            <table className="w-full border-collapse text-sm mb-6">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">EFECTIVO</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">TRANSFERENCIA</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">TARJETA</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">CHEQUES</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">VALOR</th>
+                </tr>
+                <tr className="bg-gray-50">
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">BANCO</th>
+                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">NÚMERO</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="border border-gray-300 px-2 py-2">
+                    <input type="number" step="0.01" placeholder="0.00"
+                      value={metodos.efectivo}
+                      onChange={e => setMetodos(prev => ({...prev, efectivo: e.target.value}))}
+                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+                  </td>
+                  <td className="border border-gray-300 px-2 py-2">
+                    <input type="number" step="0.01" placeholder="0.00"
+                      value={metodos.transferencia}
+                      onChange={e => setMetodos(prev => ({...prev, transferencia: e.target.value}))}
+                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+                  </td>
+                  <td className="border border-gray-300 px-2 py-2">
+                    <input type="number" step="0.01" placeholder="0.00"
+                      value={metodos.tarjeta}
+                      onChange={e => setMetodos(prev => ({...prev, tarjeta: e.target.value}))}
+                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+                  </td>
+                  <td className="border border-gray-300 px-2 py-2">
+                    <input type="text" placeholder="Nombre banco"
+                      value={metodos.cheque_banco}
+                      onChange={e => setMetodos(prev => ({...prev, cheque_banco: e.target.value}))}
+                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </td>
+                  <td className="border border-gray-300 px-2 py-2">
+                    <input type="text" placeholder="# cheque"
+                      value={metodos.cheque_numero}
+                      onChange={e => setMetodos(prev => ({...prev, cheque_numero: e.target.value}))}
+                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="flex justify-end gap-4">
+              <button onClick={() => setShowMetodo(false)}
+                className="px-6 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-700 font-medium">
+                VOLVER
+              </button>
+              <button onClick={handleEnviarMetodo}
+                className="px-6 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 font-medium">
+                ENVIAR
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
