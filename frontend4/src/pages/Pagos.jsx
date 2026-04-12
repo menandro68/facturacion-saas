@@ -192,66 +192,50 @@ export default function Pagos() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
             <h3 className="text-lg font-semibold text-center text-gray-800 mb-5">MÉTODOS DE PAGO</h3>
-            <table className="w-full border-collapse text-sm mb-6">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">EFECTIVO</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">TRANSFERENCIA</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">TARJETA</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">CHEQUES</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">CHEQUES</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-700">VALOR</th>
-                </tr>
-                <tr className="bg-gray-50">
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">VALOR</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">BANCO</th>
-                  <th className="border border-gray-300 px-3 py-2 text-center text-gray-500 font-normal">NÚMERO</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="border border-gray-300 px-2 py-2">
-                    <input type="number" step="0.01" placeholder="0.00"
-                      value={metodos.efectivo}
-                      onChange={e => setMetodos(prev => ({...prev, efectivo: e.target.value}))}
-                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
-                  </td>
-                  <td className="border border-gray-300 px-2 py-2">
-                    <input type="number" step="0.01" placeholder="0.00"
-                      value={metodos.transferencia}
-                      onChange={e => setMetodos(prev => ({...prev, transferencia: e.target.value}))}
-                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
-                  </td>
-                  <td className="border border-gray-300 px-2 py-2">
-                    <input type="number" step="0.01" placeholder="0.00"
-                      value={metodos.tarjeta}
-                      onChange={e => setMetodos(prev => ({...prev, tarjeta: e.target.value}))}
-                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
-                  </td>
-                  <td className="border border-gray-300 px-2 py-2">
-                    <input type="number" step="0.01" placeholder="0.00"
-                      value={metodos.cheque_valor}
-                      onChange={e => setMetodos(prev => ({...prev, cheque_valor: e.target.value}))}
-                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
-                  </td>
-                  <td className="border border-gray-300 px-2 py-2">
-                    <input type="text" placeholder="Nombre banco"
-                      value={metodos.cheque_banco}
-                      onChange={e => setMetodos(prev => ({...prev, cheque_banco: e.target.value}))}
-                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </td>
-                  <td className="border border-gray-300 px-2 py-2">
-                    <input type="text" placeholder="# cheque"
-                      value={metodos.cheque_numero}
-                      onChange={e => setMetodos(prev => ({...prev, cheque_numero: e.target.value}))}
-                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">💵 Efectivo</label>
+                <input type="number" step="0.01" placeholder="0.00"
+                  value={metodos.efectivo}
+                  onChange={e => setMetodos(prev => ({...prev, efectivo: e.target.value}))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">🏦 Transferencia</label>
+                <input type="number" step="0.01" placeholder="0.00"
+                  value={metodos.transferencia}
+                  onChange={e => setMetodos(prev => ({...prev, transferencia: e.target.value}))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">💳 Tarjeta</label>
+                <input type="number" step="0.01" placeholder="0.00"
+                  value={metodos.tarjeta}
+                  onChange={e => setMetodos(prev => ({...prev, tarjeta: e.target.value}))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Valor</label>
+                <input type="number" step="0.01" placeholder="0.00"
+                  value={metodos.cheque_valor}
+                  onChange={e => setMetodos(prev => ({...prev, cheque_valor: e.target.value}))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Banco</label>
+                <input type="text" placeholder="Nombre del banco"
+                  value={metodos.cheque_banco}
+                  onChange={e => setMetodos(prev => ({...prev, cheque_banco: e.target.value}))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Número</label>
+                <input type="text" placeholder="# cheque"
+                  value={metodos.cheque_numero}
+                  onChange={e => setMetodos(prev => ({...prev, cheque_numero: e.target.value}))}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
             <div className="flex justify-end gap-4">
               <button onClick={() => setShowMetodo(false)}
                 className="px-6 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-700 font-medium">

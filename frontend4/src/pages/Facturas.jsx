@@ -1251,8 +1251,9 @@ export default function Facturas({ vendedor_id = null }) {
                 <div id="ped-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
               </div>
               {itemsPed.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-2 mb-2">
-                  <div className="col-span-3 relative">
+                <div key={index} className="border rounded-lg p-3 mb-3 bg-gray-50">
+                  {/* Búsqueda de producto */}
+                  <div className="relative mb-2">
                     <input type="text" placeholder="🔍 Buscar producto..."
                       ref={el => pedProductoRefs.current[index] = el}
                       value={buscarProductoPed[index] || ''}
@@ -1286,7 +1287,7 @@ export default function Facturas({ vendedor_id = null }) {
                           setDropdownPed(prev => ({...prev, [index]: false}))
                         }
                       }}
-                      className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     />
                     {dropdownPed[index] && (
                       <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
@@ -1304,55 +1305,61 @@ export default function Facturas({ vendedor_id = null }) {
                       </div>
                     )}
                   </div>
-                  <div className="col-span-3">
-                    <input placeholder="Descripción" value={item.descripcion}
-                      onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, descripcion: e.target.value} : it))}
-                      className="w-full border rounded px-2 py-1.5 text-sm" />
-                  </div>
-                  <div className="col-span-2">
-                    <input type="number" placeholder="Cant." value={item.cantidad} min="1"
-                      ref={el => pedCantidadRefs.current[index] = el}
-                      onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, cantidad: e.target.value} : it))}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); pedPrecioRefs.current[index]?.focus() } }}
-                      className="w-full border rounded px-2 py-1.5 text-sm" />
-                  </div>
-                  <div className="col-span-2">
-                    <input type="number" placeholder="Precio" value={item.precio_unitario}
-                      ref={el => pedPrecioRefs.current[index] = el}
-                      onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: e.target.value} : it))}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          const nextIndex = index + 1
-                          if (pedProductoRefs.current[nextIndex]) {
-                            pedProductoRefs.current[nextIndex]?.focus()
-                          } else {
-                            pedAgregarRef.current?.focus()
+                  {/* Descripción */}
+                  <input placeholder="Descripción" value={item.descripcion}
+                    onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, descripcion: e.target.value} : it))}
+                    className="w-full border rounded-lg px-3 py-2.5 text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  {/* Cant, Precio, ITBIS en fila */}
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Cantidad</label>
+                      <input type="number" placeholder="1" value={item.cantidad} min="1"
+                        ref={el => pedCantidadRefs.current[index] = el}
+                        onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, cantidad: e.target.value} : it))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); pedPrecioRefs.current[index]?.focus() } }}
+                        className="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Precio</label>
+                      <input type="number" placeholder="0.00" value={item.precio_unitario}
+                        ref={el => pedPrecioRefs.current[index] = el}
+                        onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: e.target.value} : it))}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            const nextIndex = index + 1
+                            if (pedProductoRefs.current[nextIndex]) {
+                              pedProductoRefs.current[nextIndex]?.focus()
+                            } else {
+                              pedAgregarRef.current?.focus()
+                            }
                           }
-                        }
-                      }}
-                      className="w-full border rounded px-2 py-1.5 text-sm" />
+                        }}
+                        className="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">ITBIS</label>
+                      <select value={item.itbis_rate}
+                        onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, itbis_rate: e.target.value} : it))}
+                        className="w-full border rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="18">18%</option>
+                        <option value="16">16%</option>
+                        <option value="0">0%</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="col-span-1">
-                    <input type="text" readOnly
-                      value={item.precio_unitario && item.cantidad ? 'RD$' + (parseFloat(item.cantidad||0)*parseFloat(item.precio_unitario||0)).toLocaleString('es-DO',{minimumFractionDigits:2}) : ''}
-                      placeholder="Subtotal"
-                      className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-right font-medium text-gray-700" />
-                  </div>
-                  <div className="col-span-1">
-                    <select value={item.itbis_rate}
-                      onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, itbis_rate: e.target.value} : it))}
-                      className="w-full border rounded px-2 py-1.5 text-sm">
-                      <option value="18">18%</option>
-                      <option value="16">16%</option>
-                      <option value="0">0%</option>
-                    </select>
-                  </div>
-                  <div className="col-span-0 flex items-center justify-center">
-                    {itemsPed.length > 1 && (
-                      <button onClick={() => setItemsPed(prev => prev.filter((_,i) => i !== index))}
-                        className="text-red-500 hover:text-red-700 text-lg">×</button>
-                    )}
+                  {/* Subtotal y eliminar */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">Subtotal:</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-blue-700 text-sm">
+                        {item.precio_unitario && item.cantidad ? 'RD$' + (parseFloat(item.cantidad||0)*parseFloat(item.precio_unitario||0)).toLocaleString('es-DO',{minimumFractionDigits:2}) : 'RD$0.00'}
+                      </span>
+                      {itemsPed.length > 1 && (
+                        <button onClick={() => setItemsPed(prev => prev.filter((_,i) => i !== index))}
+                          className="bg-red-100 text-red-500 hover:bg-red-200 rounded-full w-7 h-7 flex items-center justify-center text-lg font-bold">×</button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1402,7 +1409,8 @@ export default function Facturas({ vendedor_id = null }) {
               </div>
             </div>
           )}
-          <div className="flex gap-4 items-end mb-4 flex-wrap">
+          {/* CAMBIO 1: div de filtros responsivo */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end mb-4 flex-wrap">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
               <input type="date" id="ped-fecha-inicio"
@@ -1445,25 +1453,20 @@ export default function Facturas({ vendedor_id = null }) {
             </button>
           </div>
 
+          {/* CAMBIO 2: tabla de pedidos con vista móvil (cards) y desktop */}
           {pedidos.length > 0 && (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-gray-600">ID</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
-                  <th className="px-4 py-3 text-right text-gray-600">Total</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Vista móvil - cards */}
+              <div className="sm:hidden space-y-3">
                 {pedidos.map(p => (
-                  <tr key={p.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs">{p.id.slice(0,8)}...</td>
-                    <td className="px-4 py-3">{p.cliente_nombre || 'Consumidor Final'}</td>
-                    <td className="px-4 py-3 text-right font-medium">RD${parseFloat(p.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-4 py-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</td>
-                    <td className="px-4 py-3 flex gap-2">
+                  <div key={p.id} className="bg-gray-50 rounded-lg p-4 border">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs text-gray-400 font-mono">{p.id.slice(0,8)}...</span>
+                      <span className="font-bold text-blue-700">RD${parseFloat(p.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-800 mb-1">{p.cliente_nombre || 'Consumidor Final'}</p>
+                    <p className="text-xs text-gray-500 mb-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</p>
+                    <div className="flex gap-3">
                       <button onClick={async () => {
                         if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
                         if (!confirm('¿Convertir este pedido a factura?')) return
@@ -1474,7 +1477,7 @@ export default function Facturas({ vendedor_id = null }) {
                           fetchData()
                           alert('¡Factura emitida exitosamente!')
                         } catch(e) { alert('Error al convertir') }
-                      }} className="text-green-600 hover:underline text-xs font-medium">Convertir a Factura</button>
+                      }} className="flex-1 bg-green-600 text-white py-2 rounded text-xs font-medium text-center">Convertir a Factura</button>
                       <button onClick={async () => {
                         if (!confirm('¿Eliminar este pedido?')) return
                         try {
@@ -1482,12 +1485,55 @@ export default function Facturas({ vendedor_id = null }) {
                           const res = await API.get('/invoices/pedidos/lista')
                           setPedidos(res.data.data)
                         } catch(e) { alert('Error') }
-                      }} className="text-red-500 hover:underline text-xs">Eliminar</button>
-                    </td>
-                  </tr>
+                      }} className="flex-1 border border-red-300 text-red-500 py-2 rounded text-xs text-center">Eliminar</button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+              {/* Vista desktop - tabla */}
+              <table className="hidden sm:table w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-gray-600">ID</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
+                    <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pedidos.map(p => (
+                    <tr key={p.id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-mono text-xs">{p.id.slice(0,8)}...</td>
+                      <td className="px-4 py-3">{p.cliente_nombre || 'Consumidor Final'}</td>
+                      <td className="px-4 py-3 text-right font-medium">RD${parseFloat(p.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</td>
+                      <td className="px-4 py-3 flex gap-2">
+                        <button onClick={async () => {
+                          if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
+                          if (!confirm('¿Convertir este pedido a factura?')) return
+                          try {
+                            await API.put(`/invoices/pedido/${p.id}/convertir`)
+                            const res = await API.get('/invoices/pedidos/lista')
+                            setPedidos(res.data.data)
+                            fetchData()
+                            alert('¡Factura emitida exitosamente!')
+                          } catch(e) { alert('Error al convertir') }
+                        }} className="text-green-600 hover:underline text-xs font-medium">Convertir a Factura</button>
+                        <button onClick={async () => {
+                          if (!confirm('¿Eliminar este pedido?')) return
+                          try {
+                            await API.put(`/invoices/${p.id}/anular`)
+                            const res = await API.get('/invoices/pedidos/lista')
+                            setPedidos(res.data.data)
+                          } catch(e) { alert('Error') }
+                        }} className="text-red-500 hover:underline text-xs">Eliminar</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
           {pedidos.length === 0 && !showPedido && (
             <p className="text-gray-400 text-sm text-center py-8">No hay pedidos</p>

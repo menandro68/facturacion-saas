@@ -19,6 +19,7 @@ function App() {
     return u ? JSON.parse(u) : null
   })
   const [pagina, setPagina] = useState('facturas')
+  const [menuAbierto, setMenuAbierto] = useState(false)
 
   const handleLogin = (user) => {
     setUsuario(user)
@@ -58,56 +59,92 @@ function App() {
 
   const menuItems = esVendedor ? menuVendedor : menuAdmin
 
+  const handleNavegar = (id) => {
+    setPagina(id)
+    setMenuAbierto(false)
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <div className="w-56 bg-white shadow-md flex flex-col">
-        <div className="px-6 py-5 border-b">
-          <h1 className="text-lg font-bold text-blue-600">Facturación</h1>
-          {esVendedor && (
-            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded mt-1 inline-block">Vendedor</span>
-          )}
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+
+      {/* Header móvil */}
+      <div className="bg-white shadow-md flex items-center justify-between px-4 py-3 md:hidden">
+        <div>
+          <h1 className="text-base font-bold text-blue-600">Facturación</h1>
+          {esVendedor && <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">Vendedor</span>}
         </div>
-        <nav className="flex-1 p-4">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setPagina(item.id)}
-              className={`w-full text-left px-4 py-2 rounded mb-1 text-sm ${
-                pagina === item.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-        <div className="p-4 border-t">
-          <p className="text-xs text-gray-500 mb-2">{usuario.nombre}</p>
-          <button
-            onClick={handleLogout}
-            className="w-full bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600 text-sm"
-          >
-            Cerrar Sesión
-          </button>
-        </div>
+        <button onClick={() => setMenuAbierto(!menuAbierto)}
+          className="text-gray-700 focus:outline-none text-2xl">
+          {menuAbierto ? '✕' : '☰'}
+        </button>
       </div>
 
-      {/* Contenido */}
-      <div className="flex-1 overflow-auto">
-        {pagina === 'dashboard' && !esVendedor && <Dashboard />}
-        {pagina === 'clientes' && !esVendedor && <Clientes />}
-        {pagina === 'productos' && !esVendedor && <Productos />}
-        {pagina === 'facturas' && <Facturas vendedor_id={esVendedor ? usuario.id : null} />}
-        {pagina === 'pagos' && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
-        {pagina === 'reportes' && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
-        {pagina === 'proveedores' && !esVendedor && <Proveedores />}
-        {pagina === 'inventario' && !esVendedor && <Inventario />}
-        {pagina === 'cuentascobrar' && <CuentasCobrar vendedor_id={esVendedor ? usuario.id : null} />}
-        {pagina === 'cuentaspagar' && !esVendedor && <CuentasPagar />}
-        {pagina === 'mantenimiento' && !esVendedor && <Mantenimiento />}
-        {pagina === 'configuracion' && !esVendedor && <Configuracion />}
+      {/* Menú móvil desplegable */}
+      {menuAbierto && (
+        <div className="bg-white shadow-lg md:hidden z-50">
+          <nav className="p-3">
+            {menuItems.map((item) => (
+              <button key={item.id} onClick={() => handleNavegar(item.id)}
+                className={`w-full text-left px-4 py-3 rounded mb-1 text-sm font-medium ${
+                  pagina === item.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                }`}>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <div className="px-4 pb-4 border-t pt-3">
+            <p className="text-xs text-gray-500 mb-2">{usuario.nombre}</p>
+            <button onClick={handleLogout}
+              className="w-full bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 text-sm">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar desktop */}
+        <div className="hidden md:flex w-56 bg-white shadow-md flex-col">
+          <div className="px-6 py-5 border-b">
+            <h1 className="text-lg font-bold text-blue-600">Facturación</h1>
+            {esVendedor && (
+              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded mt-1 inline-block">Vendedor</span>
+            )}
+          </div>
+          <nav className="flex-1 p-4">
+            {menuItems.map((item) => (
+              <button key={item.id} onClick={() => setPagina(item.id)}
+                className={`w-full text-left px-4 py-2 rounded mb-1 text-sm ${
+                  pagina === item.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                }`}>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <div className="p-4 border-t">
+            <p className="text-xs text-gray-500 mb-2">{usuario.nombre}</p>
+            <button onClick={handleLogout}
+              className="w-full bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600 text-sm">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+
+        {/* Contenido */}
+        <div className="flex-1 overflow-auto">
+          {pagina === 'dashboard' && !esVendedor && <Dashboard />}
+          {pagina === 'clientes' && !esVendedor && <Clientes />}
+          {pagina === 'productos' && !esVendedor && <Productos />}
+          {pagina === 'facturas' && <Facturas vendedor_id={esVendedor ? usuario.id : null} />}
+          {pagina === 'pagos' && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
+          {pagina === 'reportes' && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
+          {pagina === 'proveedores' && !esVendedor && <Proveedores />}
+          {pagina === 'inventario' && !esVendedor && <Inventario />}
+          {pagina === 'cuentascobrar' && <CuentasCobrar vendedor_id={esVendedor ? usuario.id : null} />}
+          {pagina === 'cuentaspagar' && !esVendedor && <CuentasPagar />}
+          {pagina === 'mantenimiento' && !esVendedor && <Mantenimiento />}
+          {pagina === 'configuracion' && !esVendedor && <Configuracion />}
+        </div>
       </div>
     </div>
   )

@@ -20,6 +20,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
   const [cxcFiltradas, setCxcFiltradas] = useState([])
+  const [pagos, setPagos] = useState([])
 
   const fetchData = async () => {
     try {
@@ -35,6 +36,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
       setTodasFacturas(fac.data.data)
       setFacturas(fac.data.data.filter(f => f.estado === 'emitida'))
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
+      API.get('/payments').then(r => setPagos(r.data.data)).catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -105,7 +107,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
         <h2 className="text-xl font-bold text-gray-800">Cuentas por Cobrar</h2>
         <button onClick={() => {
           const hoy = new Date()
@@ -340,19 +342,19 @@ export default function CuentasCobrar({ vendedor_id = null }) {
       {tab === 'cobro_vendedor' && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Cobro por Vendedor</h3>
-          <div className="flex gap-4 items-end mb-6 flex-wrap">
-            <div>
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end mb-6 flex-wrap">
+            <div className="w-full sm:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
               <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
               <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+            <div className="w-full sm:w-auto">
+              {!vendedor_id && <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>}
               {!vendedor_id ? (
                 <select id="cob-vendedor"
                   className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
@@ -369,18 +371,19 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                 if (!vendedorId) return
                 const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
                 const idsClientes = clientesVendedor.map(c => c.id)
-                const filtradas = todasFacturas.filter(f => {
-                  if (!idsClientes.includes(f.customer_id)) return false
-                  if (f.estado !== 'pagada') return false
-                  const d = new Date(f.creado_en)
+                const facturasVendedor = todasFacturas.filter(f => idsClientes.includes(f.customer_id))
+                const idsFacturas = facturasVendedor.map(f => f.id)
+                const filtradas = pagos.filter(p => {
+                  if (!idsFacturas.includes(p.invoice_id)) return false
+                  const d = new Date(p.creado_en)
                   const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
                   if (fechaInicio && fecha < fechaInicio) return false
                   if (fechaFin && fecha > fechaFin) return false
                   return true
                 })
-                const totalCobrado = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
-                const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
-                const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
+                const totalCobrado = filtradas.reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                const totalItbis = 0
+                const totalSubtotal = totalCobrado
                 document.getElementById('cob-resultado').innerHTML = `
                   <p class="text-sm text-gray-600">Facturas pagadas: <span class="font-bold text-gray-800">${filtradas.length}</span></p>
                   <p class="text-sm text-gray-600">Subtotal: <span class="font-medium">RD$${totalSubtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
@@ -389,13 +392,14 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                 const tbody = document.getElementById('cob-tbody')
                 tbody.innerHTML = filtradas.length === 0
                   ? '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No hay facturas pagadas</td></tr>'
-                  : filtradas.map(f => `
-                    <tr class="border-t hover:bg-gray-50">
-                      <td class="px-4 py-3 font-mono text-sm">${f.ncf || 'N/A'}</td>
-                      <td class="px-4 py-3 text-sm">${f.cliente_nombre || 'Consumidor Final'}</td>
-                      <td class="px-4 py-3 text-right text-sm font-medium text-green-700">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                      <td class="px-4 py-3 text-sm">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
-                    </tr>`).join('')
+                  : filtradas.map(p => {
+                    const factura = todasFacturas.find(f => f.id === p.invoice_id)
+                    return `<tr class="border-t hover:bg-gray-50">
+                      <td class="px-4 py-3 font-mono text-sm">${factura?.ncf || 'N/A'}</td>
+                      <td class="px-4 py-3 text-sm">${factura?.cliente_nombre || 'Consumidor Final'}</td>
+                      <td class="px-4 py-3 text-right text-sm font-medium text-green-700">RD$${parseFloat(p.monto).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td class="px-4 py-3 text-sm">${new Date(p.creado_en).toLocaleDateString('es-DO')}</td>
+                    </tr>`}).join('')
               }}>
               Buscar
             </button>
