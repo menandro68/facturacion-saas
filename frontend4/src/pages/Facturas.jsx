@@ -22,6 +22,7 @@ export default function Facturas({ vendedor_id = null }) {
   const [cotizaciones, setCotizaciones] = useState([])
   const [pedidos, setPedidos] = useState([])
   const [showPedido, setShowPedido] = useState(false)
+  const [pedidoEditandoId, setPedidoEditandoId] = useState(null)
   const [itemsPed, setItemsPed] = useState([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
   const [buscarProductoPed, setBuscarProductoPed] = useState({})
   const [dropdownPed, setDropdownPed] = useState({})
@@ -1392,7 +1393,12 @@ export default function Facturas({ vendedor_id = null }) {
                   const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   try {
+                  if (pedidoEditandoId) {
+                    await API.put(`/invoices/pedido/${pedidoEditandoId}/editar`, { customer_id: customer_id || null, items: itemsValidos })
+                    setPedidoEditandoId(null)
+                  } else {
                     await API.post('/invoices/pedido', { customer_id: customer_id || null, items: itemsValidos })
+                  }
                     setShowPedido(false)
                     setItemsPed([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
                     setBuscarProductoPed({})
@@ -1466,7 +1472,30 @@ export default function Facturas({ vendedor_id = null }) {
                     </div>
                     <p className="text-sm font-medium text-gray-800 mb-1">{p.cliente_nombre || 'Consumidor Final'}</p>
                     <p className="text-xs text-gray-500 mb-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</p>
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-wrap">
+                      <button onClick={async () => {
+                        try {
+                          const res = await API.get(`/invoices/${p.id}`)
+                          const data = res.data.data
+                          setItemsPed(data.items.map(it => ({
+                            descripcion: it.descripcion,
+                            cantidad: it.cantidad,
+                            precio_unitario: it.precio_unitario,
+                            itbis_rate: it.itbis_rate,
+                            product_id: it.product_id || ''
+                          })))
+                          setBuscarProductoPed(data.items.reduce((acc, it, i) => ({...acc, [i]: it.descripcion}), {}))
+                          setPedClienteSeleccionadoId(data.customer_id || '')
+                          setPedidoEditandoId(p.id)
+                          setShowPedido(true)
+                          setTimeout(() => {
+                            const inp = document.getElementById('ped-cliente-input')
+                            if (inp) inp.value = data.cliente_nombre || ''
+                            const hid = document.getElementById('ped-cliente')
+                            if (hid) hid.value = data.customer_id || ''
+                          }, 200)
+                        } catch(e) { alert('Error al cargar pedido: ' + (e.response?.data?.mensaje || e.message)) }
+                      }} className="flex-1 bg-blue-600 text-white py-2 rounded text-xs font-medium text-center">✏️ Editar</button>
                       <button onClick={async () => {
                         if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
                         if (!confirm('¿Convertir este pedido a factura?')) return

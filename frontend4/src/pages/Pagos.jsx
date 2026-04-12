@@ -11,6 +11,8 @@ export default function Pagos() {
   const [form, setForm] = useState({
     invoice_id: '', monto: '', metodo: 'efectivo', referencia: '', notas: ''
   })
+  const [mostrarImprimirPago, setMostrarImprimirPago] = useState(false)
+  const [pagoGuardadoId, setPagoGuardadoId] = useState(null)
   const [metodos, setMetodos] = useState({
     efectivo: '',
     transferencia: '',
@@ -80,11 +82,16 @@ export default function Pagos() {
     e.preventDefault()
     setError('')
     try {
-      await API.post('/payments', form)
+      const res = await API.post('/payments', form)
       setShowForm(false)
       setForm({ invoice_id: '', monto: '', metodo: 'efectivo', referencia: '', notas: '' })
       setMetodos({ efectivo: '', transferencia: '', tarjeta: '', cheque_valor: '', cheque_banco: '', cheque_numero: '' })
       fetchData()
+      const id = res.data.data?.id
+      if (id) {
+        setPagoGuardadoId(id)
+        setMostrarImprimirPago(true)
+      }
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al registrar pago')
     }
@@ -94,6 +101,29 @@ export default function Pagos() {
 
   return (
     <div className="p-6">
+      {mostrarImprimirPago && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir el recibo de pago?</p>
+            <div className="flex justify-center gap-6">
+              <button autoFocus
+                onClick={() => {
+                  const token = sessionStorage.getItem('token')
+                  window.open(`https://facturacion-saas-production.up.railway.app/payments/${pagoGuardadoId}/recibo?token=${token}`, '_blank')
+                  setMostrarImprimirPago(false)
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium">
+                Sí
+              </button>
+              <button
+                onClick={() => setMostrarImprimirPago(false)}
+                className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm font-medium text-gray-700">
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Pagos</h2>
         <button onClick={() => setShowForm(!showForm)}
