@@ -21,6 +21,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
   const [fechaFin, setFechaFin] = useState('')
   const [cxcFiltradas, setCxcFiltradas] = useState([])
   const [pagos, setPagos] = useState([])
+  const [modalResumen, setModalResumen] = useState(null)
 
   const fetchData = async () => {
     try {
@@ -109,6 +110,12 @@ export default function CuentasCobrar({ vendedor_id = null }) {
     <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
         <h2 className="text-xl font-bold text-gray-800">Cuentas por Cobrar</h2>
+        {vendedor_id && (
+          <button onClick={() => setTab('cobro_vendedor')}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm flex items-center gap-2">
+            ← Volver
+          </button>
+        )}
         <button onClick={() => {
           const hoy = new Date()
           const emitidas = todasFacturas.filter(f => f.estado === 'emitida')
@@ -116,48 +123,8 @@ export default function CuentasCobrar({ vendedor_id = null }) {
           const vencidas = emitidas.filter(f => f.fecha_vencimiento && new Date(f.fecha_vencimiento) < hoy)
           const totalPendiente = emitidas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
           const totalCobrado = pagadas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
-          const totalCuentas = totalPendiente + totalCobrado
           const totalVencidas = vencidas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
-          const printW = window.open('', '_blank')
-          printW.document.write(`
-            <!DOCTYPE html><html><head><title>Resumen Cuentas por Cobrar</title>
-            <style>
-              body{font-family:Arial,sans-serif;padding:30px;color:#1e293b}
-              h2{color:#1e40af;margin-bottom:4px}
-              p.sub{color:#64748b;font-size:13px;margin-bottom:24px}
-              .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:600px}
-              .card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px}
-              .card p.label{font-size:13px;color:#64748b;margin:0 0 6px}
-              .card p.valor{font-size:22px;font-weight:bold;margin:0}
-              .pendiente{color:#f97316}
-              .cobrado{color:#16a34a}
-              .vencidas{color:#dc2626}
-              .total{color:#1e40af}
-              @media print{button{display:none}}
-            </style></head><body>
-            <h2>Resumen — Cuentas por Cobrar</h2>
-            <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
-            <div class="grid">
-              <div class="card">
-                <p class="label">Total Cuentas</p>
-                <p class="valor total">RD$ ${totalCuentas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
-              </div>
-              <div class="card">
-                <p class="label">Total Pendiente</p>
-                <p class="valor pendiente">RD$ ${totalPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
-              </div>
-              <div class="card">
-                <p class="label">Cobrado Total</p>
-                <p class="valor cobrado">RD$ ${totalCobrado.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
-              </div>
-              <div class="card">
-                <p class="label">Vencidas</p>
-                <p class="valor vencidas">RD$ ${totalVencidas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
-              </div>
-            </div>
-            <script>window.onload=()=>window.print()</script>
-            </body></html>`)
-          printW.document.close()
+          setModalResumen({ totalCuentas: totalPendiente + totalCobrado, totalPendiente, totalCobrado, totalVencidas, fecha: hoy.toLocaleDateString('es-DO') })
         }}
           className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
           🖨️ Imprimir Resumen
@@ -172,7 +139,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
           { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
           { id: 'estado_cuenta', label: 'Estado de Cuenta x Cliente' },
           { id: 'historial', label: 'Historial' },
-        ].filter(t => !vendedor_id || t.id === 'cobro_vendedor')
+        ].filter(t => !vendedor_id || t.id === 'cobro_vendedor' || t.id === 'cxc_vendedor' || t.id === 'estado_cuenta')
         .map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -461,12 +428,16 @@ export default function CuentasCobrar({ vendedor_id = null }) {
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Cuenta por Cobrar por Vendedor</h3>
           <div className="flex gap-4 items-end mb-6 flex-wrap">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
-              <select id="cxc-vendedor"
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                <option value="">-- Seleccionar vendedor --</option>
-                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-              </select>
+              {!vendedor_id && <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>}
+              {!vendedor_id ? (
+                <select id="cxc-vendedor"
+                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
+                  <option value="">-- Seleccionar vendedor --</option>
+                  {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+                </select>
+              ) : (
+                <input type="hidden" id="cxc-vendedor" value={vendedor_id} />
+              )}
             </div>
             <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
               onClick={() => {
@@ -500,7 +471,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
               }}>
               Buscar
             </button>
-            <button className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
+            <button className={`bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 ${vendedor_id ? 'hidden' : ''}`}
               onClick={() => {
                 const vendedorNombre = vendedores.find(v => v.id === document.getElementById('cxc-vendedor').value)?.nombre || ''
                 const resumenHtml = document.getElementById('cxc-resultado').innerHTML
@@ -603,7 +574,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                 document.getElementById('ec-resultado').innerHTML = ''
                 document.getElementById('ec-tbody').innerHTML = ''
                 if (val.length < 2) return
-                const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val)).slice(0, 10)
+                const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val) && (!vendedor_id || c.vendedor_id === vendedor_id)).slice(0, 10)
                 filtrados.forEach(c => {
                   const div = document.createElement('div')
                   div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 border-b'
@@ -652,7 +623,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                           printW.document.write('<table><thead><tr><th>FACTURA</th><th>FECHA</th><th style=text-align:right>VALOR</th><th style=text-align:right>DÍAS VEN.</th><th style=text-align:right>NOTA CR.</th><th style=text-align:right>ABONO</th><th style=text-align:right>BALANCE</th></tr></thead><tbody>'+filas+'</tbody></table>');
                           printW.document.write('<script>window.onload=()=>window.print()<\/script></body></html>');
                           printW.document.close();
-                        " style="background:#16a34a;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;align-self:center">🖨️ Imprimir</button>
+                        " style="background:#16a34a;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;align-self:center;display:${vendedor_id ? 'none' : 'inline-block'}">🖨️ Imprimir</button>
                       </div>`
                     document.getElementById('ec-tbody').innerHTML = filas || '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No hay facturas pendientes</td></tr>'
                   }
@@ -765,6 +736,33 @@ export default function CuentasCobrar({ vendedor_id = null }) {
               <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Busca un cliente para ver su historial</td></tr>
             </tbody>
           </table>
+        </div>
+      )}
+      {modalResumen && (
+        <div className="fixed inset-0 bg-white z-50 overflow-auto p-4">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-blue-700">Resumen — CxC</h2>
+            <button onClick={() => setModalResumen(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">← Volver</button>
+          </div>
+          <p className="text-gray-400 text-sm mb-6">Fecha: {modalResumen.fecha}</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 border rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">Total Cuentas</p>
+              <p className="text-xl font-bold text-blue-600">RD$ {modalResumen.totalCuentas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+            </div>
+            <div className="bg-orange-50 border rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">Total Pendiente</p>
+              <p className="text-xl font-bold text-orange-500">RD$ {modalResumen.totalPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+            </div>
+            <div className="bg-green-50 border rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">Cobrado Total</p>
+              <p className="text-xl font-bold text-green-600">RD$ {modalResumen.totalCobrado.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+            </div>
+            <div className="bg-red-50 border rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">Vencidas</p>
+              <p className="text-xl font-bold text-red-600">RD$ {modalResumen.totalVencidas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+            </div>
+          </div>
         </div>
       )}
     </div>

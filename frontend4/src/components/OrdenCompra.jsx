@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import API from '../services/api'
 
-export default function OrdenCompra() {
+export default function OrdenCompra({ onInventarioUpdate }) {
   const [ordenes, setOrdenes] = useState([])
   const [proveedores, setProveedores] = useState([])
   const [productos, setProductos] = useState([])
@@ -28,21 +28,22 @@ export default function OrdenCompra() {
   useEffect(() => { fetchData() }, [])
 
 const handleItemChange = async (idx, field, value) => {
-    const updated = [...items]
-    updated[idx][field] = value
+    const updated = items.map((item, i) => i === idx ? {...item, [field]: value} : item)
     if (field === 'product_id' && value) {
       const prod = productos.find(p => p.id === value)
       if (prod) {
-        updated[idx].descripcion = prod.nombre
-        updated[idx].precio_unitario = prod.costo || prod.precio || ''
+        updated[idx] = {
+          ...updated[idx],
+          product_id: value,
+          descripcion: prod.nombre,
+          precio_unitario: prod.costo || prod.precio || ''
+        }
         setItems([...updated])
-        // Buscar último precio desde el backend
         try {
           const res = await API.get(`/purchase-orders/ultimo-precio/${value}`)
           if (res.data.data) {
-            const u = [...items]
-            u[idx].precio_unitario = res.data.data.precio
-            setItems([...u])
+            const u = updated.map((item, i) => i === idx ? {...item, product_id: value, precio_unitario: res.data.data.precio} : item)
+            setItems(u)
           }
         } catch (err) {
           console.error(err)
@@ -90,6 +91,9 @@ const handleItemChange = async (idx, field, value) => {
     try {
       await API.put(`/purchase-orders/${id}/estado`, { estado })
       fetchData()
+      if (estado === 'recibida' && onInventarioUpdate) {
+        onInventarioUpdate()
+      }
     } catch (err) {
       console.error(err)
     }

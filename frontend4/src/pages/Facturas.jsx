@@ -1539,16 +1539,47 @@ export default function Facturas({ vendedor_id = null }) {
                       <td className="px-4 py-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</td>
                       <td className="px-4 py-3 flex gap-2">
                         <button onClick={async () => {
-                          if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
-                          if (!confirm('¿Convertir este pedido a factura?')) return
                           try {
-                            await API.put(`/invoices/pedido/${p.id}/convertir`)
-                            const res = await API.get('/invoices/pedidos/lista')
-                            setPedidos(res.data.data)
-                            fetchData()
-                            alert('¡Factura emitida exitosamente!')
-                          } catch(e) { alert('Error al convertir') }
-                        }} className="text-green-600 hover:underline text-xs font-medium">Convertir a Factura</button>
+                            const res = await API.get(`/invoices/${p.id}`)
+                            const data = res.data.data
+                            const win = window.open('', '_blank')
+                            const filas = data.items.map(it => `
+                              <tr>
+                                <td>${it.descripcion}</td>
+                                <td style="text-align:right">${parseFloat(it.cantidad).toFixed(0)}</td>
+                                <td style="text-align:right">RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                                <td style="text-align:right">RD$${(parseFloat(it.cantidad)*parseFloat(it.precio_unitario)).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                              </tr>`).join('')
+                            win.document.write(`<!DOCTYPE html><html><head><title>Pedido</title>
+                              <style>body{font-family:Arial,sans-serif;padding:24px;color:#1e293b}h2{color:#1e40af}table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}th{background:#1e40af;color:white;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #e2e8f0}tr:nth-child(even){background:#f8fafc}.total{text-align:right;margin-top:16px;font-size:16px;font-weight:bold}@media print{button{display:none}}</style>
+                              </head><body>
+                              <h2>Pedido</h2>
+                              <p><b>Cliente:</b> ${data.cliente_nombre || 'Consumidor Final'}</p>
+                              <p><b>Fecha:</b> ${new Date(data.creado_en).toLocaleDateString('es-DO')}</p>
+                              <table><thead><tr><th>Descripción</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr></thead>
+                              <tbody>${filas}</tbody></table>
+                              <div class="total">
+                                <p>Subtotal: RD$${parseFloat(data.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                                <p>ITBIS: RD$${parseFloat(data.itbis).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                                <p>Total: RD$${parseFloat(data.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                              </div>
+                              <br>
+              <div style="display:flex;gap:12px;margin-top:16px">
+                <button onclick="window.print()" style="padding:8px 20px;background:#1e40af;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
+                <button onclick="
+                  if(confirm('¿Desea convertir este pedido a factura?')){
+                    fetch('https://facturacion-saas-production.up.railway.app/invoices/pedido/${p.id}/convertir',{method:'PUT',headers:{'Authorization':'Bearer '+sessionStorage.getItem('token'),'Content-Type':'application/json'}})
+                    .then(r=>r.json()).then(d=>{if(d.success){const fid=d.data?.id||d.id;const tok=sessionStorage.getItem('token');if(window.opener)window.opener.location.reload();if(confirm('¿Desea imprimir esta factura?')){window.location.href='https://facturacion-saas-production.up.railway.app/invoices/'+fid+'/pdf?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
+                    .catch(()=>alert('Error al convertir'))
+                  }
+                " style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✅ Convertir a Factura</button>
+                <button onclick="window.close()" style="padding:8px 20px;background:white;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px">← Volver</button>
+              </div>
+                              </body></html>`)
+                            win.document.close()
+                          } catch(e) { alert('Error al cargar pedido') }
+                        }} className="text-blue-600 hover:underline text-xs">Ver</button>
+
                         <button onClick={async () => {
                           if (!confirm('¿Eliminar este pedido?')) return
                           try {

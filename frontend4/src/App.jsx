@@ -20,6 +20,7 @@ function App() {
   })
   const [pagina, setPagina] = useState('facturas')
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [listadoPrecios, setListadoPrecios] = useState(null)
 
   const handleLogin = (user) => {
     setUsuario(user)
@@ -55,6 +56,7 @@ function App() {
     { id: 'facturas', label: '📋 Pedidos' },
     { id: 'pagos', label: '💰 Pagos' },
     { id: 'cuentascobrar', label: '💵 Cuentas por Cobrar' },
+    { id: 'listado_precios', label: '🏷️ Listado de Precios' },
   ]
 
   const menuItems = esVendedor ? menuVendedor : menuAdmin
@@ -84,7 +86,18 @@ function App() {
         <div className="bg-white shadow-lg md:hidden z-50">
           <nav className="p-3">
             {menuItems.map((item) => (
-              <button key={item.id} onClick={() => handleNavegar(item.id)}
+              <button key={item.id} onClick={async () => {
+                if (item.id === 'listado_precios') {
+                  const token = sessionStorage.getItem('token')
+                  const res = await fetch('https://facturacion-saas-production.up.railway.app/products', { headers: { Authorization: `Bearer ${token}` } })
+                  const data = await res.json()
+                  const prods = data.data.filter(p => p.precio)
+                  setListadoPrecios(prods)
+                  setMenuAbierto(false)
+                  return
+                }
+                handleNavegar(item.id)
+              }}
                 className={`w-full text-left px-4 py-3 rounded mb-1 text-sm font-medium ${
                   pagina === item.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
                 }`}>
@@ -146,6 +159,31 @@ function App() {
           {pagina === 'configuracion' && !esVendedor && <Configuracion />}
         </div>
       </div>
+      {listadoPrecios && (
+        <div className="fixed inset-0 bg-white z-50 overflow-auto p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-blue-700">🏷️ Listado de Precios</h2>
+            <button onClick={() => setListadoPrecios(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium">← Volver</button>
+          </div>
+          <p className="text-gray-400 text-sm mb-4">Fecha: {new Date().toLocaleDateString('es-DO')} — {listadoPrecios.length} producto(s)</p>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-blue-700 text-white">
+                <th className="px-3 py-3 text-left">Producto</th>
+                <th className="px-3 py-3 text-right">Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {listadoPrecios.map((p, i) => (
+                <tr key={p.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                  <td className="px-3 py-3 text-gray-800">{p.nombre}</td>
+                  <td className="px-3 py-3 text-right font-bold text-gray-800">RD${parseFloat(p.precio).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

@@ -100,7 +100,39 @@ export default function Inventario() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Inventario</h2>
-      
+        <button onClick={async () => {
+          const res = await API.get('/products')
+          const prods = res.data.data.filter(p => p.precio)
+          const printW = window.open('', '_blank')
+          const filas = prods.map(p => `
+            <tr>
+              <td>${p.nombre}</td>
+              <td>${p.codigo || '-'}</td>
+              <td style="text-align:right">RD$${parseFloat(p.precio).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+            </tr>`).join('')
+          printW.document.write(`<!DOCTYPE html><html><head><title>Listado de Precios</title>
+            <style>
+              body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+              h2{color:#1e40af;margin-bottom:4px}
+              p{color:#64748b;font-size:13px;margin-bottom:16px}
+              table{width:100%;border-collapse:collapse;font-size:13px}
+              th{background:#1e40af;color:white;padding:8px;text-align:left}
+              td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+              tr:nth-child(even){background:#f8fafc}
+              @media print{button{display:none}}
+            </style></head><body>
+            <h2>Listado de Precios</h2>
+            <p>Fecha: ${new Date().toLocaleDateString('es-DO')} — ${prods.length} producto(s)</p>
+            <table>
+              <thead><tr><th>Producto</th><th>Código</th><th style="text-align:right">Precio</th></tr></thead>
+              <tbody>${filas}</tbody>
+            </table>
+            <script>window.onload=()=>window.print()</script>
+            </body></html>`)
+          printW.document.close()
+        }} className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
+          🖨️ Listado de Precios
+        </button>
       </div>
 
       {/* Filtro de fechas - oculto */}
@@ -112,6 +144,7 @@ export default function Inventario() {
           { id: 'valor', label: 'Valor de Inventario' },
           { id: 'stock_minimo', label: 'Stock Mínimo' },
           { id: 'orden_compra', label: 'Crear Orden de Compra' },
+          { id: 'mov_producto', label: 'Movimiento de Producto' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -125,11 +158,102 @@ export default function Inventario() {
       </div>
 
       {tab === 'orden_compra' && (
-        <OrdenCompra />
+       <OrdenCompra onInventarioUpdate={fetchData} />
       )}
 
       {tab === 'valor' && <ValorInventario />}
       {tab === 'stock_minimo' && <StockMinimo />}
+
+      {tab === 'mov_producto' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Movimiento de Producto</h3>
+          <div className="flex flex-wrap gap-4 items-end mb-6">
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+              <select id="mov-producto-select" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-64">
+                <option value="">-- Seleccionar producto --</option>
+                {inventario.map(i => <option key={i.id} value={i.id}>{i.producto_nombre}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
+              <input type="date" id="mov-fecha-inicio" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
+              <input type="date" id="mov-fecha-fin" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <button onClick={async () => {
+              const invId = document.getElementById('mov-producto-select').value
+              if (!invId) return alert('Selecciona un producto')
+              const fi = document.getElementById('mov-fecha-inicio').value
+              const ff = document.getElementById('mov-fecha-fin').value
+              let url = `/inventory/${invId}/movimientos`
+              const qs = []
+              if (fi) qs.push(`fecha_inicio=${fi}`)
+              if (ff) qs.push(`fecha_fin=${ff}`)
+              if (qs.length) url += '?' + qs.join('&')
+              try {
+                const res = await API.get(url)
+                const movs = res.data.data
+                const nombreProd = document.getElementById('mov-producto-select').selectedOptions[0].text
+                // Filtrar por fecha en frontend si backend no soporta filtro
+                const filtrados = movs.filter(m => {
+                  const d = m.creado_en?.slice(0,10)
+                  if (fi && d < fi) return false
+                  if (ff && d > ff) return false
+                  return true
+                })
+                const printW = window.open('', '_blank')
+                const entradas = filtrados.filter(m => m.tipo === 'entrada').reduce((s, m) => s + parseFloat(m.cantidad || 0), 0)
+                const salidas = filtrados.filter(m => m.tipo === 'salida').reduce((s, m) => s + parseFloat(m.cantidad || 0), 0)
+                const filas = filtrados.map(m => `
+                  <tr>
+                    <td style="text-align:center">
+                      <span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;background:${m.tipo==='entrada'?'#dcfce7':m.tipo==='salida'?'#fee2e2':'#dbeafe'};color:${m.tipo==='entrada'?'#16a34a':m.tipo==='salida'?'#dc2626':'#2563eb'}">${m.tipo.toUpperCase()}</span>
+                    </td>
+                    <td style="text-align:right">${parseFloat(m.cantidad).toFixed(2)}</td>
+                    <td style="text-align:right">${parseFloat(m.stock_anterior).toFixed(2)}</td>
+                    <td style="text-align:right">${parseFloat(m.stock_nuevo).toFixed(2)}</td>
+                    <td>${m.motivo || '-'}</td>
+                    <td style="text-align:center">${new Date(m.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('')
+                printW.document.write(`<!DOCTYPE html><html><head><title>Movimientos - ${nombreProd}</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.sub{color:#64748b;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    .resumen{display:flex;gap:24px;margin-bottom:16px}
+                    .resumen-card{background:#f1f5f9;border-radius:8px;padding:12px 20px;text-align:center}
+                    .resumen-card .val{font-size:20px;font-weight:bold}
+                    .verde{color:#16a34a} .rojo{color:#dc2626}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Movimientos: ${nombreProd}</h2>
+                  <p class="sub">Período: ${fi||'Inicio'} al ${ff||'Hoy'} — ${filtrados.length} movimiento(s)</p>
+                  <div class="resumen">
+                    <div class="resumen-card"><div class="val verde">+${entradas.toFixed(2)}</div><div>Total Entradas</div></div>
+                    <div class="resumen-card"><div class="val rojo">-${salidas.toFixed(2)}</div><div>Total Salidas</div></div>
+                    <div class="resumen-card"><div class="val">${(entradas-salidas).toFixed(2)}</div><div>Neto</div></div>
+                  </div>
+                  <table>
+                    <thead><tr><th style="text-align:center">Tipo</th><th style="text-align:right">Cantidad</th><th style="text-align:right">Stock Ant.</th><th style="text-align:right">Stock Nuevo</th><th>Motivo</th><th style="text-align:center">Fecha</th></tr></thead>
+                    <tbody>${filas || '<tr><td colspan="6" style="text-align:center;color:#94a3b8">Sin movimientos en el período</td></tr>'}</tbody>
+                  </table>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                printW.document.close()
+              } catch(e) { alert('Error al cargar movimientos') }
+            }} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+              🔍 Ver e Imprimir
+            </button>
+          </div>
+        </div>
+      )}
 
       {tab === 'inventario' && (
         <>
