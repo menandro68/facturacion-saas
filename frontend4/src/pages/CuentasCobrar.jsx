@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import API from '../services/api'
+import { listarDispositivos, imprimirEnDispositivo } from '../utils/bluetoothPrint'
 
 export default function CuentasCobrar({ vendedor_id = null }) {
   const [tab, setTab] = useState(vendedor_id ? 'cobro_vendedor' : 'cuentas')
@@ -22,6 +23,10 @@ export default function CuentasCobrar({ vendedor_id = null }) {
   const [cxcFiltradas, setCxcFiltradas] = useState([])
   const [pagos, setPagos] = useState([])
   const [modalResumen, setModalResumen] = useState(null)
+  const [btModal, setBtModal] = useState(false)
+  const [btDevices, setBtDevices] = useState([])
+  const [btLineas, setBtLineas] = useState([])
+  const [btLoading, setBtLoading] = useState(false)
 
   const fetchData = async () => {
     try {
@@ -105,6 +110,11 @@ export default function CuentasCobrar({ vendedor_id = null }) {
   }
 
   if (loading) return <p className="text-gray-500 p-6">Cargando cuentas por cobrar...</p>
+
+  const centerText = (text, width) => {
+    const spaces = Math.max(0, Math.floor((width - text.length) / 2))
+    return ' '.repeat(spaces) + text
+  }
 
   return (
     <div className="p-6">
@@ -374,10 +384,111 @@ export default function CuentasCobrar({ vendedor_id = null }) {
           <div id="cob-resultado" className="mb-4 text-right bg-green-50 p-3 rounded-lg min-h-8"></div>
         <div className="flex justify-end mb-4">
           <button className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
-            onClick={() => {
+            onClick={async () => {
               const tbody = document.getElementById('cob-tbody')
               if (!tbody || tbody.innerHTML.includes('No hay') || tbody.innerHTML.includes('Selecciona')) return alert('Primero realiza una búsqueda')
-              const resultado = document.getElementById('cob-resultado').innerHTML
+              const resultado = document.getElementById('cob-resultado')
+              if (vendedor_id && window.bluetoothSerial) {
+                try {
+                  setBtLoading(true)
+                  let devices = []
+                  const filas = Array.from(tbody.querySelectorAll('tr')).map(tr =>
+                    Array.from(tr.querySelectorAll('td')).map(td => td.innerText).join('  |  ')
+                  )
+                  const W = 48 // ancho real para 80mm
+
+                  const pad = (text, length, align = 'left') => {
+                    text = String(text || '')
+                    if (text.length > length) return text.substring(0, length)
+                    if (align === 'right') return ' '.repeat(length - text.length) + text
+                    if (align === 'center') {
+                      const spaces = Math.floor((length - text.length) / 2)
+                      return ' '.repeat(spaces) + text + ' '.repeat(length - text.length - spaces)
+                    }
+                    return text + ' '.repeat(length - text.length)
+                  }
+
+                  const line = (a, b, c, d) => {
+                    return (
+                      pad(a, 12) +           // NCF
+                      pad(b, 14) +           // CLIENTE (más a la derecha)
+                      pad(c, 12, 'right') +  // COBRADO
+                      pad(d, 10, 'right')    // FECHA
+                    )                        // TOTAL = 48
+                  }
+
+                  const sep = '='.repeat(W)
+                  const sep2 = '-'.repeat(W)
+
+                  const empresa = sessionStorage.getItem('tenant_name') || 'MI EMPRESA'
+                  const vendedorNombre = vendedor_id
+                    ? (vendedores.find(v => v.id === vendedor_id)?.nombre || sessionStorage.getItem('user_nombre') || 'VENDEDOR')
+                    : (sessionStorage.getItem('user_nombre') || 'VENDEDOR')
+
+                  const fechaIni = fechaInicio
+                    ? new Date(fechaInicio).toLocaleDateString('es-DO')
+                    : '--/--/----'
+
+                  const fechaFin2 = fechaFin
+                    ? new Date(fechaFin).toLocaleDateString('es-DO')
+                    : '--/--/----'
+
+                  const filasDatos = Array.from(tbody.querySelectorAll('tr')).map(tr => {
+                    const tds = Array.from(tr.querySelectorAll('td'))
+                    if (tds.length < 4) return ''
+
+                    const factura = tds[0].innerText.trim().slice(-10)
+                    const cliente = tds[1].innerText.trim()
+                    const monto = tds[2].innerText.replace('RD$', '').trim()
+                    const fecha = tds[3].innerText.trim()
+
+                    return line(factura, cliente, monto, fecha)
+                  }).filter(Boolean)
+
+                  const lineas = [
+                    sep,
+                    pad(empresa.toUpperCase(), W, 'center'),
+                    pad('REPORTE DE COBRO', W, 'center'),
+                    sep,
+                    `VENDEDOR: ${vendedorNombre}`,
+                    sep2,
+                    `FECHA INI: ${fechaIni}`,
+                    `FECHA FIN: ${fechaFin2}`,
+                    sep2,
+                    line('FACT.', 'CLIENTE', 'COBRADO', 'FECHA'),
+                    sep2,
+                    ...filasDatos,
+                    sep2,
+                    `FACTURAS: ${resultado?.innerText.match(/Facturas pagadas:\s*(\d+)/)?.[1] || ''}`,
+                    `TOTAL: ${resultado?.innerText.match(/Total Cobrado[:\s]+(.+)/)?.[1]?.trim() || ''}`,
+                    sep,
+                    pad('** GRACIAS **', W, 'center'),
+                    sep,
+                    '', '', ''
+                  ]
+
+                  const savedAddress = localStorage.getItem('bt_printer_address')
+                  const savedName = localStorage.getItem('bt_printer_name')
+                  if (savedAddress) {
+                    try {
+                      await imprimirEnDispositivo(savedAddress, lineas)
+                      alert('✅ Impreso en ' + (savedName || savedAddress))
+                    } catch (err) {
+                      alert('❌ Error al imprimir: ' + err)
+                    }
+                    return
+                  }
+                  devices = await listarDispositivos()
+                  setBtDevices(devices)
+                  setBtLineas(lineas)
+                  setBtModal(true)
+                } catch (err) {
+                  alert('❌ ' + err)
+                } finally {
+                  setBtLoading(false)
+                }
+                return
+              }
               const printW = window.open('', '_blank')
               printW.document.write(`
                 <!DOCTYPE html><html><head><title>Cobro por Vendedor</title>
@@ -398,7 +509,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                   <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total Cobrado</th><th>Fecha</th></tr></thead>
                   <tbody>${tbody.innerHTML}</tbody>
                 </table>
-                <div class="resumen">${resultado}</div>
+                <div class="resumen">${resultado.innerHTML}</div>
                 <script>window.onload=()=>window.print()</script>
                 </body></html>`)
               printW.document.close()
@@ -736,6 +847,43 @@ export default function CuentasCobrar({ vendedor_id = null }) {
               <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Busca un cliente para ver su historial</td></tr>
             </tbody>
           </table>
+        </div>
+      )}
+      {btModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">Seleccionar Impresora</h3>
+              <p className="text-sm text-gray-500 mt-1">Elige el dispositivo Bluetooth</p>
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+              {btDevices.length === 0 ? (
+                <p className="p-4 text-center text-gray-400 text-sm">No hay dispositivos emparejados</p>
+              ) : btDevices.map(d => (
+                <button key={d.address} className="w-full text-left px-4 py-3 border-b hover:bg-blue-50 flex items-center gap-3"
+                  onClick={async () => {
+                    setBtModal(false)
+                    localStorage.setItem('bt_printer_address', d.address)
+                    localStorage.setItem('bt_printer_name', d.name)
+                    try {
+                      await imprimirEnDispositivo(d.address, btLineas)
+                      alert('✅ Impreso en ' + d.name)
+                    } catch (err) {
+                      alert('❌ ' + err)
+                    }
+                  }}>
+                  <span className="text-2xl">🖨️</span>
+                  <div>
+                    <p className="font-medium text-gray-800 text-sm">{d.name}</p>
+                    <p className="text-xs text-gray-400">{d.address}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="p-3 flex justify-end">
+              <button onClick={() => setBtModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+            </div>
+          </div>
         </div>
       )}
       {modalResumen && (
