@@ -13,7 +13,7 @@ export default function Configuracion() {
   useEffect(() => {
     const fetchTenant = async () => {
       try {
-        const res = await API.get('/tenant/perfil')
+        const res = await API.get('/tenant/profile')
         const t = res.data.data
         setForm({
           nombre: t.nombre || '',
@@ -41,7 +41,7 @@ export default function Configuracion() {
     setMensaje('')
     setError('')
     try {
-      await API.put('/tenant/perfil', form)
+      await API.put('/tenant/profile', form)
       setMensaje('✅ Configuración guardada correctamente')
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al guardar')

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import API from '../services/api'
+import { listarDispositivos, imprimirEnDispositivo } from '../utils/bluetoothPrint'
 
 export default function Pagos() {
   const [pagos, setPagos] = useState([])
@@ -21,6 +22,10 @@ export default function Pagos() {
     cheque_banco: '',
     cheque_numero: '',
   })
+  const [btModal, setBtModal] = useState(false)
+  const [btDevices, setBtDevices] = useState([])
+  const [btLineas, setBtLineas] = useState([])
+  const [pagoData, setPagoData] = useState(null)
 
   const fetchData = async () => {
     try {
@@ -90,6 +95,14 @@ export default function Pagos() {
       const id = res.data.data?.id
       if (id) {
         setPagoGuardadoId(id)
+        const facturaSeleccionada = facturas.find(f => f.id === form.invoice_id)
+        setPagoData({
+          monto: form.monto,
+          metodo: form.metodo,
+          referencia: form.referencia,
+          ncf: facturaSeleccionada?.ncf || '',
+          cliente: facturaSeleccionada?.cliente_nombre || 'Consumidor Final'
+        })
         setMostrarImprimirPago(true)
       }
     } catch (err) {
@@ -107,7 +120,50 @@ export default function Pagos() {
             <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir el recibo de pago?</p>
             <div className="flex justify-center gap-6">
               <button autoFocus
-                onClick={() => {
+                onClick={async () => {
+                  if (window.bluetoothSerial && pagoData) {
+                    setMostrarImprimirPago(false)
+                    const W = 32
+                    const pad = (t, l, a='left') => { t=String(t||''); if(t.length>l) return t.substring(0,l); if(a==='right') return ' '.repeat(l-t.length)+t; if(a==='center'){ const s=Math.floor((l-t.length)/2); return ' '.repeat(s)+t+' '.repeat(l-t.length-s); } return t+' '.repeat(l-t.length) }
+                    const sep = '='.repeat(W)
+                    const sep2 = '-'.repeat(W)
+                    const empresa = sessionStorage.getItem('tenant_name') || 'MI EMPRESA'
+                    const lineas = [
+                      sep,
+                      pad(empresa.toUpperCase(), W, 'center'),
+                      pad('RECIBO DE PAGO', W, 'center'),
+                      sep,
+                      `FECHA   : ${new Date().toLocaleDateString('es-DO')}`,
+                      `VENDEDOR: ${(() => { try { return JSON.parse(sessionStorage.getItem('usuario'))?.nombre || '-' } catch(e) { return '-' } })()}`,
+                      pagoData.ncf ? `FACTURA : ${pagoData.ncf}` : '',
+                      sep2,
+                      `CLIENTE : ${pagoData.cliente}`,
+                      sep2,
+                      `MONTO   : RD$${parseFloat(pagoData.monto).toLocaleString('es-DO',{minimumFractionDigits:2})}`,
+                      `METODO  : ${pagoData.metodo.toUpperCase()}`,
+                      pagoData.referencia ? `REF     : ${pagoData.referencia}` : '',
+                      sep2,
+                      pad('GRACIAS POR SU PAGO', W, 'center'),
+                      sep,
+                      '', '', ''
+                    ].filter(l => l !== '')
+                    const savedAddress = localStorage.getItem('bt_printer_address')
+                    const savedName = localStorage.getItem('bt_printer_name')
+                    if (savedAddress) {
+                      try {
+                        await imprimirEnDispositivo(savedAddress, lineas)
+                        alert('✅ Impreso')
+                      } catch (err) {
+                        alert('❌ ' + err)
+                      }
+                      return
+                    }
+                    const devices = await listarDispositivos()
+                    setBtDevices(devices)
+                    setBtLineas(lineas)
+                    setBtModal(true)
+                    return
+                  }
                   const token = sessionStorage.getItem('token')
                   window.open(`https://facturacion-saas-production.up.railway.app/payments/${pagoGuardadoId}/recibo?token=${token}`, '_blank')
                   setMostrarImprimirPago(false)
@@ -275,6 +331,43 @@ export default function Pagos() {
                 className="px-6 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 font-medium">
                 ENVIAR
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {btModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">Seleccionar Impresora</h3>
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+              {btDevices.length === 0 ? (
+                <p className="p-4 text-center text-gray-400 text-sm">No hay dispositivos emparejados</p>
+              ) : btDevices.map(d => (
+                <button key={d.address} className="w-full text-left px-4 py-3 border-b hover:bg-blue-50 flex items-center gap-3"
+                  onClick={async () => {
+                    setBtModal(false)
+                    localStorage.setItem('bt_printer_address', d.address)
+                    localStorage.setItem('bt_printer_name', d.name)
+                    try {
+                      await imprimirEnDispositivo(d.address, btLineas)
+                      alert('✅ Impreso en ' + d.name)
+                    } catch (err) {
+                      alert('❌ ' + err)
+                    }
+                  }}>
+                  <span className="text-2xl">🖨️</span>
+                  <div>
+                    <p className="font-medium text-gray-800 text-sm">{d.name}</p>
+                    <p className="text-xs text-gray-400">{d.address}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="p-3 flex justify-end">
+              <button onClick={() => setBtModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
             </div>
           </div>
         </div>
