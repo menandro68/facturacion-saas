@@ -346,12 +346,10 @@ export default function CuentasCobrar({ vendedor_id = null }) {
               onClick={() => {
                 const vendedorId = document.getElementById('cob-vendedor').value
                 if (!vendedorId) return
-                const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
-                const idsClientes = clientesVendedor.map(c => c.id)
-                const facturasVendedor = todasFacturas.filter(f => idsClientes.includes(f.customer_id))
-                const idsFacturas = facturasVendedor.map(f => f.id)
+                const vendedorNombreSeleccionado = vendedores.find(v => v.id === vendedorId)?.nombre || ''
                 const filtradas = pagos.filter(p => {
-                  if (!idsFacturas.includes(p.invoice_id)) return false
+                  const matchVendedor = p.vendedor_nombre && p.vendedor_nombre.toLowerCase().includes(vendedorNombreSeleccionado.toLowerCase())
+                  if (!matchVendedor) return false
                   const d = new Date(p.creado_en)
                   const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
                   if (fechaInicio && fecha < fechaInicio) return false
@@ -373,7 +371,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                     const factura = todasFacturas.find(f => f.id === p.invoice_id)
                     return `<tr class="border-t hover:bg-gray-50">
                       <td class="px-4 py-3 font-mono text-sm">${factura?.ncf || 'N/A'}</td>
-                      <td class="px-4 py-3 text-sm">${factura?.cliente_nombre || 'Consumidor Final'}</td>
+                      <td class="px-4 py-3 text-sm">${factura?.cliente_nombre || p.cliente_nombre || 'Consumidor Final'}</td>
                       <td class="px-4 py-3 text-right text-sm font-medium text-green-700">RD$${parseFloat(p.monto).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                       <td class="px-4 py-3 text-sm">${new Date(p.creado_en).toLocaleDateString('es-DO')}</td>
                     </tr>`}).join('')
@@ -395,7 +393,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                   const filas = Array.from(tbody.querySelectorAll('tr')).map(tr =>
                     Array.from(tr.querySelectorAll('td')).map(td => td.innerText).join('  |  ')
                   )
-                  const W = 48 // ancho real para 80mm
+                  const W = 48
 
                   const pad = (text, length, align = 'left') => {
                     text = String(text || '')
@@ -410,11 +408,11 @@ export default function CuentasCobrar({ vendedor_id = null }) {
 
                   const line = (a, b, c, d) => {
                     return (
-                      pad(a, 12) +           // NCF
-                      pad(b, 14) +           // CLIENTE (más a la derecha)
-                      pad(c, 12, 'right') +  // COBRADO
-                      pad(d, 10, 'right')    // FECHA
-                    )                        // TOTAL = 48
+                      pad(a, 12) +
+                      pad(b, 14) +
+                      pad(c, 12, 'right') +
+                      pad(d, 10, 'right')
+                    )
                   }
 
                   const sep = '='.repeat(W)
@@ -436,12 +434,10 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                   const filasDatos = Array.from(tbody.querySelectorAll('tr')).map(tr => {
                     const tds = Array.from(tr.querySelectorAll('td'))
                     if (tds.length < 4) return ''
-
                     const factura = tds[0].innerText.trim().slice(-10)
                     const cliente = tds[1].innerText.trim()
                     const monto = tds[2].innerText.replace('RD$', '').trim()
                     const fecha = tds[3].innerText.trim()
-
                     return line(factura, cliente, monto, fecha)
                   }).filter(Boolean)
 
@@ -786,10 +782,8 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                   div.onmousedown = () => {
                     e.target.value = c.nombre
                     list.innerHTML = ''
-                    // Mapeo de condiciones a días
                     const condDias = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
                     const diasCondicion = condDias[c.condiciones] || 0
-                    // Últimas 10 facturas (emitidas + pagadas)
                     const facturasCliente = todasFacturas
                       .filter(f => f.customer_id === c.id && (f.estado === 'emitida' || f.estado === 'pagada'))
                       .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
@@ -804,7 +798,6 @@ export default function CuentasCobrar({ vendedor_id = null }) {
                       const fechaEmitida = new Date(f.creado_en)
                       const fechaVencimientoCondicion = new Date(fechaEmitida)
                       fechaVencimientoCondicion.setDate(fechaVencimientoCondicion.getDate() + diasCondicion)
-                      // Fecha de pago: si está pagada usamos actualizado_en, si no hoy
                       const fechaPago = f.estado === 'pagada' ? new Date(f.actualizado_en) : null
                       const fechaRef = fechaPago || hoy
                       const diasVencido = Math.max(0, Math.floor((fechaRef - fechaVencimientoCondicion) / (1000*60*60*24)))
