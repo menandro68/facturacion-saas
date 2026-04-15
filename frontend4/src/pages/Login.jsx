@@ -3,7 +3,7 @@ import API from '../services/api'
 
 export default function Login({ onLogin }) {
   const [tipo, setTipo] = useState('admin')
-  const [form, setForm] = useState({ email: 'menandro68@gmail.com', password: '132312ml', usuario: '' })
+  const [form, setForm] = useState({ email: '', password: '', usuario: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -67,12 +67,13 @@ export default function Login({ onLogin }) {
           <div className="mb-4">
             {tipo === 'admin' ? (
               <>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
                 <input
-                  type="email"
+                  type="text"
                   name="email"
                   value={form.email}
                   onChange={handleChange}
+                  placeholder="Usuario o email"
                   className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
