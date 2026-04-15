@@ -92,13 +92,19 @@ export default function Pagos() {
       if (id) {
         setPagoGuardadoId(id)
         const facturaSeleccionada = facturas.find(f => f.id === form.invoice_id)
-        setPagoData({
-          monto: form.monto,
-          metodo: form.metodo,
-          referencia: form.referencia,
-          ncf: facturaSeleccionada?.ncf || '',
-          cliente: facturaSeleccionada?.cliente_nombre || 'Consumidor Final'
-        })
+        const pagosAnteriores = pagos
+            .filter(p => p.invoice_id === form.invoice_id)
+            .reduce((sum, p) => sum + parseFloat(p.monto || 0), 0)
+          const totalOriginal = parseFloat(facturaSeleccionada?.total || form.monto)
+          const saldoRestante = totalOriginal - pagosAnteriores
+          setPagoData({
+            monto: form.monto,
+            metodo: form.metodo,
+            referencia: form.referencia,
+            ncf: facturaSeleccionada?.ncf || '',
+            cliente: facturaSeleccionada?.cliente_nombre || 'Consumidor Final',
+            totalFactura: saldoRestante > 0 ? saldoRestante : totalOriginal
+          })
         setMostrarImprimirPago(true)
       }
     } catch (err) {
@@ -144,11 +150,14 @@ export default function Pagos() {
                       '',
                       sep2,
                       '',
-                      `CONCEPTO : Pago de Factura`,
+                      `CONCEPTO : ${parseFloat(pagoData.monto) >= parseFloat(pagoData.totalFactura || pagoData.monto) ? 'SALDO' : 'ABONO'}`,
                       '',
                       sep2,
                       '',
                       pad(`RD$ ${montoFmt}`, W, 'center'),
+                      '',
+                      parseFloat(pagoData.monto) < parseFloat(pagoData.totalFactura || pagoData.monto) ? sep2 : '',
+                      parseFloat(pagoData.monto) < parseFloat(pagoData.totalFactura || pagoData.monto) ? `PENDIENTE: RD$ ${(parseFloat(pagoData.totalFactura) - parseFloat(pagoData.monto)).toLocaleString('es-DO', {minimumFractionDigits:2})}` : '',
                       '',
                       sep2,
                       '',
@@ -219,7 +228,7 @@ export default function Pagos() {
                       const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
                       if (!factura) { setError('Factura no encontrada: ' + val); return }
                       setError('')
-                      setForm(prev => ({ ...prev, invoice_id: factura.id, monto: factura.total }))
+                      setForm(prev => ({ ...prev, invoice_id: factura.id, monto: '' }))
                       document.getElementById('pago-ncf-resultado').innerHTML =
                         `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${parseFloat(factura.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                     }
@@ -230,7 +239,7 @@ export default function Pagos() {
                     const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
                     if (!factura) { setError('Factura no encontrada: ' + val); return }
                     setError('')
-                    setForm(prev => ({ ...prev, invoice_id: factura.id, monto: factura.total }))
+                    setForm(prev => ({ ...prev, invoice_id: factura.id, monto: '' }))
                     document.getElementById('pago-ncf-resultado').innerHTML =
                       `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${parseFloat(factura.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                   }}
@@ -243,6 +252,8 @@ export default function Pagos() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
               <input name="monto" type="number" step="0.01" value={form.monto} onChange={handleChange} required
+                placeholder="DIGITAR MONTO"
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); setShowMetodo(true) } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2">
@@ -252,16 +263,11 @@ export default function Pagos() {
                 💳 {getMetodoLabel()}
               </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
-              <input name="referencia" value={form.referencia} onChange={handleChange}
-                placeholder="Número de referencia"
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div className="hidden">
+              <input name="referencia" value={form.referencia} onChange={handleChange} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-              <input name="notas" value={form.notas} onChange={handleChange}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div className="hidden">
+              <input name="notas" value={form.notas} onChange={handleChange} />
             </div>
             <div className="md:col-span-2 flex gap-3 justify-end">
               <button type="button" onClick={() => setShowForm(false)}
