@@ -15,12 +15,8 @@ export default function Pagos() {
   const [mostrarImprimirPago, setMostrarImprimirPago] = useState(false)
   const [pagoGuardadoId, setPagoGuardadoId] = useState(null)
   const [metodos, setMetodos] = useState({
-    efectivo: '',
-    transferencia: '',
-    tarjeta: '',
-    cheque_valor: '',
-    cheque_banco: '',
-    cheque_numero: '',
+    efectivo: '', transferencia: '', tarjeta: '',
+    cheque_valor: '', cheque_banco: '', cheque_numero: '',
   })
   const [btModal, setBtModal] = useState(false)
   const [btDevices, setBtDevices] = useState([])
@@ -29,12 +25,16 @@ export default function Pagos() {
 
   const fetchData = async () => {
     try {
-      const [p, f] = await Promise.all([
+      const [p, f, t] = await Promise.all([
         API.get('/payments'),
-        API.get('/invoices')
+        API.get('/invoices'),
+        API.get('/tenant/profile')
       ])
       setPagos(p.data.data)
       setFacturas(f.data.data.filter(f => f.estado === 'emitida'))
+      if (t.data.data?.nombre) {
+        sessionStorage.setItem('tenant_name', t.data.data.nombre)
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -54,20 +54,16 @@ export default function Pagos() {
     const tarjeta = parseFloat(metodos.tarjeta || 0)
     const cheque = parseFloat(metodos.cheque_valor || 0)
     const total = efectivo + transferencia + tarjeta + cheque
-
     let metodoLabel = 'efectivo'
     let maxVal = efectivo
     if (transferencia > maxVal) { metodoLabel = 'transferencia'; maxVal = transferencia }
     if (tarjeta > maxVal) { metodoLabel = 'tarjeta'; maxVal = tarjeta }
     if (cheque > maxVal) { metodoLabel = 'cheque'; maxVal = cheque }
-
     let ref = ''
     if (metodos.cheque_banco) ref += metodos.cheque_banco
     if (metodos.cheque_numero) ref += (ref ? ' #' : '#') + metodos.cheque_numero
-
     setForm(prev => ({
-      ...prev,
-      metodo: metodoLabel,
+      ...prev, metodo: metodoLabel,
       monto: total > 0 ? total : prev.monto,
       referencia: ref || prev.referencia
     }))
@@ -123,32 +119,49 @@ export default function Pagos() {
                 onClick={async () => {
                   if (window.bluetoothSerial && pagoData) {
                     setMostrarImprimirPago(false)
-                    const W = 32
+                    const W = 48
                     const pad = (t, l, a='left') => { t=String(t||''); if(t.length>l) return t.substring(0,l); if(a==='right') return ' '.repeat(l-t.length)+t; if(a==='center'){ const s=Math.floor((l-t.length)/2); return ' '.repeat(s)+t+' '.repeat(l-t.length-s); } return t+' '.repeat(l-t.length) }
                     const sep = '='.repeat(W)
                     const sep2 = '-'.repeat(W)
                     const empresa = sessionStorage.getItem('tenant_name') || 'MI EMPRESA'
+                    const vendedor = (() => { try { return JSON.parse(sessionStorage.getItem('usuario'))?.nombre || '-' } catch(e) { return '-' } })()
+                    const fecha = new Date().toLocaleDateString('es-DO')
+                    const hora = new Date().toLocaleTimeString('es-DO', {hour:'2-digit', minute:'2-digit'})
+                    const montoFmt = parseFloat(pagoData.monto).toLocaleString('es-DO', {minimumFractionDigits:2})
                     const lineas = [
                       sep,
                       pad(empresa.toUpperCase(), W, 'center'),
                       pad('RECIBO DE PAGO', W, 'center'),
                       sep,
-                      `FECHA   : ${new Date().toLocaleDateString('es-DO')}`,
-                      `VENDEDOR: ${(() => { try { return JSON.parse(sessionStorage.getItem('usuario'))?.nombre || '-' } catch(e) { return '-' } })()}`,
-                      pagoData.ncf ? `FACTURA : ${pagoData.ncf}` : '',
+                      '',
+                      `FECHA    : ${fecha}   ${hora}`,
+                      `VENDEDOR : ${vendedor}`,
+                      '',
                       sep2,
-                      `CLIENTE : ${pagoData.cliente}`,
+                      '',
+                      `CLIENTE  : ${pagoData.cliente}`,
+                      pagoData.ncf ? `FACTURA  : ${pagoData.ncf}` : '',
+                      '',
                       sep2,
-                      `MONTO   : RD$${parseFloat(pagoData.monto).toLocaleString('es-DO',{minimumFractionDigits:2})}`,
-                      `METODO  : ${pagoData.metodo.toUpperCase()}`,
-                      pagoData.referencia ? `REF     : ${pagoData.referencia}` : '',
+                      '',
+                      `CONCEPTO : Pago de Factura`,
+                      '',
                       sep2,
+                      '',
+                      pad(`RD$ ${montoFmt}`, W, 'center'),
+                      '',
+                      sep2,
+                      '',
+                      `METODO   : ${pagoData.metodo.toUpperCase()}`,
+                      pagoData.referencia ? `REF      : ${pagoData.referencia}` : '',
+                      '',
+                      sep2,
+                      '',
                       pad('GRACIAS POR SU PAGO', W, 'center'),
                       sep,
                       '', '', ''
-                    ].filter(l => l !== '')
+                    ]
                     const savedAddress = localStorage.getItem('bt_printer_address')
-                    const savedName = localStorage.getItem('bt_printer_name')
                     if (savedAddress) {
                       try {
                         await imprimirEnDispositivo(savedAddress, lineas)
@@ -171,8 +184,7 @@ export default function Pagos() {
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium">
                 Sí
               </button>
-              <button
-                onClick={() => setMostrarImprimirPago(false)}
+              <button onClick={() => setMostrarImprimirPago(false)}
                 className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm font-medium text-gray-700">
                 No
               </button>
@@ -180,6 +192,7 @@ export default function Pagos() {
           </div>
         </div>
       )}
+
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Pagos</h2>
         <button onClick={() => setShowForm(!showForm)}
@@ -188,7 +201,6 @@ export default function Pagos() {
         </button>
       </div>
 
-      {/* Formulario */}
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">Registrar Pago</h3>
@@ -197,10 +209,7 @@ export default function Pagos() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Factura * (NCF)</label>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Ej: B0100000001"
-                  id="pago-ncf-input"
+                <input type="text" placeholder="Ej: B0100000001" id="pago-ncf-input"
                   className="w-full border rounded px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
                   onChange={e => e.target.value = e.target.value.toUpperCase()}
                   onKeyDown={e => {
@@ -214,8 +223,7 @@ export default function Pagos() {
                       document.getElementById('pago-ncf-resultado').innerHTML =
                         `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${parseFloat(factura.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                     }
-                  }}
-                />
+                  }} />
                 <button type="button"
                   onClick={() => {
                     const val = document.getElementById('pago-ncf-input').value.trim().toUpperCase()
@@ -232,35 +240,29 @@ export default function Pagos() {
               </div>
               <div id="pago-ncf-resultado" className="mt-1 text-sm"></div>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
               <input name="monto" type="number" step="0.01" value={form.monto} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-              <button type="button"
-                onClick={() => setShowMetodo(true)}
+              <button type="button" onClick={() => setShowMetodo(true)}
                 className="w-full border rounded px-3 py-2 text-sm text-left bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600">
                 💳 {getMetodoLabel()}
               </button>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
               <input name="referencia" value={form.referencia} onChange={handleChange}
                 placeholder="Número de referencia"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
               <input name="notas" value={form.notas} onChange={handleChange}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-
             <div className="md:col-span-2 flex gap-3 justify-end">
               <button type="button" onClick={() => setShowForm(false)}
                 className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
@@ -273,7 +275,6 @@ export default function Pagos() {
         </div>
       )}
 
-      {/* Modal Métodos de Pago */}
       {showMetodo && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
@@ -281,56 +282,46 @@ export default function Pagos() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">💵 Efectivo</label>
-                <input type="number" step="0.01" placeholder="0.00"
-                  value={metodos.efectivo}
+                <input type="number" step="0.01" placeholder="0.00" value={metodos.efectivo}
                   onChange={e => setMetodos(prev => ({...prev, efectivo: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">🏦 Transferencia</label>
-                <input type="number" step="0.01" placeholder="0.00"
-                  value={metodos.transferencia}
+                <input type="number" step="0.01" placeholder="0.00" value={metodos.transferencia}
                   onChange={e => setMetodos(prev => ({...prev, transferencia: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">💳 Tarjeta</label>
-                <input type="number" step="0.01" placeholder="0.00"
-                  value={metodos.tarjeta}
+                <input type="number" step="0.01" placeholder="0.00" value={metodos.tarjeta}
                   onChange={e => setMetodos(prev => ({...prev, tarjeta: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Valor</label>
-                <input type="number" step="0.01" placeholder="0.00"
-                  value={metodos.cheque_valor}
+                <input type="number" step="0.01" placeholder="0.00" value={metodos.cheque_valor}
                   onChange={e => setMetodos(prev => ({...prev, cheque_valor: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Banco</label>
-                <input type="text" placeholder="Nombre del banco"
-                  value={metodos.cheque_banco}
+                <input type="text" placeholder="Nombre del banco" value={metodos.cheque_banco}
                   onChange={e => setMetodos(prev => ({...prev, cheque_banco: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Número</label>
-                <input type="text" placeholder="# cheque"
-                  value={metodos.cheque_numero}
+                <input type="text" placeholder="# cheque" value={metodos.cheque_numero}
                   onChange={e => setMetodos(prev => ({...prev, cheque_numero: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
             <div className="flex justify-end gap-4">
               <button onClick={() => setShowMetodo(false)}
-                className="px-6 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-700 font-medium">
-                VOLVER
-              </button>
+                className="px-6 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 text-gray-700 font-medium">VOLVER</button>
               <button onClick={handleEnviarMetodo}
-                className="px-6 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 font-medium">
-                ENVIAR
-              </button>
+                className="px-6 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 font-medium">ENVIAR</button>
             </div>
           </div>
         </div>
@@ -373,7 +364,6 @@ export default function Pagos() {
         </div>
       )}
 
-      {/* Tabla */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">

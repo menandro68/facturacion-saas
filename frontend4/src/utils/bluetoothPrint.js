@@ -57,3 +57,32 @@ export async function imprimirEnDispositivo(address, lineas) {
     )
   })
 }
+
+export async function imprimirRaw(address, bytes) {
+  return new Promise((resolve, reject) => {
+    const doWrite = () => {
+      window.bluetoothSerial.write(
+        bytes.buffer,
+        () => resolve('OK'),
+        (err) => reject('Error al escribir: ' + err)
+      )
+    }
+    const conectar = (intento) => {
+      window.bluetoothSerial.connect(
+        address,
+        () => setTimeout(doWrite, 300),
+        (err) => {
+          if (intento < 3) {
+            setTimeout(() => conectar(intento + 1), 1500)
+          } else {
+            reject('Error al conectar: ' + err)
+          }
+        }
+      )
+    }
+    window.bluetoothSerial.isConnected(
+      () => doWrite(),
+      () => conectar(1)
+    )
+  })
+}
