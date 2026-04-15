@@ -27,6 +27,7 @@ export default function Pagos() {
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('')
   const [filtroFechaFin, setFiltroFechaFin] = useState('')
   const [filtroVendedor, setFiltroVendedor] = useState('')
+  const [vendedoresList, setVendedoresList] = useState([])
 
   const fetchData = async () => {
     try {
@@ -47,7 +48,10 @@ export default function Pagos() {
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    fetchData()
+    API.get('/mantenimiento/vendedores').then(r => setVendedoresList(r.data.data || [])).catch(() => {})
+  }, [])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -402,8 +406,11 @@ export default function Pagos() {
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Vendedor</label>
                 <input type="text" value={filtroVendedor} onChange={e => setFiltroVendedor(e.target.value)}
-                  placeholder="Buscar vendedor..."
+                  placeholder="Buscar vendedor..." list="vendedores-list"
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                <datalist id="vendedores-list">
+                  {vendedoresList.map(v => <option key={v.id} value={v.nombre} />)}
+                </datalist>
               </div>
               <div className="md:col-span-3 flex justify-end">
                 <button onClick={async () => {
