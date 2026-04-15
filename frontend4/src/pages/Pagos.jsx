@@ -22,6 +22,11 @@ export default function Pagos() {
   const [btDevices, setBtDevices] = useState([])
   const [btLineas, setBtLineas] = useState([])
   const [pagoData, setPagoData] = useState(null)
+  const [showPendientes, setShowPendientes] = useState(false)
+  const [pendientes, setPendientes] = useState([])
+  const [filtroFechaInicio, setFiltroFechaInicio] = useState('')
+  const [filtroFechaFin, setFiltroFechaFin] = useState('')
+  const [filtroVendedor, setFiltroVendedor] = useState('')
 
   const fetchData = async () => {
     try {
@@ -204,10 +209,16 @@ export default function Pagos() {
 
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Pagos</h2>
-        <button onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-          + Registrar Pago
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowPendientes(true)}
+            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 text-sm">
+            ⏳ Pagos por Confirmar
+          </button>
+          <button onClick={() => setShowForm(!showForm)}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+            + Registrar Pago
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -365,6 +376,99 @@ export default function Pagos() {
             </div>
             <div className="p-3 flex justify-end">
               <button onClick={() => setBtModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPendientes && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-800">⏳ Pagos por Confirmar</h3>
+              <button onClick={() => setShowPendientes(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <div className="p-4 border-b grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Fecha Inicio</label>
+                <input type="date" value={filtroFechaInicio} onChange={e => setFiltroFechaInicio(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Fecha Fin</label>
+                <input type="date" value={filtroFechaFin} onChange={e => setFiltroFechaFin(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Vendedor</label>
+                <input type="text" value={filtroVendedor} onChange={e => setFiltroVendedor(e.target.value)}
+                  placeholder="Buscar vendedor..."
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              </div>
+              <div className="md:col-span-3 flex justify-end">
+                <button onClick={async () => {
+                  try {
+                    const params = new URLSearchParams()
+                    if (filtroFechaInicio) params.append('fecha_inicio', filtroFechaInicio)
+                    if (filtroFechaFin) params.append('fecha_fin', filtroFechaFin)
+                    if (filtroVendedor) params.append('vendedor', filtroVendedor)
+                    const res = await API.get(`/payments/pendientes?${params.toString()}`)
+                    setPendientes(res.data.data)
+                  } catch (err) {
+                    console.error(err)
+                  }
+                }}
+                  className="px-4 py-2 bg-orange-500 text-white rounded text-sm hover:bg-orange-600">
+                  🔍 Buscar
+                </button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-gray-600">NCF</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Monto</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Método</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Vendedor</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendientes.length === 0 ? (
+                    <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No hay pagos pendientes</td></tr>
+                  ) : pendientes.map(p => (
+                    <tr key={p.id} className="border-t hover:bg-orange-50">
+                      <td className="px-4 py-3 font-mono">{p.ncf || '-'}</td>
+                      <td className="px-4 py-3">{p.cliente_nombre || 'Consumidor Final'}</td>
+                      <td className="px-4 py-3 font-medium text-green-600">RD${parseFloat(p.monto).toLocaleString()}</td>
+                      <td className="px-4 py-3 capitalize">{p.metodo}</td>
+                      <td className="px-4 py-3">{p.vendedor_nombre || '-'}</td>
+                      <td className="px-4 py-3">{new Date(p.creado_en).toLocaleDateString()}</td>
+                      <td className="px-4 py-3">
+                        <button onClick={async () => {
+                          try {
+                            await API.put(`/payments/${p.id}/confirmar`)
+                            setPendientes(prev => prev.filter(x => x.id !== p.id))
+                            fetchData()
+                            alert('✅ Pago confirmado')
+                          } catch (err) {
+                            alert('❌ Error al confirmar')
+                          }
+                        }}
+                          className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">
+                          ✓ Confirmar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-3 flex justify-end border-t">
+              <button onClick={() => setShowPendientes(false)} className="px-4 py-2 border rounded text-sm text-gray-600 hover:bg-gray-50">Cerrar</button>
             </div>
           </div>
         </div>
