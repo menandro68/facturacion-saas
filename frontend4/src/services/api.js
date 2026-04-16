@@ -9,4 +9,15 @@ API.interceptors.request.use((config) => {
   }
   return config
 })
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      sessionStorage.clear()
+      localStorage.clear()
+      window.location.reload()
+    }
+    return Promise.reject(error)
+  }
+)
 export default API
