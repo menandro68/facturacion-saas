@@ -1,4 +1,4 @@
-package com.facturacion.app;
+package com.squidappsrd.facturacion;
 
 import com.getcapacitor.BridgeActivity;
 

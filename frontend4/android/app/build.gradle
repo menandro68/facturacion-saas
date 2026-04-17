@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.facturacion.app"
+    namespace = "com.squidappsrd.facturacion"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.facturacion.app"
+        applicationId "com.squidappsrd.facturacion"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
+        versionCode 4
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
