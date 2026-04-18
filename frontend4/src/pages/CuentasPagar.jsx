@@ -18,17 +18,24 @@ export default function CuentasPagar() {
   const [filtroDesde, setFiltroDesde] = useState('')
   const [filtroHasta, setFiltroHasta] = useState('')
   const [filtroDias, setFiltroDias] = useState('30')
+  const [ordenes, setOrdenes] = useState([])
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
+  const [montoPagoOrden, setMontoPagoOrden] = useState('')
+  const [metodoPagoOrden, setMetodoPagoOrden] = useState('efectivo')
+  const [loadingPago, setLoadingPago] = useState(false)
 
   const fetchData = async () => {
     try {
-      const [c, res, prov] = await Promise.all([
+      const [c, res, prov, ord] = await Promise.all([
         API.get('/accounts-payable'),
         API.get('/accounts-payable/resumen'),
-        API.get('/suppliers')
+        API.get('/suppliers'),
+        API.get('/purchase-orders')
       ])
       setCuentas(c.data.data)
       setResumen(res.data.data)
       setProveedores(prov.data.data)
+      setOrdenes(ord.data.data || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -179,6 +186,7 @@ export default function CuentasPagar() {
           { id: 'pagos', label: '✅ Pagos Realizados' },
           { id: 'vencidas', label: '🔴 Vencidas' },
           { id: 'estado_cuenta', label: '📊 Estado por Proveedor' },
+          { id: 'pagar_orden', label: '🧾 Pagar Orden' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -541,6 +549,117 @@ export default function CuentasPagar() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* TAB: PAGAR ORDEN */}
+      {tab === 'pagar_orden' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">🧾 Pagar Orden de Compra</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">Número</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Proveedor</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Pagado</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Pendiente</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Estado Pago</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ordenes.length === 0 ? (
+                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No hay órdenes de compra</td></tr>
+                ) : ordenes.map(o => {
+                  const pagado = parseFloat(o.monto_pagado || 0)
+                  const total = parseFloat(o.total || 0)
+                  const pendiente = total - pagado
+                  const estadoPago = o.estado_pago || 'pendiente'
+                  return (
+                    <tr key={o.id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-mono font-medium">{o.numero}</td>
+                      <td className="px-4 py-3">{o.proveedor_nombre || '-'}</td>
+                      <td className="px-4 py-3 text-right">RD${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3 text-right text-green-600">RD${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3 text-right font-bold text-orange-600">RD${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${estadoPago === 'pagada' ? 'bg-green-100 text-green-700' : estadoPago === 'parcial' ? 'bg-yellow-100 text-yellow-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {estadoPago.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {estadoPago !== 'pagada' && (
+                          <button onClick={() => { setOrdenSeleccionada(o); setMontoPagoOrden(pendiente.toFixed(2)); setMetodoPagoOrden('efectivo') }}
+                            className="text-blue-600 hover:underline text-xs font-medium">
+                            💳 Pagar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pago orden */}
+      {ordenSeleccionada && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">💳 Pagar Orden {ordenSeleccionada.numero}</h3>
+            <div className="bg-gray-50 rounded p-3 mb-4 text-sm">
+              <p><span className="text-gray-500">Proveedor:</span> <span className="font-medium">{ordenSeleccionada.proveedor_nombre || '-'}</span></p>
+              <p><span className="text-gray-500">Total:</span> <span className="font-medium">RD${parseFloat(ordenSeleccionada.total||0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+              <p><span className="text-gray-500">Ya pagado:</span> <span className="font-medium text-green-600">RD${parseFloat(ordenSeleccionada.monto_pagado||0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+              <p><span className="text-gray-500">Pendiente:</span> <span className="font-bold text-orange-600">RD${(parseFloat(ordenSeleccionada.total||0)-parseFloat(ordenSeleccionada.monto_pagado||0)).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Monto a Pagar *</label>
+                <input type="number" step="0.01" value={montoPagoOrden} onChange={e => setMontoPagoOrden(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+                <select value={metodoPagoOrden} onChange={e => setMetodoPagoOrden(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="tarjeta">Tarjeta</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-4">
+              <button onClick={() => setOrdenSeleccionada(null)}
+                className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button disabled={loadingPago} onClick={async () => {
+                if (!montoPagoOrden || parseFloat(montoPagoOrden) <= 0) return alert('Ingresa un monto válido')
+                setLoadingPago(true)
+                try {
+                  await API.put(`/purchase-orders/${ordenSeleccionada.id}/pagar`, {
+                    monto: montoPagoOrden,
+                    metodo: metodoPagoOrden
+                  })
+                  setOrdenSeleccionada(null)
+                  setMontoPagoOrden('')
+                  fetchData()
+                  alert('✅ Pago registrado correctamente')
+                } catch (err) {
+                  alert('❌ ' + (err.response?.data?.mensaje || 'Error al pagar'))
+                } finally {
+                  setLoadingPago(false)
+                }
+              }}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50">
+                {loadingPago ? 'Procesando...' : 'Registrar Pago'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
