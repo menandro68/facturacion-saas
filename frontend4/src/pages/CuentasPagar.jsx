@@ -691,7 +691,7 @@ export default function CuentasPagar() {
                   })
                   setOrdenSeleccionada(null)
                   setMontoPagoOrden('')
-                  fetchData()
+                  await fetchData()
                   alert('✅ Pago registrado correctamente')
                 } catch (err) {
                   alert('❌ ' + (err.response?.data?.mensaje || 'Error al pagar'))
