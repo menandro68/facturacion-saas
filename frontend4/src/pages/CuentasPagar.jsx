@@ -556,6 +556,30 @@ export default function CuentasPagar() {
       {tab === 'pagar_orden' && (
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">🧾 Pagar Orden de Compra</h3>
+          <div className="flex gap-3 items-end mb-4 flex-wrap">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por Número de Orden</label>
+              <input type="text" id="buscar-orden" placeholder="Ej: OC-0020"
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                onChange={e => {
+                  const val = e.target.value.toLowerCase()
+                  setOrdenes(prev => prev.map(o => ({ ...o, _hidden: val && !o.numero.toLowerCase().includes(val) })))
+                }} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+              <input type="text" placeholder="Buscar proveedor..."
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                onChange={e => {
+                  const val = e.target.value.toLowerCase()
+                  setOrdenes(prev => prev.map(o => ({ ...o, _hiddenProv: val && !(o.proveedor_nombre||'').toLowerCase().includes(val) })))
+                }} />
+            </div>
+            <button onClick={() => fetchData()}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300">
+              🔄 Limpiar
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
@@ -572,7 +596,7 @@ export default function CuentasPagar() {
               <tbody>
                 {ordenes.length === 0 ? (
                   <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No hay órdenes de compra</td></tr>
-                ) : ordenes.map(o => {
+                ) : ordenes.filter(o => !o._hidden && !o._hiddenProv).map(o => {
                   const pagado = parseFloat(o.monto_pagado || 0)
                   const total = parseFloat(o.total || 0)
                   const pendiente = total - pagado
