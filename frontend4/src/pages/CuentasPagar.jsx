@@ -32,10 +32,25 @@ export default function CuentasPagar() {
         API.get('/suppliers'),
         API.get('/purchase-orders')
       ])
-      setCuentas(c.data.data)
-      setResumen(res.data.data)
+      const cuentasData = c.data.data
+      const ordenesData = ord.data.data || []
+      setCuentas(cuentasData)
       setProveedores(prov.data.data)
-      setOrdenes(ord.data.data || [])
+      setOrdenes(ordenesData)
+
+      // Calcular resumen combinado: cuentas por pagar + órdenes de compra pendientes
+      const resumenCxP = res.data.data
+      const totalOrdenesTotal = ordenesData.reduce((s, o) => s + parseFloat(o.total || 0), 0)
+      const totalOrdenesPagado = ordenesData.reduce((s, o) => s + parseFloat(o.monto_pagado || 0), 0)
+      const totalOrdenesPendiente = totalOrdenesTotal - totalOrdenesPagado
+      const ordenesVencidas = 0
+
+      setResumen({
+        total_cuentas: (parseInt(resumenCxP?.total_cuentas || 0)) + ordenesData.length,
+        total_pendiente: parseFloat(resumenCxP?.total_pendiente || 0) + totalOrdenesPendiente,
+        total_pagado: parseFloat(resumenCxP?.total_pagado || 0) + totalOrdenesPagado,
+        total_vencidas: parseInt(resumenCxP?.total_vencidas || 0) + ordenesVencidas
+      })
     } catch (err) {
       console.error(err)
     } finally {
