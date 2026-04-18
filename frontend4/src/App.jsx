@@ -90,8 +90,13 @@ function App() {
                 if (item.id === 'listado_precios') {
                   const token = sessionStorage.getItem('token')
                   const res = await fetch('https://facturacion-saas-production.up.railway.app/products', { headers: { Authorization: `Bearer ${token}` } })
+                  const resInv = await fetch('https://facturacion-saas-production.up.railway.app/inventory', { headers: { Authorization: `Bearer ${token}` } })
                   const data = await res.json()
-                  const prods = data.data.filter(p => p.precio)
+                  const invData = await resInv.json()
+                  const prods = data.data.filter(p => p.precio).map(p => {
+                    const inv = invData.data?.find(i => i.product_id === p.id)
+                    return { ...p, stock_real: inv?.stock_actual || 0 }
+                  })
                   setListadoPrecios(prods)
                   setMenuAbierto(false)
                   return
@@ -170,6 +175,7 @@ function App() {
             <thead>
               <tr className="bg-blue-700 text-white">
                 <th className="px-3 py-3 text-left">Producto</th>
+                <th className="px-3 py-3 text-right">Stock</th>
                 <th className="px-3 py-3 text-right">Precio</th>
               </tr>
             </thead>
@@ -177,6 +183,7 @@ function App() {
               {listadoPrecios.map((p, i) => (
                 <tr key={p.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                   <td className="px-3 py-3 text-gray-800">{p.nombre}</td>
+                  <td className="px-3 py-3 text-right text-blue-700 font-medium">{parseFloat(p.stock_real || 0).toLocaleString('es-DO')}</td>
                   <td className="px-3 py-3 text-right font-bold text-gray-800">RD${parseFloat(p.precio).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                 </tr>
               ))}
