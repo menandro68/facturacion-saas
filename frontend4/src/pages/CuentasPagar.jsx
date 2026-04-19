@@ -825,25 +825,37 @@ export default function CuentasPagar() {
               <button disabled={loadingPago} onClick={async () => {
                 if (!montoPagoOrden || parseFloat(montoPagoOrden) <= 0) return alert('Ingresa un monto válido')
                 setLoadingPago(true)
+                // Guardar datos del pago ANTES del try (para usarlos en el comprobante)
+                const datosPago = {
+                  orden: ordenSeleccionada,
+                  monto: parseFloat(montoPagoOrden),
+                  metodo: metodoPagoOrden,
+                  totalPagadoDespues: parseFloat(ordenSeleccionada.monto_pagado || 0) + parseFloat(montoPagoOrden),
+                  fecha: new Date()
+                }
+                // Solo el API call dentro del try/catch
+                let pagoExitoso = false
                 try {
                   await API.put(`/purchase-orders/${ordenSeleccionada.id}/pagar`, {
                     monto: montoPagoOrden,
                     metodo: metodoPagoOrden
                   })
-                  // Guardar datos del pago para el comprobante
-                  const datosPago = {
-                    orden: ordenSeleccionada,
-                    monto: parseFloat(montoPagoOrden),
-                    metodo: metodoPagoOrden,
-                    totalPagadoDespues: parseFloat(ordenSeleccionada.monto_pagado || 0) + parseFloat(montoPagoOrden),
-                    fecha: new Date()
-                  }
-                  setOrdenSeleccionada(null)
-                  setMontoPagoOrden('')
-                  await fetchData()
-                  alert('✅ Pago registrado correctamente')
-                  // Preguntar si desea imprimir comprobante
-                  if (confirm('¿Desea imprimir comprobante de pago?')) {
+                  pagoExitoso = true
+                } catch (err) {
+                  alert('❌ ' + (err.response?.data?.mensaje || 'Error al pagar'))
+                } finally {
+                  setLoadingPago(false)
+                }
+                // Si el pago falló, detener aquí
+                if (!pagoExitoso) return
+                // Limpiar modal y refrescar datos
+                setOrdenSeleccionada(null)
+                setMontoPagoOrden('')
+                try { await fetchData() } catch (e) { console.error(e) }
+                alert('✅ Pago registrado correctamente')
+                // Preguntar si desea imprimir comprobante (independiente del try/catch)
+                if (confirm('¿Desea imprimir comprobante de pago?')) {
+                  try {
                     const o = datosPago.orden
                     const total = parseFloat(o.total || 0)
                     const saldoAnterior = total - parseFloat(o.monto_pagado || 0)
@@ -854,7 +866,6 @@ export default function CuentasPagar() {
                           <h2 style="margin:0;font-size:22px">COMPROBANTE DE PAGO</h2>
                           <p style="margin:4px 0 0;color:#64748b;font-size:13px">A Proveedor</p>
                         </div>
-
                         <table style="width:100%;border:none;margin-bottom:20px">
                           <tr style="background:none">
                             <td style="border:none;padding:4px 0;width:50%"><strong>Fecha:</strong> ${datosPago.fecha.toLocaleDateString('es-DO')} ${datosPago.fecha.toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</td>
@@ -868,12 +879,10 @@ export default function CuentasPagar() {
                             <td style="border:none;padding:4px 0;text-align:right"><strong>Estado:</strong> ${saldoActual <= 0.01 ? '<span style="color:#16a34a">PAGADA TOTALMENTE</span>' : '<span style="color:#ea580c">PAGO PARCIAL</span>'}</td>
                           </tr>
                         </table>
-
                         <div style="background:#f1f5f9;border-radius:8px;padding:20px;margin-bottom:20px;text-align:center">
                           <p style="margin:0;color:#64748b;font-size:13px">MONTO PAGADO</p>
                           <p style="margin:8px 0 0;font-size:32px;font-weight:bold;color:#16a34a">RD$${datosPago.monto.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
                         </div>
-
                         <table style="margin-bottom:30px">
                           <thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead>
                           <tbody>
@@ -884,7 +893,6 @@ export default function CuentasPagar() {
                             <tr style="background:${saldoActual <= 0.01 ? '#dcfce7' : '#fed7aa'}"><td><strong>Saldo actual</strong></td><td style="text-align:right;font-weight:bold;color:${saldoActual <= 0.01 ? '#16a34a' : '#ea580c'}">RD$${Math.max(0, saldoActual).toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>
                           </tbody>
                         </table>
-
                         <div style="display:flex;justify-content:space-between;margin-top:60px;gap:30px">
                           <div style="flex:1;text-align:center;border-top:1px solid #64748b;padding-top:8px">
                             <p style="margin:0;font-size:12px;color:#64748b">Entregado por</p>
@@ -893,15 +901,13 @@ export default function CuentasPagar() {
                             <p style="margin:0;font-size:12px;color:#64748b">Recibido por (${o.proveedor_nombre || 'Proveedor'})</p>
                           </div>
                         </div>
-
                         <p style="text-align:center;margin-top:40px;color:#94a3b8;font-size:11px">Este documento es un comprobante interno de pago</p>
                       </div>
                     `)
+                  } catch (errPrint) {
+                    console.error('Error al generar comprobante:', errPrint)
+                    alert('⚠️ No se pudo generar el comprobante, pero el pago fue registrado. Verifica el bloqueador de ventanas emergentes.')
                   }
-                } catch (err) {
-                  alert('❌ ' + (err.response?.data?.mensaje || 'Error al pagar'))
-                } finally {
-                  setLoadingPago(false)
                 }
               }}
                 className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50">
