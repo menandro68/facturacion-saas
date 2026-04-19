@@ -45,8 +45,11 @@ export default function CuentasPagar() {
       const totalOrdenesPendiente = totalOrdenesTotal - totalOrdenesPagado
       const ordenesVencidas = 0
 
+      // Contar solo órdenes pendientes de pago (no PAGADA)
+      const ordenesPendientesCount = ordenesData.filter(o => (o.estado_pago || 'pendiente') !== 'pagada').length
+
       setResumen({
-        total_cuentas: ordenesData.length,
+        total_cuentas: ordenesPendientesCount,
         total_pendiente: parseFloat(resumenCxP?.total_pendiente || 0) + totalOrdenesPendiente,
         total_pagado: parseFloat(resumenCxP?.total_pagado || 0) + totalOrdenesPagado,
         total_vencidas: parseInt(resumenCxP?.total_vencidas || 0) + ordenesVencidas
