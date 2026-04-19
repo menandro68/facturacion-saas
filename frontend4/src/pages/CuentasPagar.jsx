@@ -148,7 +148,7 @@ export default function CuentasPagar() {
 
   const hoy = new Date()
 
-  // Reporte 1: Por vencimiento
+  // Reporte 1: Por vencimiento (incluye cuentas por pagar + ordenes de compra)
   const cuentasPorVencer = cuentas.filter(c => {
     if (c.estado === 'pagada') return false
     if (!c.fecha_vencimiento) return false
@@ -156,6 +156,15 @@ export default function CuentasPagar() {
     const dias = Math.ceil((venc - hoy) / (1000*60*60*24))
     return dias <= parseInt(filtroDias)
   }).sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento))
+
+  // Ordenes de compra proximas a vencer (por fecha_vencimiento_pago)
+  const ordenesPorVencer = ordenes.filter(o => {
+    if ((o.estado_pago || 'pendiente') === 'pagada') return false
+    if (!o.fecha_vencimiento_pago) return false
+    const venc = new Date(o.fecha_vencimiento_pago)
+    const dias = Math.ceil((venc - hoy) / (1000*60*60*24))
+    return dias <= parseInt(filtroDias)
+  }).sort((a, b) => new Date(a.fecha_vencimiento_pago) - new Date(b.fecha_vencimiento_pago))
 
   // Reporte 2: Por proveedor
   const porProveedor = proveedores.map(p => {
@@ -402,7 +411,7 @@ export default function CuentasPagar() {
             </button>
           </div>
           <div className="mb-4 p-3 bg-orange-50 rounded-lg">
-            <p className="text-sm text-gray-600">Cuentas: <span className="font-bold">{cuentasPorVencer.length}</span> — Total Pendiente: <span className="font-bold text-orange-600">RD${cuentasPorVencer.reduce((s,c)=>s+parseFloat(c.monto_pendiente||0),0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+            <p className="text-sm text-gray-600">Cuentas: <span className="font-bold">{cuentasPorVencer.length + ordenesPorVencer.length}</span> — Total Pendiente: <span className="font-bold text-orange-600">RD${(cuentasPorVencer.reduce((s,c)=>s+parseFloat(c.monto_pendiente||0),0) + ordenesPorVencer.reduce((s,o)=>s+(parseFloat(o.total||0)-parseFloat(o.monto_pagado||0)),0)).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
           </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
@@ -415,22 +424,41 @@ export default function CuentasPagar() {
               </tr>
             </thead>
             <tbody>
-              {cuentasPorVencer.length === 0 ? (
+              {cuentasPorVencer.length === 0 && ordenesPorVencer.length === 0 ? (
                 <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-400">No hay cuentas próximas a vencer</td></tr>
-              ) : cuentasPorVencer.map(c => {
-                const dias = Math.ceil((new Date(c.fecha_vencimiento) - hoy) / (1000*60*60*24))
-                return (
-                  <tr key={c.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{c.proveedor_nombre || '-'}</td>
-                    <td className="px-4 py-3">{c.descripcion}</td>
-                    <td className="px-4 py-3 text-right font-medium text-orange-600">RD${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-4 py-3">{new Date(c.fecha_vencimiento).toLocaleDateString('es-DO')}</td>
-                    <td className={`px-4 py-3 text-center font-bold ${dias <= 0 ? 'text-red-600' : dias <= 7 ? 'text-orange-500' : 'text-green-600'}`}>
-                      {dias <= 0 ? 'VENCIDA' : `${dias} días`}
-                    </td>
-                  </tr>
-                )
-              })}
+              ) : (
+                <>
+                  {cuentasPorVencer.map(c => {
+                    const dias = Math.ceil((new Date(c.fecha_vencimiento) - hoy) / (1000*60*60*24))
+                    return (
+                      <tr key={`cxp-${c.id}`} className="border-t hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{c.proveedor_nombre || '-'}</td>
+                        <td className="px-4 py-3">{c.descripcion}</td>
+                        <td className="px-4 py-3 text-right font-medium text-orange-600">RD${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td className="px-4 py-3">{new Date(c.fecha_vencimiento).toLocaleDateString('es-DO')}</td>
+                        <td className={`px-4 py-3 text-center font-bold ${dias <= 0 ? 'text-red-600' : dias <= 7 ? 'text-orange-500' : 'text-green-600'}`}>
+                          {dias <= 0 ? 'VENCIDA' : `${dias} días`}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {ordenesPorVencer.map(o => {
+                    const dias = Math.ceil((new Date(o.fecha_vencimiento_pago) - hoy) / (1000*60*60*24))
+                    const pendiente = parseFloat(o.total||0) - parseFloat(o.monto_pagado||0)
+                    return (
+                      <tr key={`oc-${o.id}`} className="border-t hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{o.proveedor_nombre || '-'}</td>
+                        <td className="px-4 py-3">📦 Orden {o.numero}</td>
+                        <td className="px-4 py-3 text-right font-medium text-orange-600">RD${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td className="px-4 py-3">{new Date(o.fecha_vencimiento_pago).toLocaleDateString('es-DO')}</td>
+                        <td className={`px-4 py-3 text-center font-bold ${dias <= 0 ? 'text-red-600' : dias <= 7 ? 'text-orange-500' : 'text-green-600'}`}>
+                          {dias <= 0 ? 'VENCIDA' : `${dias} días`}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </>
+              )}
             </tbody>
           </table>
         </div>
