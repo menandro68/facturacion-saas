@@ -18,6 +18,7 @@ export default function CuentasPagar() {
   const [filtroDesde, setFiltroDesde] = useState('')
   const [filtroHasta, setFiltroHasta] = useState('')
   const [filtroDias, setFiltroDias] = useState('30')
+  const [diasBusqueda, setDiasBusqueda] = useState(null)
   const [ordenes, setOrdenes] = useState([])
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
   const [montoPagoOrden, setMontoPagoOrden] = useState('')
@@ -149,21 +150,22 @@ export default function CuentasPagar() {
   const hoy = new Date()
 
   // Reporte 1: Por vencimiento (incluye cuentas por pagar + ordenes de compra)
-  const cuentasPorVencer = cuentas.filter(c => {
+  // Solo filtra cuando el usuario presiona el boton Buscar (diasBusqueda !== null)
+  const cuentasPorVencer = diasBusqueda === null ? [] : cuentas.filter(c => {
     if (c.estado === 'pagada') return false
     if (!c.fecha_vencimiento) return false
     const venc = new Date(c.fecha_vencimiento)
     const dias = Math.ceil((venc - hoy) / (1000*60*60*24))
-    return dias <= parseInt(filtroDias)
+    return dias >= 0 && dias <= parseInt(diasBusqueda)
   }).sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento))
 
   // Ordenes de compra proximas a vencer (por fecha_vencimiento_pago)
-  const ordenesPorVencer = ordenes.filter(o => {
+  const ordenesPorVencer = diasBusqueda === null ? [] : ordenes.filter(o => {
     if ((o.estado_pago || 'pendiente') === 'pagada') return false
     if (!o.fecha_vencimiento_pago) return false
     const venc = new Date(o.fecha_vencimiento_pago)
     const dias = Math.ceil((venc - hoy) / (1000*60*60*24))
-    return dias <= parseInt(filtroDias)
+    return dias >= 0 && dias <= parseInt(diasBusqueda)
   }).sort((a, b) => new Date(a.fecha_vencimiento_pago) - new Date(b.fecha_vencimiento_pago))
 
   // Reporte 2: Por proveedor
@@ -396,6 +398,10 @@ export default function CuentasPagar() {
                 <option value="90">90 días</option>
               </select>
             </div>
+            <button onClick={() => setDiasBusqueda(filtroDias)}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+              🔍 Buscar
+            </button>
             <button onClick={() => imprimir('Cuentas por Vencer', `
               <h2>Cuentas por Vencer en ${filtroDias} días</h2>
               <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
