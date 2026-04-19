@@ -1907,10 +1907,10 @@ export default function Facturas({ vendedor_id = null }) {
                     const res = await API.get(`/invoices/${factura.id}`)
                     const data = res.data.data
                     setNcFacturaEncontrada(data)
-                    setNcItemsSeleccionados(data.items.map(it => ({
+              setNcItemsSeleccionados(data.items.map(it => ({
                       ...it,
                       seleccionado: true,
-                      cantidad_nc: parseFloat(it.cantidad)
+                      cantidad_nc: 0
                     })))
                   } catch(e) { alert('Error al cargar factura') }
                 }}
