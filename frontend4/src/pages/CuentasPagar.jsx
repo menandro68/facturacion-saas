@@ -46,7 +46,7 @@ export default function CuentasPagar() {
       const ordenesVencidas = 0
 
       setResumen({
-        total_cuentas: (parseInt(resumenCxP?.total_cuentas || 0)) + ordenesData.length,
+        total_cuentas: ordenesData.length,
         total_pendiente: parseFloat(resumenCxP?.total_pendiente || 0) + totalOrdenesPendiente,
         total_pagado: parseFloat(resumenCxP?.total_pagado || 0) + totalOrdenesPagado,
         total_vencidas: parseInt(resumenCxP?.total_vencidas || 0) + ordenesVencidas
