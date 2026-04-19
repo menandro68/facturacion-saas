@@ -327,12 +327,23 @@ export default function CuentasPagar() {
             </div>
           )}
           <div className="flex justify-end mb-3">
-            <button onClick={() => imprimir('Cuentas por Pagar', `
-              <h2>Cuentas por Pagar</h2>
-              <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
-              <table><thead><tr><th>Proveedor</th><th>Descripción</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Vencimiento</th><th>Estado</th></tr></thead>
-              <tbody>${cuentas.map(c => `<tr><td>${c.proveedor_nombre||'-'}</td><td>${c.descripcion}</td><td>RD$${parseFloat(c.monto_total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td>RD$${parseFloat(c.monto_pagado).toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td>RD$${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td>${c.fecha_vencimiento?new Date(c.fecha_vencimiento).toLocaleDateString('es-DO'):'-'}</td><td>${c.estado.toUpperCase()}</td></tr>`).join('')}</tbody></table>
-            `)}
+            <button onClick={() => {
+              const ordenesPendientes = ordenes.filter(o => (o.estado_pago || 'pendiente') !== 'pagada')
+              const totalPendiente = ordenesPendientes.reduce((s,o) => s + (parseFloat(o.total||0) - parseFloat(o.monto_pagado||0)), 0)
+              imprimir('Cuentas por Pagar', `
+                <h2>Cuentas por Pagar</h2>
+                <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
+                <table><thead><tr><th>Número</th><th>Proveedor</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Vence Pago</th><th>Estado Pago</th></tr></thead>
+                <tbody>${ordenesPendientes.map(o => {
+                  const pagado = parseFloat(o.monto_pagado || 0)
+                  const total = parseFloat(o.total || 0)
+                  const pendiente = total - pagado
+                  const estadoPago = o.estado_pago || 'pendiente'
+                  return `<tr><td>${o.numero}</td><td>${o.proveedor_nombre||'-'}</td><td style="text-align:right">RD$${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right">RD$${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right;color:#ea580c;font-weight:bold">RD$${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td>${o.fecha_vencimiento_pago?new Date(o.fecha_vencimiento_pago).toLocaleDateString('es-DO'):'-'}</td><td>${estadoPago.toUpperCase()}</td></tr>`
+                }).join('')}</tbody></table>
+                <p><strong>Total Pendiente: RD$${totalPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</strong></p>
+              `)
+            }}
               className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
               🖨️ Imprimir
             </button>
