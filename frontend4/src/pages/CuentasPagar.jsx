@@ -19,6 +19,7 @@ export default function CuentasPagar() {
   const [filtroHasta, setFiltroHasta] = useState('')
   const [filtroDias, setFiltroDias] = useState('30')
   const [diasBusqueda, setDiasBusqueda] = useState(null)
+  const [busquedaProveedor, setBusquedaProveedor] = useState('')
   const [ordenes, setOrdenes] = useState([])
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
   const [montoPagoOrden, setMontoPagoOrden] = useState('')
@@ -168,13 +169,13 @@ export default function CuentasPagar() {
     return dias >= 0 && dias <= parseInt(diasBusqueda)
   }).sort((a, b) => new Date(a.fecha_vencimiento_pago) - new Date(b.fecha_vencimiento_pago))
 
-  // Reporte 2: Por proveedor
+  // Reporte 2: Por proveedor (usa ordenes de compra pendientes y parciales)
   const porProveedor = proveedores.map(p => {
-    const cxp = cuentas.filter(c => c.supplier_id === p.id)
-    const total = cxp.reduce((s, c) => s + parseFloat(c.monto_total || 0), 0)
-    const pagado = cxp.reduce((s, c) => s + parseFloat(c.monto_pagado || 0), 0)
-    const pendiente = cxp.reduce((s, c) => s + parseFloat(c.monto_pendiente || 0), 0)
-    return { ...p, total, pagado, pendiente, cantidad: cxp.length }
+    const ord = ordenes.filter(o => o.supplier_id === p.id && (o.estado_pago || 'pendiente') !== 'pagada')
+    const total = ord.reduce((s, o) => s + parseFloat(o.total || 0), 0)
+    const pagado = ord.reduce((s, o) => s + parseFloat(o.monto_pagado || 0), 0)
+    const pendiente = total - pagado
+    return { ...p, total, pagado, pendiente, cantidad: ord.length }
   }).filter(p => p.cantidad > 0).sort((a, b) => b.pendiente - a.pendiente)
 
   // Reporte 3: Pagos realizados
@@ -488,14 +489,23 @@ export default function CuentasPagar() {
       {/* TAB: POR PROVEEDOR */}
       {tab === 'proveedor' && (
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-end mb-4">
-            <button onClick={() => imprimir('CxP por Proveedor', `
-              <h2>Cuentas por Pagar por Proveedor</h2>
-              <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
-              <table><thead><tr><th>Proveedor</th><th>Cuentas</th><th>Total</th><th>Pagado</th><th>Pendiente</th></tr></thead>
-              <tbody>${porProveedor.map(p=>`<tr><td>${p.nombre}</td><td style="text-align:center">${p.cantidad}</td><td style="text-align:right">RD$${p.total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right">RD$${p.pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right;font-weight:bold;color:#ea580c">RD$${p.pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>`).join('')}</tbody></table>
-              <p><strong>Total Pendiente General: RD$${porProveedor.reduce((s,p)=>s+p.pendiente,0).toLocaleString('es-DO',{minimumFractionDigits:2})}</strong></p>
-            `)}
+          <div className="flex gap-3 items-end justify-between mb-4 flex-wrap">
+            <div className="flex-1 min-w-64">
+              <label className="block text-sm font-medium text-gray-700 mb-1">🔍 Buscar Proveedor</label>
+              <input type="text" value={busquedaProveedor} onChange={e => setBusquedaProveedor(e.target.value)}
+                placeholder="Escriba el nombre del proveedor..."
+                className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <button onClick={() => {
+              const listaFiltrada = porProveedor.filter(p => p.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase()))
+              imprimir('CxP por Proveedor', `
+                <h2>Cuentas por Pagar por Proveedor</h2>
+                <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
+                <table><thead><tr><th>Proveedor</th><th>Cuentas</th><th>Total</th><th>Pagado</th><th>Pendiente</th></tr></thead>
+                <tbody>${listaFiltrada.map(p=>`<tr><td>${p.nombre}</td><td style="text-align:center">${p.cantidad}</td><td style="text-align:right">RD$${p.total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right">RD$${p.pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right;font-weight:bold;color:#ea580c">RD$${p.pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>`).join('')}</tbody></table>
+                <p><strong>Total Pendiente General: RD$${listaFiltrada.reduce((s,p)=>s+p.pendiente,0).toLocaleString('es-DO',{minimumFractionDigits:2})}</strong></p>
+              `)
+            }}
               className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
               🖨️ Imprimir
             </button>
@@ -511,9 +521,9 @@ export default function CuentasPagar() {
               </tr>
             </thead>
             <tbody>
-              {porProveedor.length === 0 ? (
+              {porProveedor.filter(p => p.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase())).length === 0 ? (
                 <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-400">No hay datos</td></tr>
-              ) : porProveedor.map(p => (
+              ) : porProveedor.filter(p => p.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase())).map(p => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{p.nombre}</td>
                   <td className="px-4 py-3 text-center">{p.cantidad}</td>
@@ -524,10 +534,10 @@ export default function CuentasPagar() {
               ))}
               <tr className="border-t bg-gray-50 font-bold">
                 <td className="px-4 py-3">TOTAL</td>
-                <td className="px-4 py-3 text-center">{porProveedor.reduce((s,p)=>s+p.cantidad,0)}</td>
-                <td className="px-4 py-3 text-right">RD${porProveedor.reduce((s,p)=>s+p.total,0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                <td className="px-4 py-3 text-right text-green-600">RD${porProveedor.reduce((s,p)=>s+p.pagado,0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                <td className="px-4 py-3 text-right text-orange-600">RD${porProveedor.reduce((s,p)=>s+p.pendiente,0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                <td className="px-4 py-3 text-center">{porProveedor.filter(p => p.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase())).reduce((s,p)=>s+p.cantidad,0)}</td>
+                <td className="px-4 py-3 text-right">RD${porProveedor.filter(p => p.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase())).reduce((s,p)=>s+p.total,0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                <td className="px-4 py-3 text-right text-green-600">RD${porProveedor.filter(p => p.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase())).reduce((s,p)=>s+p.pagado,0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                <td className="px-4 py-3 text-right text-orange-600">RD${porProveedor.filter(p => p.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase())).reduce((s,p)=>s+p.pendiente,0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
               </tr>
             </tbody>
           </table>
