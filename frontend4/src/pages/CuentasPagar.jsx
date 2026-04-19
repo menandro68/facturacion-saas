@@ -341,42 +341,46 @@ export default function CuentasPagar() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">Número</th>
                   <th className="px-4 py-3 text-left text-gray-600">Proveedor</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Descripción</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Total</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Pagado</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Pendiente</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Vencimiento</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Estado</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Pagado</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Pendiente</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Vence Pago</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Estado Pago</th>
                   <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {cuentas.length === 0 ? (
+                {ordenes.filter(o => (o.estado_pago || 'pendiente') !== 'pagada').length === 0 ? (
                   <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay cuentas por pagar</td></tr>
-                ) : cuentas.map(c => (
-                  <tr key={c.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{c.proveedor_nombre || '-'}</td>
-                    <td className="px-4 py-3">{c.descripcion}</td>
-                    <td className="px-4 py-3">RD${parseFloat(c.monto_total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-4 py-3 text-green-600">RD${parseFloat(c.monto_pagado).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-4 py-3 text-orange-500 font-medium">RD${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-4 py-3">{c.fecha_vencimiento ? new Date(c.fecha_vencimiento).toLocaleDateString('es-DO') : '-'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(c.estado)}`}>
-                        {c.estado.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 flex gap-2">
-                      {c.estado !== 'pagada' && (
-                        <button onClick={() => { setShowAbono(c.id); setError('') }}
-                          className="text-blue-600 hover:underline text-xs">Pagar</button>
-                      )}
-                      <button onClick={() => handleEliminar(c.id)}
-                        className="text-red-500 hover:underline text-xs">Eliminar</button>
-                    </td>
-                  </tr>
-                ))}
+                ) : ordenes.filter(o => (o.estado_pago || 'pendiente') !== 'pagada').map(o => {
+                  const pagado = parseFloat(o.monto_pagado || 0)
+                  const total = parseFloat(o.total || 0)
+                  const pendiente = total - pagado
+                  const estadoPago = o.estado_pago || 'pendiente'
+                  return (
+                    <tr key={o.id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-mono font-medium">{o.numero}</td>
+                      <td className="px-4 py-3">{o.proveedor_nombre || '-'}</td>
+                      <td className="px-4 py-3 text-right">RD${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3 text-right text-green-600">RD${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3 text-right font-bold text-orange-600">RD${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3">{o.fecha_vencimiento_pago ? new Date(o.fecha_vencimiento_pago).toLocaleDateString('es-DO') : '-'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${estadoPago === 'parcial' ? 'bg-yellow-100 text-yellow-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {estadoPago.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => { setOrdenSeleccionada(o); setMontoPagoOrden(pendiente.toFixed(2)); setMetodoPagoOrden('efectivo') }}
+                          className="text-blue-600 hover:underline text-xs font-medium">
+                          💳 Pagar
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
