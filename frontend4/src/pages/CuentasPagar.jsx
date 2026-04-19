@@ -26,6 +26,8 @@ export default function CuentasPagar() {
   const [montoPagoOrden, setMontoPagoOrden] = useState('')
   const [metodoPagoOrden, setMetodoPagoOrden] = useState('efectivo')
   const [loadingPago, setLoadingPago] = useState(false)
+  const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null)
+  const [busquedaEstadoProv, setBusquedaEstadoProv] = useState('')
 
   const fetchData = async () => {
     try {
@@ -847,80 +849,171 @@ export default function CuentasPagar() {
       )}
 
       {/* TAB: ESTADO POR PROVEEDOR */}
-      {tab === 'estado_cuenta' && (
+      {tab === 'estado_cuenta' && (() => {
+        // Proveedores que coinciden con la busqueda (para autocompletar)
+        const sugerenciasProv = busquedaEstadoProv.length >= 2
+          ? proveedores.filter(p => p.nombre.toLowerCase().includes(busquedaEstadoProv.toLowerCase())).slice(0, 10)
+          : []
+
+        // Ordenes pendientes/parciales del proveedor seleccionado
+        const ordenesProv = proveedorSeleccionado
+          ? ordenes.filter(o => o.supplier_id === proveedorSeleccionado.id && (o.estado_pago || 'pendiente') !== 'pagada')
+              .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
+          : []
+
+        // Totales del proveedor
+        const totalProv = ordenesProv.reduce((s, o) => s + parseFloat(o.total || 0), 0)
+        const pagadoProv = ordenesProv.reduce((s, o) => s + parseFloat(o.monto_pagado || 0), 0)
+        const pendienteProv = totalProv - pagadoProv
+        const vencidasProv = ordenesProv.filter(o => o.fecha_vencimiento_pago && new Date(o.fecha_vencimiento_pago) < hoy).length
+
+        return (
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">Estado de Cuenta por Proveedor</h3>
-          <div className="relative mb-6 max-w-md">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Proveedor</label>
-            <input type="text" placeholder="🔍 Escriba el nombre del proveedor..." autoComplete="off"
-              className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onChange={e => {
-                const val = e.target.value.toLowerCase()
-                const list = document.getElementById('ec-prov-list')
-                list.innerHTML = ''
-                document.getElementById('ec-prov-resultado').innerHTML = ''
-                document.getElementById('ec-prov-tbody').innerHTML = ''
-                if (val.length < 2) return
-                const filtrados = proveedores.filter(p => p.nombre.toLowerCase().includes(val)).slice(0, 10)
-                filtrados.forEach(p => {
-                  const div = document.createElement('div')
-                  div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 border-b'
-                  div.textContent = p.nombre
-                  div.onmousedown = () => {
-                    e.target.value = p.nombre
-                    list.innerHTML = ''
-                    const cxp = cuentas.filter(c => c.supplier_id === p.id)
-                    const total = cxp.reduce((s,c)=>s+parseFloat(c.monto_total||0),0)
-                    const pagado = cxp.reduce((s,c)=>s+parseFloat(c.monto_pagado||0),0)
-                    const pendiente = cxp.reduce((s,c)=>s+parseFloat(c.monto_pendiente||0),0)
-                    const vencidas = cxp.filter(c=>c.fecha_vencimiento && new Date(c.fecha_vencimiento)<hoy && c.estado!=='pagada').length
-                    document.getElementById('ec-prov-resultado').innerHTML = `
-                      <div class="flex gap-4 flex-wrap mb-4">
-                        <div class="bg-gray-50 rounded-lg p-3 text-center min-w-28"><p class="text-xs text-gray-500">Cuentas</p><p class="text-lg font-bold text-gray-800">${cxp.length}</p></div>
-                        <div class="bg-orange-50 rounded-lg p-3 text-center min-w-28"><p class="text-xs text-gray-500">Total</p><p class="text-lg font-bold text-orange-600">RD$${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
-                        <div class="bg-green-50 rounded-lg p-3 text-center min-w-28"><p class="text-xs text-gray-500">Pagado</p><p class="text-lg font-bold text-green-600">RD$${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
-                        <div class="bg-red-50 rounded-lg p-3 text-center min-w-28"><p class="text-xs text-gray-500">Pendiente</p><p class="text-lg font-bold text-red-600">RD$${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
-                        <div class="bg-yellow-50 rounded-lg p-3 text-center min-w-28"><p class="text-xs text-gray-500">Vencidas</p><p class="text-lg font-bold text-yellow-600">${vencidas}</p></div>
-                      </div>`
-                    document.getElementById('ec-prov-tbody').innerHTML = cxp.length === 0
-                      ? '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No hay cuentas</td></tr>'
-                      : cxp.map(c => {
-                        const diasVenc = c.fecha_vencimiento ? Math.floor((hoy-new Date(c.fecha_vencimiento))/(1000*60*60*24)) : 0
-                        return `<tr class="border-t hover:bg-gray-50">
-                          <td class="px-4 py-3 text-sm">${c.descripcion}</td>
-                          <td class="px-4 py-3 text-right text-sm">RD$${parseFloat(c.monto_total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                          <td class="px-4 py-3 text-right text-sm text-green-600">RD$${parseFloat(c.monto_pagado).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                          <td class="px-4 py-3 text-right text-sm font-bold text-orange-600">RD$${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                          <td class="px-4 py-3 text-sm">${c.fecha_vencimiento?new Date(c.fecha_vencimiento).toLocaleDateString('es-DO'):'-'}</td>
-                          <td class="px-4 py-3 text-sm"><span class="px-2 py-1 rounded text-xs font-medium ${estadoColor(c.estado)}">${c.estado.toUpperCase()}</span></td>
-                        </tr>`
-                      }).join('')
-                  }
-                  list.appendChild(div)
-                })
-              }}
-              onBlur={() => setTimeout(() => { document.getElementById('ec-prov-list').innerHTML = '' }, 200)}
-            />
-            <div id="ec-prov-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+          <div className="flex justify-between items-start mb-4 flex-wrap gap-3">
+            <h3 className="text-lg font-semibold text-gray-800">📊 Estado de Cuenta por Proveedor</h3>
+            {proveedorSeleccionado && (
+              <button onClick={() => imprimir(`Estado de Cuenta - ${proveedorSeleccionado.nombre}`, `
+                <h2>Estado de Cuenta: ${proveedorSeleccionado.nombre}</h2>
+                <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
+                <div class="resumen">
+                  <div class="card"><p>Órdenes</p><p class="val" style="color:#1e40af">${ordenesProv.length}</p></div>
+                  <div class="card"><p>Total</p><p class="val" style="color:#ea580c">RD$${totalProv.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                  <div class="card"><p>Pagado</p><p class="val" style="color:#16a34a">RD$${pagadoProv.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                  <div class="card"><p>Pendiente</p><p class="val" style="color:#dc2626">RD$${pendienteProv.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                  <div class="card"><p>Vencidas</p><p class="val" style="color:#ca8a04">${vencidasProv}</p></div>
+                </div>
+                <table><thead><tr><th>Número</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Vence Pago</th><th>Estado</th></tr></thead>
+                <tbody>${ordenesProv.map(o => {
+                  const pag = parseFloat(o.monto_pagado || 0)
+                  const tot = parseFloat(o.total || 0)
+                  const pen = tot - pag
+                  const est = o.estado_pago || 'pendiente'
+                  const vencida = o.fecha_vencimiento_pago && new Date(o.fecha_vencimiento_pago) < hoy
+                  return `<tr><td>${o.numero}</td><td style="text-align:right">RD$${tot.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right">RD$${pag.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right;color:#ea580c;font-weight:bold">RD$${pen.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td>${o.fecha_vencimiento_pago?new Date(o.fecha_vencimiento_pago).toLocaleDateString('es-DO'):'-'}${vencida?' <span style="color:red;font-weight:bold">(VENCIDA)</span>':''}</td><td>${est.toUpperCase()}</td></tr>`
+                }).join('')}</tbody></table>
+                <p><strong>Total Pendiente: RD$${pendienteProv.toLocaleString('es-DO',{minimumFractionDigits:2})}</strong></p>
+              `)}
+                className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
+                🖨️ Imprimir
+              </button>
+            )}
           </div>
-          <div id="ec-prov-resultado"></div>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-gray-600">Descripción</th>
-                <th className="px-4 py-3 text-right text-gray-600">Total</th>
-                <th className="px-4 py-3 text-right text-gray-600">Pagado</th>
-                <th className="px-4 py-3 text-right text-gray-600">Pendiente</th>
-                <th className="px-4 py-3 text-left text-gray-600">Vencimiento</th>
-                <th className="px-4 py-3 text-left text-gray-600">Estado</th>
-              </tr>
-            </thead>
-            <tbody id="ec-prov-tbody">
-              <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Busca un proveedor para ver su estado de cuenta</td></tr>
-            </tbody>
-          </table>
+
+          {/* Buscador con autocompletado */}
+          <div className="relative mb-6 max-w-md">
+            <label className="block text-sm font-medium text-gray-700 mb-1">🔍 Buscar Proveedor</label>
+            <input type="text" value={busquedaEstadoProv}
+              onChange={e => setBusquedaEstadoProv(e.target.value)}
+              placeholder="Escriba el nombre del proveedor..." autoComplete="off"
+              className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            {sugerenciasProv.length > 0 && (!proveedorSeleccionado || proveedorSeleccionado.nombre !== busquedaEstadoProv) && (
+              <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto mt-1">
+                {sugerenciasProv.map(p => (
+                  <div key={p.id}
+                    onMouseDown={() => { setProveedorSeleccionado(p); setBusquedaEstadoProv(p.nombre) }}
+                    className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 border-b">
+                    {p.nombre}
+                  </div>
+                ))}
+              </div>
+            )}
+            {proveedorSeleccionado && (
+              <button onClick={() => { setProveedorSeleccionado(null); setBusquedaEstadoProv('') }}
+                className="mt-2 text-xs text-blue-600 hover:underline">
+                🔄 Limpiar selección
+              </button>
+            )}
+          </div>
+
+          {/* Si no hay proveedor seleccionado */}
+          {!proveedorSeleccionado && (
+            <div className="text-center text-gray-400 py-12">
+              <p>Busca un proveedor para ver su estado de cuenta</p>
+            </div>
+          )}
+
+          {/* Resultado del proveedor seleccionado */}
+          {proveedorSeleccionado && (
+            <>
+              {/* Resumen */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Órdenes</p>
+                  <p className="text-lg font-bold text-gray-800">{ordenesProv.length}</p>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-lg font-bold text-orange-600">RD${totalProv.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Pagado</p>
+                  <p className="text-lg font-bold text-green-600">RD${pagadoProv.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Pendiente</p>
+                  <p className="text-lg font-bold text-red-600">RD${pendienteProv.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Vencidas</p>
+                  <p className="text-lg font-bold text-yellow-600">{vencidasProv}</p>
+                </div>
+              </div>
+
+              {/* Tabla de ordenes */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-gray-600">Número</th>
+                      <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                      <th className="px-4 py-3 text-right text-gray-600">Pagado</th>
+                      <th className="px-4 py-3 text-right text-gray-600">Pendiente</th>
+                      <th className="px-4 py-3 text-left text-gray-600">Vence Pago</th>
+                      <th className="px-4 py-3 text-left text-gray-600">Estado</th>
+                      <th className="px-4 py-3 text-left text-gray-600">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ordenesProv.length === 0 ? (
+                      <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">Este proveedor no tiene órdenes pendientes ✅</td></tr>
+                    ) : ordenesProv.map(o => {
+                      const pagado = parseFloat(o.monto_pagado || 0)
+                      const total = parseFloat(o.total || 0)
+                      const pendiente = total - pagado
+                      const estadoPago = o.estado_pago || 'pendiente'
+                      const vencida = o.fecha_vencimiento_pago && new Date(o.fecha_vencimiento_pago) < hoy
+                      return (
+                        <tr key={o.id} className={`border-t ${vencida ? 'hover:bg-red-50' : 'hover:bg-gray-50'}`}>
+                          <td className="px-4 py-3 font-mono font-medium">{o.numero}</td>
+                          <td className="px-4 py-3 text-right">RD${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                          <td className="px-4 py-3 text-right text-green-600">RD${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                          <td className="px-4 py-3 text-right font-bold text-orange-600">RD${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                          <td className={`px-4 py-3 ${vencida ? 'text-red-600 font-bold' : ''}`}>
+                            {o.fecha_vencimiento_pago ? new Date(o.fecha_vencimiento_pago).toLocaleDateString('es-DO') : '-'}
+                            {vencida && <span className="ml-2 text-xs">⚠️ VENCIDA</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${estadoPago === 'parcial' ? 'bg-yellow-100 text-yellow-700' : 'bg-orange-100 text-orange-700'}`}>
+                              {estadoPago.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button onClick={() => { setOrdenSeleccionada(o); setMontoPagoOrden(pendiente.toFixed(2)); setMetodoPagoOrden('efectivo') }}
+                              className="text-blue-600 hover:underline text-xs font-medium">
+                              💳 Pagar
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
