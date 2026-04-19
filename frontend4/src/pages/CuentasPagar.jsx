@@ -21,6 +21,7 @@ export default function CuentasPagar() {
   const [diasBusqueda, setDiasBusqueda] = useState(null)
   const [busquedaProveedor, setBusquedaProveedor] = useState('')
   const [ordenes, setOrdenes] = useState([])
+  const [pagos, setPagos] = useState([])
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
   const [montoPagoOrden, setMontoPagoOrden] = useState('')
   const [metodoPagoOrden, setMetodoPagoOrden] = useState('efectivo')
@@ -28,17 +29,20 @@ export default function CuentasPagar() {
 
   const fetchData = async () => {
     try {
-      const [c, res, prov, ord] = await Promise.all([
+      const [c, res, prov, ord, pag] = await Promise.all([
         API.get('/accounts-payable'),
         API.get('/accounts-payable/resumen'),
         API.get('/suppliers'),
-        API.get('/purchase-orders')
+        API.get('/purchase-orders'),
+        API.get('/purchase-orders/payments/all')
       ])
       const cuentasData = c.data.data
       const ordenesData = ord.data.data || []
+      const pagosData = pag.data.data || []
       setCuentas(cuentasData)
       setProveedores(prov.data.data)
       setOrdenes(ordenesData)
+      setPagos(pagosData)
 
       // Calcular resumen combinado: cuentas por pagar + órdenes de compra pendientes
       const resumenCxP = res.data.data
@@ -545,7 +549,16 @@ export default function CuentasPagar() {
       )}
 
       {/* TAB: PAGOS REALIZADOS */}
-      {tab === 'pagos' && (
+      {tab === 'pagos' && (() => {
+        // Filtrar pagos por fecha y proveedor
+        const pagosFiltrados = pagos.filter(p => {
+          if (filtroDesde && new Date(p.fecha_pago) < new Date(filtroDesde)) return false
+          if (filtroHasta && new Date(p.fecha_pago) > new Date(filtroHasta + 'T23:59:59')) return false
+          if (filtroProveedor && !p.proveedor_nombre?.toLowerCase().includes(filtroProveedor.toLowerCase())) return false
+          return true
+        })
+        const totalPagado = pagosFiltrados.reduce((s,p) => s + parseFloat(p.monto || 0), 0)
+        return (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex gap-3 items-end mb-6 flex-wrap">
             <div>
@@ -564,48 +577,59 @@ export default function CuentasPagar() {
                 placeholder="Buscar proveedor..."
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
+            <button onClick={() => { setFiltroDesde(''); setFiltroHasta(''); setFiltroProveedor('') }}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300">
+              🔄 Limpiar
+            </button>
             <button onClick={() => imprimir('Pagos Realizados', `
               <h2>Pagos Realizados a Proveedores</h2>
               <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
-              <table><thead><tr><th>Proveedor</th><th>Descripción</th><th>Total Cuenta</th><th>Pagado</th><th>Pendiente</th></tr></thead>
-              <tbody>${pagosRealizados.map(c=>`<tr><td>${c.proveedor_nombre||'-'}</td><td>${c.descripcion}</td><td style="text-align:right">RD$${parseFloat(c.monto_total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right;color:green;font-weight:bold">RD$${parseFloat(c.monto_pagado).toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right">RD$${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>`).join('')}</tbody></table>
-              <p><strong>Total Pagado: RD$${pagosRealizados.reduce((s,c)=>s+parseFloat(c.monto_pagado||0),0).toLocaleString('es-DO',{minimumFractionDigits:2})}</strong></p>
+              <table><thead><tr><th>Fecha</th><th>Orden</th><th>Proveedor</th><th>Monto</th><th>Método</th><th>Notas</th></tr></thead>
+              <tbody>${pagosFiltrados.map(p=>`<tr><td>${new Date(p.fecha_pago).toLocaleDateString('es-DO')} ${new Date(p.fecha_pago).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</td><td>${p.orden_numero}</td><td>${p.proveedor_nombre||'-'}</td><td style="text-align:right;color:green;font-weight:bold">RD$${parseFloat(p.monto).toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td>${(p.metodo||'efectivo').toUpperCase()}</td><td>${p.notas||'-'}</td></tr>`).join('')}</tbody></table>
+              <p><strong>Total Pagado: RD$${totalPagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</strong></p>
             `)}
               className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
               🖨️ Imprimir
             </button>
           </div>
           <div className="mb-4 p-3 bg-green-50 rounded-lg">
-            <p className="text-sm text-gray-600">Registros: <span className="font-bold">{pagosRealizados.length}</span> — Total Pagado: <span className="font-bold text-green-600">RD${pagosRealizados.reduce((s,c)=>s+parseFloat(c.monto_pagado||0),0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+            <p className="text-sm text-gray-600">Registros: <span className="font-bold">{pagosFiltrados.length}</span> — Total Pagado: <span className="font-bold text-green-600">RD${totalPagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-gray-600">Proveedor</th>
-                <th className="px-4 py-3 text-left text-gray-600">Descripción</th>
-                <th className="px-4 py-3 text-right text-gray-600">Total Cuenta</th>
-                <th className="px-4 py-3 text-right text-gray-600">Pagado</th>
-                <th className="px-4 py-3 text-right text-gray-600">Pendiente</th>
-                <th className="px-4 py-3 text-left text-gray-600">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagosRealizados.length === 0 ? (
-                <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay pagos registrados</td></tr>
-              ) : pagosRealizados.map(c => (
-                <tr key={c.id} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">{c.proveedor_nombre || '-'}</td>
-                  <td className="px-4 py-3">{c.descripcion}</td>
-                  <td className="px-4 py-3 text-right">RD${parseFloat(c.monto_total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                  <td className="px-4 py-3 text-right font-bold text-green-600">RD${parseFloat(c.monto_pagado).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                  <td className="px-4 py-3 text-right text-orange-500">RD${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(c.estado)}`}>{c.estado.toUpperCase()}</span></td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Orden</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Proveedor</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Monto</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Método</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Notas</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pagosFiltrados.length === 0 ? (
+                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay pagos registrados</td></tr>
+                ) : pagosFiltrados.map(p => (
+                  <tr key={p.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3">{new Date(p.fecha_pago).toLocaleDateString('es-DO')} <span className="text-xs text-gray-500">{new Date(p.fecha_pago).toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</span></td>
+                    <td className="px-4 py-3 font-mono font-medium">{p.orden_numero}</td>
+                    <td className="px-4 py-3 font-medium">{p.proveedor_nombre || '-'}</td>
+                    <td className="px-4 py-3 text-right font-bold text-green-600">RD${parseFloat(p.monto).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                        {(p.metodo || 'efectivo').toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{p.notas || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* TAB: VENCIDAS */}
       {tab === 'vencidas' && (
