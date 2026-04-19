@@ -186,12 +186,27 @@ export default function CuentasPagar() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Cuentas por Pagar</h2>
         {/* Botón Actualizar oculto - refresh automático al pagar y al volver a la pestaña */}
-        {tab === 'cuentas' && (
-          <button onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-            + Nueva Cuenta
+        <div className="flex gap-2">
+          <button onClick={() => imprimir('Resumen Cuentas por Pagar', `
+            <h2>Resumen General - Cuentas por Pagar</h2>
+            <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
+            <div class="resumen">
+              <div class="card"><p>Total Cuentas</p><p class="val" style="color:#1e40af">${resumen?.total_cuentas || 0}</p></div>
+              <div class="card"><p>Total Pendiente</p><p class="val" style="color:#ea580c">RD$${parseFloat(resumen?.total_pendiente || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+              <div class="card"><p>Total Pagado</p><p class="val" style="color:#16a34a">RD$${parseFloat(resumen?.total_pagado || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+              <div class="card"><p>Vencidas</p><p class="val" style="color:#dc2626">${resumen?.total_vencidas || 0}</p></div>
+            </div>
+          `)}
+            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm">
+            🖨️ Imprimir
           </button>
-        )}
+          {tab === 'cuentas' && (
+            <button onClick={() => setShowForm(!showForm)}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+              + Nueva Cuenta
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Resumen */}
