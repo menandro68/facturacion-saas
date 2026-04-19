@@ -198,6 +198,13 @@ export default function CuentasPagar() {
     return new Date(c.fecha_vencimiento) < hoy
   }).sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento))
 
+  // Ordenes de compra vencidas (por fecha_vencimiento_pago, solo pendientes/parciales)
+  const ordenesVencidas = ordenes.filter(o => {
+    if ((o.estado_pago || 'pendiente') === 'pagada') return false
+    if (!o.fecha_vencimiento_pago) return false
+    return new Date(o.fecha_vencimiento_pago) < hoy
+  }).sort((a, b) => new Date(a.fecha_vencimiento_pago) - new Date(b.fecha_vencimiento_pago))
+
   if (loading) return <p className="text-gray-500 p-6">Cargando cuentas por pagar...</p>
 
   return (
@@ -632,60 +639,77 @@ export default function CuentasPagar() {
       })()}
 
       {/* TAB: VENCIDAS */}
-      {tab === 'vencidas' && (
+      {tab === 'vencidas' && (() => {
+        const totalVencido = ordenesVencidas.reduce((s,o) => s + (parseFloat(o.total||0) - parseFloat(o.monto_pagado||0)), 0)
+        return (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-end mb-4">
-            <button onClick={() => imprimir('Cuentas Vencidas', `
-              <h2>Cuentas Vencidas</h2>
+            <button onClick={() => imprimir('Ordenes de Compra Vencidas', `
+              <h2>Órdenes de Compra Vencidas</h2>
               <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
-              <table><thead><tr><th>Proveedor</th><th>Descripción</th><th>Pendiente</th><th>Vencimiento</th><th>Días Vencido</th></tr></thead>
-              <tbody>${cuentasVencidas.map(c=>{
-                const dias = Math.floor((hoy-new Date(c.fecha_vencimiento))/(1000*60*60*24))
-                return `<tr><td>${c.proveedor_nombre||'-'}</td><td>${c.descripcion}</td><td style="text-align:right">RD$${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td>${new Date(c.fecha_vencimiento).toLocaleDateString('es-DO')}</td><td style="text-align:center;color:red;font-weight:bold">${dias} días</td></tr>`
+              <table><thead><tr><th>Número</th><th>Proveedor</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Vence Pago</th><th>Días Vencido</th></tr></thead>
+              <tbody>${ordenesVencidas.map(o=>{
+                const pagado = parseFloat(o.monto_pagado || 0)
+                const total = parseFloat(o.total || 0)
+                const pendiente = total - pagado
+                const dias = Math.floor((hoy - new Date(o.fecha_vencimiento_pago)) / (1000*60*60*24))
+                return `<tr><td>${o.numero}</td><td>${o.proveedor_nombre||'-'}</td><td style="text-align:right">RD$${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right">RD$${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td style="text-align:right;color:red;font-weight:bold">RD$${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td><td>${new Date(o.fecha_vencimiento_pago).toLocaleDateString('es-DO')}</td><td style="text-align:center;color:red;font-weight:bold">${dias} días</td></tr>`
               }).join('')}</tbody></table>
-              <p><strong>Total Vencido: RD$${cuentasVencidas.reduce((s,c)=>s+parseFloat(c.monto_pendiente||0),0).toLocaleString('es-DO',{minimumFractionDigits:2})}</strong></p>
+              <p><strong>Total Vencido: RD$${totalVencido.toLocaleString('es-DO',{minimumFractionDigits:2})}</strong></p>
             `)}
               className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
               🖨️ Imprimir
             </button>
           </div>
           <div className="mb-4 p-3 bg-red-50 rounded-lg">
-            <p className="text-sm text-gray-600">Cuentas vencidas: <span className="font-bold text-red-600">{cuentasVencidas.length}</span> — Total: <span className="font-bold text-red-600">RD${cuentasVencidas.reduce((s,c)=>s+parseFloat(c.monto_pendiente||0),0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+            <p className="text-sm text-gray-600">Órdenes vencidas: <span className="font-bold text-red-600">{ordenesVencidas.length}</span> — Total: <span className="font-bold text-red-600">RD${totalVencido.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-gray-600">Proveedor</th>
-                <th className="px-4 py-3 text-left text-gray-600">Descripción</th>
-                <th className="px-4 py-3 text-right text-gray-600">Pendiente</th>
-                <th className="px-4 py-3 text-left text-gray-600">Vencimiento</th>
-                <th className="px-4 py-3 text-center text-gray-600">Días Vencido</th>
-                <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cuentasVencidas.length === 0 ? (
-                <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay cuentas vencidas ✅</td></tr>
-              ) : cuentasVencidas.map(c => {
-                const dias = Math.floor((hoy - new Date(c.fecha_vencimiento)) / (1000*60*60*24))
-                return (
-                  <tr key={c.id} className="border-t hover:bg-red-50">
-                    <td className="px-4 py-3 font-medium">{c.proveedor_nombre || '-'}</td>
-                    <td className="px-4 py-3">{c.descripcion}</td>
-                    <td className="px-4 py-3 text-right font-bold text-red-600">RD${parseFloat(c.monto_pendiente).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-4 py-3">{new Date(c.fecha_vencimiento).toLocaleDateString('es-DO')}</td>
-                    <td className="px-4 py-3 text-center font-bold text-red-600">{dias} días</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => { setShowAbono(c.id); setError(''); setTab('cuentas') }}
-                        className="text-blue-600 hover:underline text-xs">Pagar</button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">Número</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Proveedor</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Pagado</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Pendiente</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Vence Pago</th>
+                  <th className="px-4 py-3 text-center text-gray-600">Días Vencido</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ordenesVencidas.length === 0 ? (
+                  <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay órdenes vencidas ✅</td></tr>
+                ) : ordenesVencidas.map(o => {
+                  const pagado = parseFloat(o.monto_pagado || 0)
+                  const total = parseFloat(o.total || 0)
+                  const pendiente = total - pagado
+                  const dias = Math.floor((hoy - new Date(o.fecha_vencimiento_pago)) / (1000*60*60*24))
+                  return (
+                    <tr key={o.id} className="border-t hover:bg-red-50">
+                      <td className="px-4 py-3 font-mono font-medium">{o.numero}</td>
+                      <td className="px-4 py-3 font-medium">{o.proveedor_nombre || '-'}</td>
+                      <td className="px-4 py-3 text-right">RD${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3 text-right text-green-600">RD${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3 text-right font-bold text-red-600">RD${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3">{new Date(o.fecha_vencimiento_pago).toLocaleDateString('es-DO')}</td>
+                      <td className="px-4 py-3 text-center font-bold text-red-600">{dias} días</td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => { setOrdenSeleccionada(o); setMontoPagoOrden(pendiente.toFixed(2)); setMetodoPagoOrden('efectivo') }}
+                          className="text-blue-600 hover:underline text-xs font-medium">
+                          💳 Pagar
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* TAB: PAGAR ORDEN */}
       {tab === 'pagar_orden' && (
