@@ -200,12 +200,7 @@ export default function CuentasPagar() {
             className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm">
             🖨️ Imprimir
           </button>
-          {tab === 'cuentas' && (
-            <button onClick={() => setShowForm(!showForm)}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-              + Nueva Cuenta
-            </button>
-          )}
+          {/* Botón + Nueva Cuenta oculto */}
         </div>
       </div>
 
