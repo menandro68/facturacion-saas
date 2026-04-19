@@ -830,10 +830,74 @@ export default function CuentasPagar() {
                     monto: montoPagoOrden,
                     metodo: metodoPagoOrden
                   })
+                  // Guardar datos del pago para el comprobante
+                  const datosPago = {
+                    orden: ordenSeleccionada,
+                    monto: parseFloat(montoPagoOrden),
+                    metodo: metodoPagoOrden,
+                    totalPagadoDespues: parseFloat(ordenSeleccionada.monto_pagado || 0) + parseFloat(montoPagoOrden),
+                    fecha: new Date()
+                  }
                   setOrdenSeleccionada(null)
                   setMontoPagoOrden('')
                   await fetchData()
                   alert('✅ Pago registrado correctamente')
+                  // Preguntar si desea imprimir comprobante
+                  if (confirm('¿Desea imprimir comprobante de pago?')) {
+                    const o = datosPago.orden
+                    const total = parseFloat(o.total || 0)
+                    const saldoAnterior = total - parseFloat(o.monto_pagado || 0)
+                    const saldoActual = total - datosPago.totalPagadoDespues
+                    imprimir(`Comprobante Pago - ${o.numero}`, `
+                      <div style="max-width:700px;margin:0 auto">
+                        <div style="text-align:center;border-bottom:2px solid #1e40af;padding-bottom:16px;margin-bottom:24px">
+                          <h2 style="margin:0;font-size:22px">COMPROBANTE DE PAGO</h2>
+                          <p style="margin:4px 0 0;color:#64748b;font-size:13px">A Proveedor</p>
+                        </div>
+
+                        <table style="width:100%;border:none;margin-bottom:20px">
+                          <tr style="background:none">
+                            <td style="border:none;padding:4px 0;width:50%"><strong>Fecha:</strong> ${datosPago.fecha.toLocaleDateString('es-DO')} ${datosPago.fecha.toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'})}</td>
+                            <td style="border:none;padding:4px 0;text-align:right"><strong>No. Orden:</strong> ${o.numero}</td>
+                          </tr>
+                          <tr style="background:none">
+                            <td style="border:none;padding:4px 0" colspan="2"><strong>Proveedor:</strong> ${o.proveedor_nombre || '-'}</td>
+                          </tr>
+                          <tr style="background:none">
+                            <td style="border:none;padding:4px 0"><strong>Método de Pago:</strong> ${datosPago.metodo.toUpperCase()}</td>
+                            <td style="border:none;padding:4px 0;text-align:right"><strong>Estado:</strong> ${saldoActual <= 0.01 ? '<span style="color:#16a34a">PAGADA TOTALMENTE</span>' : '<span style="color:#ea580c">PAGO PARCIAL</span>'}</td>
+                          </tr>
+                        </table>
+
+                        <div style="background:#f1f5f9;border-radius:8px;padding:20px;margin-bottom:20px;text-align:center">
+                          <p style="margin:0;color:#64748b;font-size:13px">MONTO PAGADO</p>
+                          <p style="margin:8px 0 0;font-size:32px;font-weight:bold;color:#16a34a">RD$${datosPago.monto.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                        </div>
+
+                        <table style="margin-bottom:30px">
+                          <thead><tr><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead>
+                          <tbody>
+                            <tr><td>Total de la Orden</td><td style="text-align:right">RD$${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>
+                            <tr><td>Pagado anteriormente</td><td style="text-align:right">RD$${parseFloat(o.monto_pagado || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>
+                            <tr style="background:#fef3c7"><td><strong>Saldo antes del pago</strong></td><td style="text-align:right;font-weight:bold">RD$${saldoAnterior.toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>
+                            <tr><td><strong>Este pago</strong></td><td style="text-align:right;color:#16a34a;font-weight:bold">RD$${datosPago.monto.toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>
+                            <tr style="background:${saldoActual <= 0.01 ? '#dcfce7' : '#fed7aa'}"><td><strong>Saldo actual</strong></td><td style="text-align:right;font-weight:bold;color:${saldoActual <= 0.01 ? '#16a34a' : '#ea580c'}">RD$${Math.max(0, saldoActual).toLocaleString('es-DO',{minimumFractionDigits:2})}</td></tr>
+                          </tbody>
+                        </table>
+
+                        <div style="display:flex;justify-content:space-between;margin-top:60px;gap:30px">
+                          <div style="flex:1;text-align:center;border-top:1px solid #64748b;padding-top:8px">
+                            <p style="margin:0;font-size:12px;color:#64748b">Entregado por</p>
+                          </div>
+                          <div style="flex:1;text-align:center;border-top:1px solid #64748b;padding-top:8px">
+                            <p style="margin:0;font-size:12px;color:#64748b">Recibido por (${o.proveedor_nombre || 'Proveedor'})</p>
+                          </div>
+                        </div>
+
+                        <p style="text-align:center;margin-top:40px;color:#94a3b8;font-size:11px">Este documento es un comprobante interno de pago</p>
+                      </div>
+                    `)
+                  }
                 } catch (err) {
                   alert('❌ ' + (err.response?.data?.mensaje || 'Error al pagar'))
                 } finally {
