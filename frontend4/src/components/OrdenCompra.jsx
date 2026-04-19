@@ -7,7 +7,7 @@ export default function OrdenCompra({ onInventarioUpdate }) {
   const [productos, setProductos] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ supplier_id: '', fecha_entrega: '', notas: '' })
+  const [form, setForm] = useState({ supplier_id: '', fecha_entrega: '', fecha_vencimiento_pago: '', notas: '' })
   const [items, setItems] = useState([{ product_id: '', descripcion: '', cantidad: '', precio_unitario: '' }])
 
   const fetchData = async () => {
@@ -79,7 +79,7 @@ const handleItemChange = async (idx, field, value) => {
     try {
       await API.post('/purchase-orders', { ...form, items: itemsValidos })
       setShowForm(false)
-      setForm({ supplier_id: '', fecha_entrega: '', notas: '' })
+      setForm({ supplier_id: '', fecha_entrega: '', fecha_vencimiento_pago: '', notas: '' })
       setItems([{ product_id: '', descripcion: '', cantidad: '', precio_unitario: '' }])
       fetchData()
     } catch (err) {
@@ -111,7 +111,7 @@ const handleItemChange = async (idx, field, value) => {
 
   const [verOrden, setVerOrden] = useState(null)
   const [editarOrden, setEditarOrden] = useState(null)
-  const [formEditar, setFormEditar] = useState({ supplier_id: '', fecha_entrega: '', notas: '' })
+  const [formEditar, setFormEditar] = useState({ supplier_id: '', fecha_entrega: '', fecha_vencimiento_pago: '', notas: '' })
   const [itemsEditar, setItemsEditar] = useState([])
 
   const handleEditar = async (id) => {
@@ -121,6 +121,7 @@ const handleItemChange = async (idx, field, value) => {
       setFormEditar({
         supplier_id: res.data.data.supplier_id || '',
         fecha_entrega: res.data.data.fecha_entrega ? res.data.data.fecha_entrega.substring(0, 10) : '',
+        fecha_vencimiento_pago: res.data.data.fecha_vencimiento_pago ? res.data.data.fecha_vencimiento_pago.substring(0, 10) : '',
         notas: res.data.data.notas || ''
       })
       setItemsEditar(res.data.data.items?.map(i => ({
@@ -187,6 +188,11 @@ const handleItemChange = async (idx, field, value) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Entrega</label>
               <input type="date" value={form.fecha_entrega} onChange={e => setForm({...form, fecha_entrega: e.target.value})}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Vencimiento Pago</label>
+              <input type="date" value={form.fecha_vencimiento_pago} onChange={e => setForm({...form, fecha_vencimiento_pago: e.target.value})}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
@@ -311,6 +317,11 @@ const handleItemChange = async (idx, field, value) => {
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Vencimiento Pago</label>
+                <input type="date" value={formEditar.fecha_vencimiento_pago} onChange={e => setFormEditar({...formEditar, fecha_vencimiento_pago: e.target.value})}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
                 <input value={formEditar.notas} onChange={e => setFormEditar({...formEditar, notas: e.target.value})}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -375,6 +386,7 @@ const handleItemChange = async (idx, field, value) => {
               <div><span className="font-medium text-gray-600">Estado:</span> {verOrden.estado?.toUpperCase()}</div>
               <div><span className="font-medium text-gray-600">Fecha:</span> {new Date(verOrden.creado_en).toLocaleDateString()}</div>
               <div><span className="font-medium text-gray-600">Entrega:</span> {verOrden.fecha_entrega ? new Date(verOrden.fecha_entrega).toLocaleDateString() : '-'}</div>
+              <div><span className="font-medium text-gray-600">Vence Pago:</span> {verOrden.fecha_vencimiento_pago ? new Date(verOrden.fecha_vencimiento_pago).toLocaleDateString() : '-'}</div>
               <div><span className="font-medium text-gray-600">Notas:</span> {verOrden.notas || '-'}</div>
               <div><span className="font-medium text-gray-600">Total:</span> RD${parseFloat(verOrden.total).toLocaleString()}</div>
             </div>
