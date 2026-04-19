@@ -60,8 +60,27 @@ export default function CuentasPagar() {
 
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData, 10000)
-    return () => clearInterval(interval)
+
+    // Refresh automático cuando la pestaña vuelve a ser visible
+    // (estándar profesional: Gmail, Notion, Linear)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData()
+      }
+    }
+
+    // Refresh cuando la ventana recibe foco
+    const handleFocus = () => {
+      fetchData()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [])
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
