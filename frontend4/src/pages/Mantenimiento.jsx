@@ -14,6 +14,10 @@ export default function Mantenimiento() {
   const [formVendedor, setFormVendedor] = useState({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '', usuario: '', password: '' })
   const [formZona, setFormZona] = useState({ nombre: '', descripcion: '' })
   const [formChofer, setFormChofer] = useState({ nombre: '', cedula: '', licencia: '', telefono: '', email: '', vehiculo: '', placa: '' })
+  const [claveDescuento, setClaveDescuento] = useState('')
+  const [nuevaClave, setNuevaClave] = useState('')
+  const [mostrarClave, setMostrarClave] = useState(false)
+  const [mensajeClave, setMensajeClave] = useState('')
 
   const fetchData = async () => {
     setLoading(true)
@@ -84,6 +88,7 @@ export default function Mantenimiento() {
     { id: 'vendedores', label: '🧑‍💼 Vendedores' },
     { id: 'zonas', label: '🗺️ Zonas' },
     { id: 'choferes', label: '🚗 Choferes' },
+    { id: 'clave', label: '🔐 Clave Descuento' },
   ]
 
   if (loading) return <p className="text-gray-500 p-6">Cargando...</p>
@@ -95,7 +100,17 @@ export default function Mantenimiento() {
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b">
         {tabs.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); setShowForm(false) }}
+          <button key={t.id} onClick={async () => {
+            setTab(t.id); setShowForm(false)
+            if (t.id === 'clave') {
+              try {
+                const res = await API.get('/mantenimiento/clave-descuento')
+                setClaveDescuento(res.data.data.valor)
+                setNuevaClave('')
+                setMensajeClave('')
+              } catch(e) { setMensajeClave('❌ Error al cargar clave') }
+            }
+          }}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
               tab === t.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}>
@@ -104,12 +119,14 @@ export default function Mantenimiento() {
         ))}
       </div>
 
-      <div className="flex justify-end mb-4">
-        <button onClick={handleNuevo}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-          + Nuevo
-        </button>
-      </div>
+      {tab !== 'clave' && (
+        <div className="flex justify-end mb-4">
+          <button onClick={handleNuevo}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+            + Nuevo
+          </button>
+        </div>
+      )}
 
       {/* Formulario Vendedor */}
       {showForm && tab === 'vendedores' && (
@@ -338,6 +355,64 @@ export default function Mantenimiento() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Vista Clave Descuento */}
+      {tab === 'clave' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6 max-w-2xl">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">🔐 Clave de Autorización de Descuentos</h3>
+            <p className="text-sm text-gray-600">Esta clave permite autorizar la venta de productos por debajo del precio oficial. Comparta esta clave solo con personal autorizado (administradores, contabilidad, gerentes).</p>
+          </div>
+
+          {mensajeClave && (
+            <div className={`p-3 rounded mb-4 text-sm ${mensajeClave.startsWith('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {mensajeClave}
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <label className="block text-sm font-medium text-blue-900 mb-2">Clave Actual</label>
+            <div className="flex items-center gap-3">
+              <input type={mostrarClave ? 'text' : 'password'} value={claveDescuento} readOnly
+                className="flex-1 border border-blue-300 rounded px-3 py-2 text-sm bg-white font-mono tracking-wider" />
+              <button onClick={() => setMostrarClave(!mostrarClave)}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                {mostrarClave ? '🙈 Ocultar' : '👁️ Ver'}
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t pt-6">
+            <h4 className="font-medium text-gray-800 mb-3">Cambiar Clave</h4>
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Clave (mínimo 4 caracteres)</label>
+                <input type="text" value={nuevaClave} onChange={e => setNuevaClave(e.target.value)}
+                  placeholder="Escriba la nueva clave..."
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <button onClick={async () => {
+                if (nuevaClave.trim().length < 4) {
+                  setMensajeClave('❌ La clave debe tener al menos 4 caracteres')
+                  return
+                }
+                if (!confirm(`¿Cambiar la clave de descuento a "${nuevaClave}"?`)) return
+                try {
+                  await API.put('/mantenimiento/clave-descuento', { nueva_clave: nuevaClave })
+                  setClaveDescuento(nuevaClave)
+                  setNuevaClave('')
+                  setMensajeClave('✅ Clave actualizada correctamente')
+                } catch(e) {
+                  setMensajeClave('❌ ' + (e.response?.data?.mensaje || 'Error al actualizar'))
+                }
+              }}
+                className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 whitespace-nowrap">
+                💾 Guardar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
