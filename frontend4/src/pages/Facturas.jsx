@@ -86,6 +86,10 @@ export default function Facturas({ vendedor_id = null }) {
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
   const [mostrarImprimir, setMostrarImprimir] = useState(false)
   const [facturaGuardadaId, setFacturaGuardadaId] = useState(null)
+  const [mostrarAutorizacion, setMostrarAutorizacion] = useState(false)
+  const [claveAutorizacion, setClaveAutorizacion] = useState('')
+  const [productosConDescuento, setProductosConDescuento] = useState([])
+  const [errorAutorizacion, setErrorAutorizacion] = useState('')
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: ''
@@ -167,8 +171,7 @@ export default function Facturas({ vendedor_id = null }) {
     setMostrarConfirmar(true)
   }
 
-  const handleConfirmarSi = async () => {
-    setMostrarConfirmar(false)
+  const guardarFacturaFinal = async () => {
     setError('')
     try {
       const res = await API.post('/invoices', { ...form, items, estado: 'emitida' })
@@ -187,6 +190,58 @@ export default function Facturas({ vendedor_id = null }) {
       }
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al guardar')
+    }
+  }
+
+  const handleConfirmarSi = async () => {
+    setMostrarConfirmar(false)
+    // Detectar productos con precio menor al oficial
+    const productosBajos = []
+    items.forEach(item => {
+      if (item.product_id && item.precio_unitario) {
+        const prodOficial = productos.find(p => p.id === item.product_id)
+        if (prodOficial && parseFloat(item.precio_unitario) < parseFloat(prodOficial.precio)) {
+          productosBajos.push({
+            nombre: prodOficial.nombre,
+            precio_oficial: parseFloat(prodOficial.precio),
+            precio_ingresado: parseFloat(item.precio_unitario),
+            diferencia: parseFloat(prodOficial.precio) - parseFloat(item.precio_unitario)
+          })
+        }
+      }
+    })
+
+    // Si hay productos bajos Y es vendedor (no admin) → pedir autorización
+    if (productosBajos.length > 0 && vendedor_id) {
+      setProductosConDescuento(productosBajos)
+      setClaveAutorizacion('')
+      setErrorAutorizacion('')
+      setMostrarAutorizacion(true)
+      return
+    }
+
+    // Si es admin o no hay precios bajos → guardar directo
+    await guardarFacturaFinal()
+  }
+
+  const handleValidarClave = async () => {
+    if (!claveAutorizacion.trim()) {
+      setErrorAutorizacion('Ingrese la clave de autorización')
+      return
+    }
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveAutorizacion })
+      if (res.data.valido) {
+        setMostrarAutorizacion(false)
+        setClaveAutorizacion('')
+        setProductosConDescuento([])
+        setErrorAutorizacion('')
+        await guardarFacturaFinal()
+      } else {
+        setErrorAutorizacion('❌ Clave incorrecta. Intente de nuevo.')
+      }
+    } catch(e) {
+      setErrorAutorizacion('❌ Error al validar clave')
     }
   }
 
@@ -2563,6 +2618,69 @@ export default function Facturas({ vendedor_id = null }) {
                 }}
                 className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
                 No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal autorización descuento */}
+      {mostrarAutorizacion && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">⚠️ Autorización Requerida</h3>
+              <p className="text-sm text-gray-600 mt-1">Los siguientes productos tienen un precio MENOR al oficial. Se requiere clave de autorización.</p>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 max-h-48 overflow-y-auto">
+              {productosConDescuento.map((p, idx) => (
+                <div key={idx} className="text-xs mb-2 pb-2 border-b border-yellow-200 last:border-0 last:mb-0 last:pb-0">
+                  <p className="font-medium text-gray-800">{p.nombre}</p>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    <div>
+                      <span className="text-gray-500">Oficial:</span><br/>
+                      <span className="font-medium text-blue-600">RD${p.precio_oficial.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Ingresado:</span><br/>
+                      <span className="font-medium text-orange-600">RD${p.precio_ingresado.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Diferencia:</span><br/>
+                      <span className="font-bold text-red-600">-RD${p.diferencia.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {errorAutorizacion && (
+              <div className="bg-red-100 text-red-700 p-2 rounded mb-3 text-sm">{errorAutorizacion}</div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">🔐 Clave de Autorización</label>
+              <input type="password"
+                value={claveAutorizacion}
+                onChange={e => setClaveAutorizacion(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleValidarClave() } }}
+                placeholder="Ingrese la clave del administrador..."
+                autoFocus
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => {
+                setMostrarAutorizacion(false)
+                setClaveAutorizacion('')
+                setProductosConDescuento([])
+                setErrorAutorizacion('')
+              }}
+                className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button onClick={handleValidarClave}
+                className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 font-medium">
+                ✓ Validar y Guardar
               </button>
             </div>
           </div>
