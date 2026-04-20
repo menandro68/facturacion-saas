@@ -2190,8 +2190,10 @@ export default function Facturas({ vendedor_id = null }) {
                       if (!itemsDev.length) { alert('Selecciona al menos un producto con cantidad mayor a 0'); return }
                       if (!devMotivo.trim()) { alert('Ingresa el motivo de la devolución'); return }
                       if (!confirm('¿Registrar esta devolución? Quedará en estado PENDIENTE esperando aprobación.')) return
+                      let devolucionRegistrada = false
+                      let devolucionId = null
                       try {
-                        await API.post('/devoluciones', {
+                        const resPost = await API.post('/devoluciones', {
                           factura_id: devFacturaEncontrada.id,
                           factura_ncf: devFacturaEncontrada.ncf,
                           customer_id: devFacturaEncontrada.customer_id || null,
@@ -2205,6 +2207,8 @@ export default function Facturas({ vendedor_id = null }) {
                             itbis_rate: parseFloat(it.itbis_rate || 0)
                           }))
                         })
+                        devolucionRegistrada = true
+                        devolucionId = resPost.data.data?.id
                         setShowDevolucion(false)
                         setDevFacturaBuscar('')
                         setDevFacturaEncontrada(null)
@@ -2213,7 +2217,106 @@ export default function Facturas({ vendedor_id = null }) {
                         const res = await API.get('/devoluciones')
                         setDevoluciones(res.data.data)
                         alert('✅ Devolución registrada con estado PENDIENTE')
-                      } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error al registrar devolución')) }
+                      } catch(e) {
+                        alert('❌ ' + (e.response?.data?.mensaje || 'Error al registrar devolución'))
+                        return
+                      }
+
+                      // Impresión del comprobante (separado del registro para no perder datos si falla el popup)
+                      if (devolucionRegistrada && devolucionId && confirm('¿Desea imprimir el comprobante de devolución?')) {
+                        try {
+                          const resDet = await API.get(`/devoluciones/${devolucionId}`)
+                          const dev = resDet.data.data
+                          const printW = window.open('', '_blank')
+                          if (!printW) { alert('⚠️ El navegador bloqueó la ventana emergente. Habilita los popups para imprimir.'); return }
+                          const filas = (dev.items || []).map(it => `
+                            <tr>
+                              <td>${it.descripcion}</td>
+                              <td style="text-align:right">${parseFloat(it.cantidad).toFixed(2)}</td>
+                              <td style="text-align:right">RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                              <td style="text-align:right">RD$${parseFloat(it.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                            </tr>`).join('')
+                          printW.document.write(`
+                            <!DOCTYPE html><html><head><title>Comprobante Devolución ${dev.numero}</title>
+                            <style>
+                              @page { size: letter; margin: 0.5in }
+                              body{font-family:Arial,sans-serif;padding:20px;color:#1e293b;max-width:8.5in;margin:0 auto}
+                              .header{background:#1e40af;color:white;padding:16px 20px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+                              .header h1{margin:0;font-size:22px}
+                              .header .numero{font-size:18px;font-weight:bold;background:rgba(255,255,255,0.2);padding:6px 14px;border-radius:6px}
+                              .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;margin-bottom:16px;background:#f1f5f9;padding:12px;border-radius:6px}
+                              .meta p{margin:3px 0}
+                              .meta strong{color:#475569}
+                              .estado-badge{display:inline-block;padding:4px 12px;border-radius:4px;font-weight:bold;font-size:11px;background:#fef3c7;color:#92400e;margin-left:6px}
+                              .motivo{background:#fffbeb;border-left:4px solid #f59e0b;padding:10px 14px;margin-bottom:16px;font-size:13px}
+                              .motivo strong{color:#92400e}
+                              table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+                              th{background:#1e40af;color:white;padding:8px;text-align:left}
+                              td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                              tr:nth-child(even){background:#f8fafc}
+                              .totales{display:flex;justify-content:flex-end;margin-bottom:32px}
+                              .totales-box{background:#fff7ed;border:2px solid #f97316;border-radius:8px;padding:12px 18px;min-width:280px}
+                              .totales-fila{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+                              .totales-fila.total{font-weight:bold;font-size:16px;color:#ea580c;border-top:2px solid #f97316;padding-top:8px;margin-top:4px}
+                              .firmas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;margin-top:60px}
+                              .firma{text-align:center;font-size:11px}
+                              .firma .linea{border-top:1px solid #334155;margin-bottom:6px;padding-top:6px}
+                              .footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:10px}
+                              @media print{.no-print{display:none}}
+                            </style></head><body>
+                            <div class="header">
+                              <h1>🔄 COMPROBANTE DE DEVOLUCIÓN</h1>
+                              <div class="numero">${dev.numero}</div>
+                            </div>
+
+                            <div class="meta">
+                              <p><strong>Cliente:</strong> ${dev.cliente_nombre || 'Consumidor Final'}</p>
+                              <p><strong>NCF Factura Original:</strong> ${dev.factura_ncf || '-'}</p>
+                              <p><strong>Fecha / Hora:</strong> ${new Date(dev.creado_en).toLocaleString('es-DO')}</p>
+                              <p><strong>Estado:</strong> <span class="estado-badge">${dev.estado.toUpperCase()}</span></p>
+                            </div>
+
+                            <div class="motivo">
+                              <strong>Motivo de la devolución:</strong><br>
+                              ${dev.motivo || 'Sin especificar'}
+                            </div>
+
+                            <table>
+                              <thead><tr>
+                                <th>Producto</th>
+                                <th style="text-align:right">Cantidad</th>
+                                <th style="text-align:right">Precio Unit.</th>
+                                <th style="text-align:right">Subtotal</th>
+                              </tr></thead>
+                              <tbody>${filas}</tbody>
+                            </table>
+
+                            <div class="totales">
+                              <div class="totales-box">
+                                <div class="totales-fila"><span>Subtotal:</span><span>RD$${parseFloat(dev.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                                <div class="totales-fila"><span>ITBIS:</span><span>RD$${parseFloat(dev.itbis).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                                <div class="totales-fila total"><span>TOTAL DEVOLUCIÓN:</span><span>RD$${parseFloat(dev.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                              </div>
+                            </div>
+
+                            <div class="firmas">
+                              <div class="firma"><div class="linea"></div>ALMACÉN<br>(Recibe mercancía)</div>
+                              <div class="firma"><div class="linea"></div>CONTABILIDAD<br>(Aprueba devolución)</div>
+                              <div class="firma"><div class="linea"></div>CLIENTE<br>(Entrega mercancía)</div>
+                            </div>
+
+                            <div class="footer">
+                              Este documento NO es una Nota de Crédito. La NC se emitirá tras la aprobación y procesamiento por parte de Contabilidad.<br>
+                              Impreso el ${new Date().toLocaleString('es-DO')}
+                            </div>
+
+                            <script>window.onload=()=>{setTimeout(()=>window.print(),300)}</script>
+                            </body></html>`)
+                          printW.document.close()
+                        } catch(e) {
+                          alert('⚠️ La devolución se guardó correctamente pero no se pudo imprimir el comprobante. Puede imprimirlo después desde el botón Ver.')
+                        }
+                      }
                     }}
                       className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
                       Registrar Devolución
