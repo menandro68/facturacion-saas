@@ -42,6 +42,15 @@ export default function Facturas({ vendedor_id = null }) {
   const [ncFacturaEncontrada, setNcFacturaEncontrada] = useState(null)
   const [ncItemsSeleccionados, setNcItemsSeleccionados] = useState([])
   const [ncMotivo, setNcMotivo] = useState('')
+  // Estados para Devoluciones
+  const [devoluciones, setDevoluciones] = useState([])
+  const [showDevolucion, setShowDevolucion] = useState(false)
+  const [devFacturaBuscar, setDevFacturaBuscar] = useState('')
+  const [devFacturaEncontrada, setDevFacturaEncontrada] = useState(null)
+  const [devItemsSeleccionados, setDevItemsSeleccionados] = useState([])
+  const [devMotivo, setDevMotivo] = useState('')
+  const [devDetalle, setDevDetalle] = useState(null)
+  const [filtroEstadoDev, setFiltroEstadoDev] = useState('todos')
   const [mostrarImprimirNC, setMostrarImprimirNC] = useState(false)
   const [ncGuardadaId, setNcGuardadaId] = useState(null)
   const [showCotizacion, setShowCotizacion] = useState(false)
@@ -104,6 +113,7 @@ export default function Facturas({ vendedor_id = null }) {
       API.get('/invoices/cotizaciones/lista').then(r => setCotizaciones(r.data.data)).catch(() => {})
       API.get('/invoices/pedidos/lista').then(r => setPedidos(r.data.data)).catch(() => {})
       API.get('/invoices/nota-credito/lista').then(r => setNotasCredito(r.data.data)).catch(() => {})
+      API.get('/devoluciones').then(r => setDevoluciones(r.data.data)).catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -243,6 +253,7 @@ export default function Facturas({ vendedor_id = null }) {
     { id: 'pedidos', label: 'Pedidos' },
     { id: 'cotizacion', label: 'Cotización' },
     { id: 'nota_credito', label: 'Nota de Crédito' },
+    { id: 'devoluciones', label: '🔄 Devoluciones' },
   ]
 
   if (loading) return <p className="text-gray-500 p-6">Cargando facturas...</p>
@@ -1907,7 +1918,7 @@ export default function Facturas({ vendedor_id = null }) {
                     const res = await API.get(`/invoices/${factura.id}`)
                     const data = res.data.data
                     setNcFacturaEncontrada(data)
-              setNcItemsSeleccionados(data.items.map(it => ({
+                    setNcItemsSeleccionados(data.items.map(it => ({
                       ...it,
                       seleccionado: true,
                       cantidad_nc: 0
@@ -2061,7 +2072,324 @@ export default function Facturas({ vendedor_id = null }) {
         </div>
       )}
 
-      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && tab !== 'producto' && tab !== 'cliente' && tab !== 'chofer' && tab !== 'relacion_vendedor' && tab !== 'cotizacion' && tab !== 'nota_credito' && tab !== 'pedidos' && (
+      {tab === 'devoluciones' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">🔄 Devoluciones de Mercancía</h3>
+          <p className="text-sm text-gray-500 mb-4">Flujo: Almacén registra → Contabilidad aprueba → Se genera Nota de Crédito</p>
+
+          {!showDevolucion ? (
+            <button onClick={() => { setShowDevolucion(true); setDevFacturaEncontrada(null); setDevItemsSeleccionados([]); setDevMotivo(''); setDevFacturaBuscar('') }}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 mb-4">
+              + Nueva Devolución
+            </button>
+          ) : (
+            <div className="mb-6 border rounded-lg p-4">
+              <h4 className="font-medium mb-3 text-gray-700">Nueva Devolución</h4>
+              <div className="flex gap-3 items-end mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">NCF de Factura Original</label>
+                  <input type="text" placeholder="Ej: B0100000001"
+                    value={devFacturaBuscar}
+                    onChange={e => setDevFacturaBuscar(e.target.value.toUpperCase())}
+                    className="border rounded px-3 py-2 text-sm w-56 uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <button onClick={async () => {
+                  const factura = facturas.find(f => (f.ncf||'').toUpperCase() === devFacturaBuscar.trim())
+                  if (!factura) { alert('Factura no encontrada'); return }
+                  if (factura.estado !== 'emitida') { alert('Solo se pueden hacer devoluciones a facturas emitidas'); return }
+                  try {
+                    const res = await API.get(`/invoices/${factura.id}`)
+                    const data = res.data.data
+                    setDevFacturaEncontrada(data)
+                    setDevItemsSeleccionados(data.items.map(it => ({
+                      ...it,
+                      seleccionado: false,
+                      cantidad_dev: 0
+                    })))
+                  } catch(e) { alert('Error al cargar factura') }
+                }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                  Buscar
+                </button>
+              </div>
+
+              {devFacturaEncontrada && (
+                <>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
+                    <p><span className="font-medium">Cliente:</span> {devFacturaEncontrada.cliente_nombre || 'Consumidor Final'}</p>
+                    <p><span className="font-medium">NCF:</span> {devFacturaEncontrada.ncf}</p>
+                    <p><span className="font-medium">Total factura:</span> RD${parseFloat(devFacturaEncontrada.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                  </div>
+
+                  <p className="text-sm font-medium text-gray-700 mb-2">Selecciona los productos que el cliente está devolviendo:</p>
+                  <table className="w-full text-sm mb-4">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-gray-600">✓</th>
+                        <th className="px-3 py-2 text-left text-gray-600">Producto</th>
+                        <th className="px-3 py-2 text-right text-gray-600">Cant. Original</th>
+                        <th className="px-3 py-2 text-right text-gray-600">Cant. Devuelta</th>
+                        <th className="px-3 py-2 text-right text-gray-600">Precio</th>
+                        <th className="px-3 py-2 text-right text-gray-600">Subtotal Dev.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {devItemsSeleccionados.map((item, idx) => (
+                        <tr key={idx} className="border-t">
+                          <td className="px-3 py-2">
+                            <input type="checkbox" checked={item.seleccionado}
+                              onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, seleccionado: e.target.checked} : it))} />
+                          </td>
+                          <td className="px-3 py-2">{item.descripcion}</td>
+                          <td className="px-3 py-2 text-right">{parseFloat(item.cantidad).toFixed(0)}</td>
+                          <td className="px-3 py-2 text-right">
+                            <input type="number" value={item.cantidad_dev} min="0"
+                              max={parseFloat(item.cantidad)}
+                              step="0.01"
+                              disabled={!item.seleccionado}
+                              onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_dev: e.target.value} : it))}
+                              className="border rounded px-2 py-1 text-sm w-20 text-right disabled:bg-gray-100" />
+                          </td>
+                          <td className="px-3 py-2 text-right">RD${parseFloat(item.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                          <td className="px-3 py-2 text-right font-medium">
+                            {item.seleccionado ? 'RD$' + (parseFloat(item.cantidad_dev||0) * parseFloat(item.precio_unitario)).toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="flex justify-end mb-4">
+                    <div className="text-sm text-right bg-gray-50 p-3 rounded-lg">
+                      {(() => {
+                        let sub = 0, itb = 0
+                        devItemsSeleccionados.filter(i => i.seleccionado).forEach(it => {
+                          const s = parseFloat(it.cantidad_dev||0) * parseFloat(it.precio_unitario)
+                          sub += s
+                          itb += s * (parseFloat(it.itbis_rate||0) / 100)
+                        })
+                        return <>
+                          <p className="text-gray-600">Subtotal Dev.: <span className="font-medium">RD${sub.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                          <p className="text-gray-600">ITBIS Dev.: <span className="font-medium">RD${itb.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                          <p className="text-lg font-bold text-orange-600">Total Devolución: RD${(sub+itb).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                        </>
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de la devolución *</label>
+                    <input type="text" placeholder="Ej: Producto defectuoso, cliente insatisfecho..."
+                      value={devMotivo} onChange={e => setDevMotivo(e.target.value)}
+                      className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button onClick={async () => {
+                      const itemsDev = devItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_dev) > 0)
+                      if (!itemsDev.length) { alert('Selecciona al menos un producto con cantidad mayor a 0'); return }
+                      if (!devMotivo.trim()) { alert('Ingresa el motivo de la devolución'); return }
+                      if (!confirm('¿Registrar esta devolución? Quedará en estado PENDIENTE esperando aprobación.')) return
+                      try {
+                        await API.post('/devoluciones', {
+                          factura_id: devFacturaEncontrada.id,
+                          factura_ncf: devFacturaEncontrada.ncf,
+                          customer_id: devFacturaEncontrada.customer_id || null,
+                          cliente_nombre: devFacturaEncontrada.cliente_nombre || 'Consumidor Final',
+                          motivo: devMotivo,
+                          items: itemsDev.map(it => ({
+                            product_id: it.product_id || null,
+                            descripcion: it.descripcion,
+                            cantidad: parseFloat(it.cantidad_dev),
+                            precio_unitario: parseFloat(it.precio_unitario),
+                            itbis_rate: parseFloat(it.itbis_rate || 0)
+                          }))
+                        })
+                        setShowDevolucion(false)
+                        setDevFacturaBuscar('')
+                        setDevFacturaEncontrada(null)
+                        setDevItemsSeleccionados([])
+                        setDevMotivo('')
+                        const res = await API.get('/devoluciones')
+                        setDevoluciones(res.data.data)
+                        alert('✅ Devolución registrada con estado PENDIENTE')
+                      } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error al registrar devolución')) }
+                    }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                      Registrar Devolución
+                    </button>
+                    <button onClick={() => setShowDevolucion(false)}
+                      className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Filtro por estado */}
+          <div className="flex gap-2 items-center mb-4 flex-wrap">
+            <span className="text-sm font-medium text-gray-700">Filtrar:</span>
+            {['todos', 'pendiente', 'aprobada', 'procesada', 'cancelada'].map(e => (
+              <button key={e} onClick={() => setFiltroEstadoDev(e)}
+                className={`px-3 py-1 rounded text-xs font-medium ${filtroEstadoDev === e ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                {e.charAt(0).toUpperCase() + e.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Lista de devoluciones */}
+          {(() => {
+            const lista = devoluciones.filter(d => filtroEstadoDev === 'todos' || d.estado === filtroEstadoDev)
+            if (lista.length === 0) return <p className="text-gray-400 text-sm text-center py-8">No hay devoluciones {filtroEstadoDev !== 'todos' ? `en estado ${filtroEstadoDev}` : ''}</p>
+            return (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-gray-600">Número</th>
+                    <th className="px-3 py-3 text-left text-gray-600">NCF Factura</th>
+                    <th className="px-3 py-3 text-left text-gray-600">Cliente</th>
+                    <th className="px-3 py-3 text-right text-gray-600">Total</th>
+                    <th className="px-3 py-3 text-left text-gray-600">Estado</th>
+                    <th className="px-3 py-3 text-left text-gray-600">Fecha</th>
+                    <th className="px-3 py-3 text-left text-gray-600">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lista.map(d => {
+                    const estadoColorDev = {
+                      pendiente: 'bg-yellow-100 text-yellow-700',
+                      aprobada: 'bg-green-100 text-green-700',
+                      procesada: 'bg-blue-100 text-blue-700',
+                      cancelada: 'bg-red-100 text-red-700'
+                    }[d.estado] || 'bg-gray-100 text-gray-700'
+                    return (
+                      <tr key={d.id} className="border-t hover:bg-gray-50">
+                        <td className="px-3 py-3 font-mono font-medium">{d.numero}</td>
+                        <td className="px-3 py-3 font-mono text-xs">{d.factura_ncf || '-'}</td>
+                        <td className="px-3 py-3">{d.cliente_nombre || 'Consumidor Final'}</td>
+                        <td className="px-3 py-3 text-right font-medium">RD${parseFloat(d.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td className="px-3 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColorDev}`}>{d.estado.toUpperCase()}</span>
+                        </td>
+                        <td className="px-3 py-3 text-xs">{new Date(d.creado_en).toLocaleDateString('es-DO')}</td>
+                        <td className="px-3 py-3 flex gap-2 flex-wrap">
+                          <button onClick={async () => {
+                            try {
+                              const res = await API.get(`/devoluciones/${d.id}`)
+                              setDevDetalle(res.data.data)
+                            } catch(e) { alert('Error al cargar detalle') }
+                          }} className="text-blue-600 hover:underline text-xs">Ver</button>
+                          {d.estado === 'pendiente' && (
+                            <>
+                              <button onClick={async () => {
+                                if (!confirm('¿Aprobar devolución? Los productos regresarán al inventario.')) return
+                                try {
+                                  await API.put(`/devoluciones/${d.id}/aprobar`, {})
+                                  const res = await API.get('/devoluciones')
+                                  setDevoluciones(res.data.data)
+                                  alert('✅ Devolución aprobada. Inventario actualizado.')
+                                } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
+                              }} className="text-green-600 hover:underline text-xs font-medium">Aprobar</button>
+                              <button onClick={async () => {
+                                if (!confirm('¿Cancelar esta devolución?')) return
+                                try {
+                                  await API.put(`/devoluciones/${d.id}/cancelar`, {})
+                                  const res = await API.get('/devoluciones')
+                                  setDevoluciones(res.data.data)
+                                } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
+                              }} className="text-red-500 hover:underline text-xs">Cancelar</button>
+                            </>
+                          )}
+                          {d.estado === 'aprobada' && (
+                            <>
+                              <button onClick={async () => {
+                                if (!confirm('¿Procesar devolución? Se generará la Nota de Crédito automáticamente.')) return
+                                try {
+                                  const res = await API.put(`/devoluciones/${d.id}/procesar`, {})
+                                  const resLista = await API.get('/devoluciones')
+                                  setDevoluciones(resLista.data.data)
+                                  const resNC = await API.get('/invoices/nota-credito/lista')
+                                  setNotasCredito(resNC.data.data)
+                                  alert(`✅ NC generada: ${res.data.data.ncf}`)
+                                } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
+                              }} className="text-blue-600 hover:underline text-xs font-medium">Procesar → NC</button>
+                              <button onClick={async () => {
+                                if (!confirm('¿Cancelar esta devolución? El inventario se revertirá.')) return
+                                try {
+                                  await API.put(`/devoluciones/${d.id}/cancelar`, {})
+                                  const res = await API.get('/devoluciones')
+                                  setDevoluciones(res.data.data)
+                                } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
+                              }} className="text-red-500 hover:underline text-xs">Cancelar</button>
+                            </>
+                          )}
+                          {d.estado === 'procesada' && d.nota_credito_id && (
+                            <button onClick={() => handlePDF(d.nota_credito_id)}
+                              className="text-green-600 hover:underline text-xs">Ver NC</button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )
+          })()}
+
+          {/* Modal detalle devolución */}
+          {devDetalle && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">Detalle Devolución {devDetalle.numero}</h3>
+                    <p className="text-sm text-gray-500">Estado: <span className="font-medium">{devDetalle.estado.toUpperCase()}</span></p>
+                  </div>
+                  <button onClick={() => setDevDetalle(null)} className="text-gray-400 hover:text-gray-700 text-2xl">×</button>
+                </div>
+                <div className="bg-gray-50 rounded p-3 mb-4 text-sm space-y-1">
+                  <p><span className="text-gray-500">Cliente:</span> <span className="font-medium">{devDetalle.cliente_nombre || 'Consumidor Final'}</span></p>
+                  <p><span className="text-gray-500">NCF Factura:</span> <span className="font-mono">{devDetalle.factura_ncf || '-'}</span></p>
+                  <p><span className="text-gray-500">Motivo:</span> <span className="font-medium">{devDetalle.motivo || '-'}</span></p>
+                  <p><span className="text-gray-500">Creada:</span> {new Date(devDetalle.creado_en).toLocaleString('es-DO')}</p>
+                  {devDetalle.aprobada_en && <p><span className="text-gray-500">Aprobada:</span> {new Date(devDetalle.aprobada_en).toLocaleString('es-DO')}</p>}
+                  {devDetalle.procesada_en && <p><span className="text-gray-500">Procesada:</span> {new Date(devDetalle.procesada_en).toLocaleString('es-DO')}</p>}
+                  {devDetalle.cancelada_en && <p><span className="text-gray-500">Cancelada:</span> {new Date(devDetalle.cancelada_en).toLocaleString('es-DO')}</p>}
+                </div>
+                <table className="w-full text-sm mb-4">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-gray-600">Producto</th>
+                      <th className="px-3 py-2 text-right text-gray-600">Cant.</th>
+                      <th className="px-3 py-2 text-right text-gray-600">Precio</th>
+                      <th className="px-3 py-2 text-right text-gray-600">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(devDetalle.items || []).map((it, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-3 py-2">{it.descripcion}</td>
+                        <td className="px-3 py-2 text-right">{parseFloat(it.cantidad).toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right">RD${parseFloat(it.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td className="px-3 py-2 text-right font-medium">RD${parseFloat(it.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="flex justify-end">
+                  <div className="text-sm text-right bg-gray-50 p-3 rounded-lg">
+                    <p className="text-gray-600">Subtotal: <span className="font-medium">RD${parseFloat(devDetalle.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                    <p className="text-gray-600">ITBIS: <span className="font-medium">RD${parseFloat(devDetalle.itbis).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                    <p className="text-lg font-bold text-orange-600">Total: RD${parseFloat(devDetalle.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && tab !== 'producto' && tab !== 'cliente' && tab !== 'chofer' && tab !== 'relacion_vendedor' && tab !== 'cotizacion' && tab !== 'nota_credito' && tab !== 'pedidos' && tab !== 'devoluciones' && (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
           <p className="text-lg">Módulo en desarrollo...</p>
           <p className="text-sm mt-2">Próximamente disponible</p>
