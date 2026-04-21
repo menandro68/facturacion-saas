@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import API from '../services/api'
 
-export default function Facturas({ vendedor_id = null }) {
+export default function Facturas({ vendedor_id = null, modulos_permitidos = null }) {
   const [tab, setTab] = useState(vendedor_id ? 'pedidos' : 'fecha')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
@@ -292,7 +292,7 @@ export default function Facturas({ vendedor_id = null }) {
     return 'bg-gray-100 text-gray-700'
   }
 
-  const tabsFila1 = [
+  const tabsFila1Todos = [
     { id: 'fecha', label: 'Venta por Fecha' },
     { id: 'zona', label: 'Venta por Zona' },
     { id: 'vendedor', label: 'Venta por Vendedor' },
@@ -302,7 +302,7 @@ export default function Facturas({ vendedor_id = null }) {
     { id: 'relacion_vendedor', label: 'Relacion Vendedor' },
   ]
 
-  const tabsFila2 = [
+  const tabsFila2Todos = [
     // { id: 'cobro_vendedor', label: 'Cobro por Vendedor' },
     // { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
     { id: 'pedidos', label: 'Pedidos' },
@@ -310,6 +310,14 @@ export default function Facturas({ vendedor_id = null }) {
     { id: 'nota_credito', label: 'Nota de Crédito' },
     { id: 'devoluciones', label: '🔄 Devoluciones' },
   ]
+
+  // Filtrar sub-tabs segun permisos del operador
+  const puedeVerSubTab = (subTabId) => {
+    if (!modulos_permitidos) return true // admin o vendedor: ve todo
+    return modulos_permitidos.includes(`facturas:${subTabId}`)
+  }
+  const tabsFila1 = tabsFila1Todos.filter(t => puedeVerSubTab(t.id))
+  const tabsFila2 = tabsFila2Todos.filter(t => puedeVerSubTab(t.id))
 
   if (loading) return <p className="text-gray-500 p-6">Cargando facturas...</p>
 

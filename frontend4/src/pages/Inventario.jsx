@@ -4,7 +4,7 @@ import OrdenCompra from '../components/OrdenCompra'
 import ValorInventario from '../components/ValorInventario'
 import StockMinimo from '../components/StockMinimo'
 
-export default function Inventario() {
+export default function Inventario({ modulos_permitidos = null }) {
   const [inventario, setInventario] = useState([])
   const [alertas, setAlertas] = useState([])
   const [productos, setProductos] = useState([])
@@ -145,7 +145,7 @@ export default function Inventario() {
           { id: 'stock_minimo', label: 'Stock Mínimo' },
           { id: 'orden_compra', label: 'Crear Orden de Compra' },
           { id: 'mov_producto', label: 'Movimiento de Producto' },
-        ].map(t => (
+        ].filter(t => !modulos_permitidos || modulos_permitidos.includes(`inventario:${t.id}`)).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.id

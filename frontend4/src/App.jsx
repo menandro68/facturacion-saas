@@ -177,13 +177,13 @@ function App() {
                 {pagina === 'dashboard' && !esVendedor && puedeVer('panel') && <Dashboard />}
                 {pagina === 'clientes' && !esVendedor && puedeVer('clientes') && <Clientes />}
                 {pagina === 'productos' && !esVendedor && puedeVer('productos') && <Productos />}
-                {pagina === 'facturas' && (esVendedor || puedeVer('facturas')) && <Facturas vendedor_id={esVendedor ? usuario.id : null} />}
+                {pagina === 'facturas' && (esVendedor || puedeVer('facturas')) && <Facturas vendedor_id={esVendedor ? usuario.id : null} modulos_permitidos={esOperador ? permitidos : null} />}
                 {pagina === 'pagos' && (esVendedor || puedeVer('pagos')) && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
                 {pagina === 'reportes' && (esVendedor || puedeVer('reportes')) && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
                 {pagina === 'proveedores' && !esVendedor && puedeVer('proveedores') && <Proveedores />}
-                {pagina === 'inventario' && !esVendedor && puedeVer('inventario') && <Inventario />}
-                {pagina === 'cuentascobrar' && (esVendedor || puedeVer('cuentas_cobrar')) && <CuentasCobrar vendedor_id={esVendedor ? usuario.id : null} />}
-                {pagina === 'cuentaspagar' && !esVendedor && puedeVer('cuentas_pagar') && <CuentasPagar />}
+                {pagina === 'inventario' && !esVendedor && puedeVer('inventario') && <Inventario modulos_permitidos={esOperador ? permitidos : null} />}
+                {pagina === 'cuentascobrar' && (esVendedor || puedeVer('cuentas_cobrar')) && <CuentasCobrar vendedor_id={esVendedor ? usuario.id : null} modulos_permitidos={esOperador ? permitidos : null} />}
+                {pagina === 'cuentaspagar' && !esVendedor && puedeVer('cuentas_pagar') && <CuentasPagar modulos_permitidos={esOperador ? permitidos : null} />}
                 {pagina === 'mantenimiento' && !esVendedor && puedeVer('mantenimiento') && <Mantenimiento />}
                 {pagina === 'configuracion' && !esVendedor && puedeVer('configuracion') && <Configuracion />}
               </>

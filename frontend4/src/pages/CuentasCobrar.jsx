@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import API from '../services/api'
 import { listarDispositivos, imprimirEnDispositivo } from '../utils/bluetoothPrint'
 
-export default function CuentasCobrar({ vendedor_id = null }) {
+export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos = null }) {
   const [tab, setTab] = useState(vendedor_id ? 'cobro_vendedor' : 'cuentas')
   const [cuentas, setCuentas] = useState([])
   const [clientes, setClientes] = useState([])
@@ -150,6 +150,7 @@ export default function CuentasCobrar({ vendedor_id = null }) {
           { id: 'estado_cuenta', label: 'Estado de Cuenta x Cliente' },
           { id: 'historial', label: 'Historial' },
         ].filter(t => !vendedor_id || t.id === 'cobro_vendedor' || t.id === 'cxc_vendedor' || t.id === 'estado_cuenta')
+        .filter(t => !modulos_permitidos || modulos_permitidos.includes(`cuentas_cobrar:${t.id}`))
         .map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
