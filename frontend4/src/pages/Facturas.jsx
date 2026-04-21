@@ -211,8 +211,9 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
       }
     })
 
-    // Si hay productos bajos Y es vendedor (no admin) → pedir autorización
-    if (productosBajos.length > 0 && vendedor_id) {
+    // Si hay productos bajos Y NO es admin (vendedor u operador) → pedir autorización
+    const esNoAdmin = vendedor_id || modulos_permitidos !== null
+    if (productosBajos.length > 0 && esNoAdmin) {
       setProductosConDescuento(productosBajos)
       setClaveAutorizacion('')
       setErrorAutorizacion('')
