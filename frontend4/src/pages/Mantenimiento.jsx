@@ -12,7 +12,23 @@ const MODULOS_DISPONIBLES = [
   {
     categoria: 'VENTAS',
     items: [
-      { id: 'facturas', label: 'Facturas' },
+      {
+        id: 'facturas',
+        label: 'Facturas',
+        sub_tabs: [
+          { id: 'facturas:fecha', label: 'Venta por Fecha' },
+          { id: 'facturas:zona', label: 'Venta por Zona' },
+          { id: 'facturas:vendedor', label: 'Venta por Vendedor' },
+          { id: 'facturas:producto', label: 'Venta por Producto' },
+          { id: 'facturas:cliente', label: 'Venta por Cliente' },
+          { id: 'facturas:chofer', label: 'Entregada Chofer' },
+          { id: 'facturas:relacion_vendedor', label: 'Relación Vendedor' },
+          { id: 'facturas:pedidos', label: 'Pedidos' },
+          { id: 'facturas:cotizacion', label: 'Cotización' },
+          { id: 'facturas:nota_credito', label: 'Nota de Crédito' },
+          { id: 'facturas:devoluciones', label: 'Devoluciones' }
+        ]
+      },
       { id: 'pedidos', label: 'Pedidos' },
       { id: 'cotizaciones', label: 'Cotizaciones' },
       { id: 'notas_credito', label: 'Notas de Crédito' },
@@ -23,7 +39,17 @@ const MODULOS_DISPONIBLES = [
     categoria: 'INVENTARIO',
     items: [
       { id: 'productos', label: 'Productos' },
-      { id: 'inventario', label: 'Inventario' },
+      {
+        id: 'inventario',
+        label: 'Inventario',
+        sub_tabs: [
+          { id: 'inventario:inventario', label: 'Inventario' },
+          { id: 'inventario:valor', label: 'Valor de Inventario' },
+          { id: 'inventario:stock_minimo', label: 'Stock Mínimo' },
+          { id: 'inventario:orden_compra', label: 'Crear Orden de Compra' },
+          { id: 'inventario:mov_producto', label: 'Movimiento de Producto' }
+        ]
+      },
       { id: 'orden_compra', label: 'Orden de Compra' }
     ]
   },
@@ -38,8 +64,30 @@ const MODULOS_DISPONIBLES = [
     categoria: 'FINANZAS',
     items: [
       { id: 'pagos', label: 'Pagos' },
-      { id: 'cuentas_cobrar', label: 'Cuentas por Cobrar' },
-      { id: 'cuentas_pagar', label: 'Cuentas por Pagar' },
+      {
+        id: 'cuentas_cobrar',
+        label: 'Cuentas por Cobrar',
+        sub_tabs: [
+          { id: 'cuentas_cobrar:cuentas', label: 'Cuentas por Cobrar' },
+          { id: 'cuentas_cobrar:cobro_vendedor', label: 'Cobro por Vendedor' },
+          { id: 'cuentas_cobrar:cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
+          { id: 'cuentas_cobrar:estado_cuenta', label: 'Estado de Cuenta x Cliente' },
+          { id: 'cuentas_cobrar:historial', label: 'Historial' }
+        ]
+      },
+      {
+        id: 'cuentas_pagar',
+        label: 'Cuentas por Pagar',
+        sub_tabs: [
+          { id: 'cuentas_pagar:cuentas', label: 'Cuentas' },
+          { id: 'cuentas_pagar:vencimiento', label: 'Por Vencer' },
+          { id: 'cuentas_pagar:proveedor', label: 'Por Proveedor' },
+          { id: 'cuentas_pagar:pagos', label: 'Pagos Realizados' },
+          { id: 'cuentas_pagar:vencidas', label: 'Vencidas' },
+          { id: 'cuentas_pagar:estado_cuenta', label: 'Estado por Proveedor' },
+          { id: 'cuentas_pagar:pagar_orden', label: 'Pagar Orden' }
+        ]
+      },
       { id: 'reportes', label: 'Reportes' }
     ]
   },
@@ -364,7 +412,7 @@ export default function Mantenimiento() {
                 <h4 className="font-medium text-gray-800">📋 Módulos y Permisos:</h4>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => {
-                    const todos = MODULOS_DISPONIBLES.flatMap(cat => cat.items.map(i => i.id))
+                    const todos = MODULOS_DISPONIBLES.flatMap(cat => cat.items.flatMap(i => [i.id, ...(i.sub_tabs || []).map(s => s.id)]))
                     setFormOperador({...formOperador, modulos_permitidos: todos})
                   }}
                     className="px-3 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 font-medium">
@@ -381,21 +429,72 @@ export default function Mantenimiento() {
                 {MODULOS_DISPONIBLES.map(categoria => (
                   <div key={categoria.categoria} className="border rounded-lg p-4 bg-gray-50">
                     <h5 className="text-xs font-bold text-blue-600 mb-3 tracking-wide">{categoria.categoria}</h5>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    <div className="space-y-3">
                       {categoria.items.map(modulo => (
-                        <label key={modulo.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
-                          <input type="checkbox"
-                            checked={formOperador.modulos_permitidos.includes(modulo.id)}
-                            onChange={e => {
-                              if (e.target.checked) {
-                                setFormOperador({...formOperador, modulos_permitidos: [...formOperador.modulos_permitidos, modulo.id]})
-                              } else {
-                                setFormOperador({...formOperador, modulos_permitidos: formOperador.modulos_permitidos.filter(m => m !== modulo.id)})
-                              }
-                            }}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                          <span className="text-sm text-gray-700">{modulo.label}</span>
-                        </label>
+                        <div key={modulo.id} className="bg-white rounded p-3 border">
+                          <label className="flex items-center gap-2 cursor-pointer font-medium">
+                            <input type="checkbox"
+                              checked={formOperador.modulos_permitidos.includes(modulo.id)}
+                              onChange={e => {
+                                if (e.target.checked) {
+                                  // Al marcar padre, NO marcar sub-tabs automáticamente (el usuario debe elegir cuáles)
+                                  setFormOperador({...formOperador, modulos_permitidos: [...formOperador.modulos_permitidos, modulo.id]})
+                                } else {
+                                  // Al desmarcar padre, desmarcar TAMBIÉN todos sus sub-tabs
+                                  const subIds = (modulo.sub_tabs || []).map(s => s.id)
+                                  setFormOperador({...formOperador, modulos_permitidos: formOperador.modulos_permitidos.filter(m => m !== modulo.id && !subIds.includes(m))})
+                                }
+                              }}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                            <span className="text-sm text-gray-800">{modulo.label}</span>
+                            {modulo.sub_tabs && (
+                              <span className="text-xs text-gray-400 ml-2">({modulo.sub_tabs.length} opciones)</span>
+                            )}
+                          </label>
+
+                          {/* Sub-tabs anidados: solo se muestran si el módulo padre está marcado Y tiene sub_tabs */}
+                          {modulo.sub_tabs && formOperador.modulos_permitidos.includes(modulo.id) && (
+                            <div className="mt-3 ml-6 pl-3 border-l-2 border-blue-200">
+                              <div className="flex justify-between items-center mb-2">
+                                <p className="text-xs text-gray-500 font-medium">Sub-opciones:</p>
+                                <div className="flex gap-1">
+                                  <button type="button" onClick={() => {
+                                    const subIds = modulo.sub_tabs.map(s => s.id)
+                                    const nuevos = [...new Set([...formOperador.modulos_permitidos, ...subIds])]
+                                    setFormOperador({...formOperador, modulos_permitidos: nuevos})
+                                  }}
+                                    className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200">
+                                    ✓ Todos
+                                  </button>
+                                  <button type="button" onClick={() => {
+                                    const subIds = modulo.sub_tabs.map(s => s.id)
+                                    setFormOperador({...formOperador, modulos_permitidos: formOperador.modulos_permitidos.filter(m => !subIds.includes(m))})
+                                  }}
+                                    className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200">
+                                    ✗ Ninguno
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                                {modulo.sub_tabs.map(sub => (
+                                  <label key={sub.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded">
+                                    <input type="checkbox"
+                                      checked={formOperador.modulos_permitidos.includes(sub.id)}
+                                      onChange={e => {
+                                        if (e.target.checked) {
+                                          setFormOperador({...formOperador, modulos_permitidos: [...formOperador.modulos_permitidos, sub.id]})
+                                        } else {
+                                          setFormOperador({...formOperador, modulos_permitidos: formOperador.modulos_permitidos.filter(m => m !== sub.id)})
+                                        }
+                                      }}
+                                      className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500" />
+                                    <span className="text-xs text-gray-600">{sub.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
