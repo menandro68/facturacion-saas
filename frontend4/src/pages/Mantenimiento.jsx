@@ -1,6 +1,57 @@
 import { useState, useEffect } from 'react'
 import API from '../services/api'
 
+// Módulos del sistema agrupados por categoría (usados para permisos de operadores)
+const MODULOS_DISPONIBLES = [
+  {
+    categoria: 'PRINCIPAL',
+    items: [
+      { id: 'panel', label: 'Panel de Control' }
+    ]
+  },
+  {
+    categoria: 'VENTAS',
+    items: [
+      { id: 'facturas', label: 'Facturas' },
+      { id: 'pedidos', label: 'Pedidos' },
+      { id: 'cotizaciones', label: 'Cotizaciones' },
+      { id: 'notas_credito', label: 'Notas de Crédito' },
+      { id: 'devoluciones', label: 'Devoluciones' }
+    ]
+  },
+  {
+    categoria: 'INVENTARIO',
+    items: [
+      { id: 'productos', label: 'Productos' },
+      { id: 'inventario', label: 'Inventario' },
+      { id: 'orden_compra', label: 'Orden de Compra' }
+    ]
+  },
+  {
+    categoria: 'CLIENTES Y PROVEEDORES',
+    items: [
+      { id: 'clientes', label: 'Clientes' },
+      { id: 'proveedores', label: 'Proveedores' }
+    ]
+  },
+  {
+    categoria: 'FINANZAS',
+    items: [
+      { id: 'pagos', label: 'Pagos' },
+      { id: 'cuentas_cobrar', label: 'Cuentas por Cobrar' },
+      { id: 'cuentas_pagar', label: 'Cuentas por Pagar' },
+      { id: 'reportes', label: 'Reportes' }
+    ]
+  },
+  {
+    categoria: 'CONFIGURACIÓN',
+    items: [
+      { id: 'mantenimiento', label: 'Mantenimiento' },
+      { id: 'configuracion', label: 'Configuración' }
+    ]
+  }
+]
+
 export default function Mantenimiento() {
   const [tab, setTab] = useState('vendedores')
   const [vendedores, setVendedores] = useState([])
@@ -14,6 +65,8 @@ export default function Mantenimiento() {
   const [formVendedor, setFormVendedor] = useState({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '', usuario: '', password: '' })
   const [formZona, setFormZona] = useState({ nombre: '', descripcion: '' })
   const [formChofer, setFormChofer] = useState({ nombre: '', cedula: '', licencia: '', telefono: '', email: '', vehiculo: '', placa: '' })
+  const [operadores, setOperadores] = useState([])
+  const [formOperador, setFormOperador] = useState({ nombre: '', username: '', password: '', modulos_permitidos: [] })
   const [claveDescuento, setClaveDescuento] = useState('')
   const [nuevaClave, setNuevaClave] = useState('')
   const [mostrarClave, setMostrarClave] = useState(false)
@@ -22,14 +75,16 @@ export default function Mantenimiento() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [v, z, c] = await Promise.all([
+      const [v, z, c, o] = await Promise.all([
         API.get('/mantenimiento/vendedores'),
         API.get('/mantenimiento/zonas'),
-        API.get('/mantenimiento/choferes')
+        API.get('/mantenimiento/choferes'),
+        API.get('/operadores')
       ])
       setVendedores(v.data.data)
       setZonas(z.data.data)
       setChoferes(c.data.data)
+      setOperadores(o.data.data)
     } catch (err) {
       console.error(err)
     } finally {
@@ -45,6 +100,7 @@ export default function Mantenimiento() {
     if (tab === 'vendedores') setFormVendedor({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '', usuario: '', password: '' })
     if (tab === 'zonas') setFormZona({ nombre: '', descripcion: '' })
     if (tab === 'choferes') setFormChofer({ nombre: '', cedula: '', licencia: '', telefono: '', email: '', vehiculo: '', placa: '' })
+    if (tab === 'usuarios') setFormOperador({ nombre: '', username: '', password: '', modulos_permitidos: [] })
     setShowForm(true)
   }
 
@@ -54,13 +110,18 @@ export default function Mantenimiento() {
     if (tab === 'vendedores') setFormVendedor({ nombre: item.nombre, cedula: item.cedula || '', email: item.email || '', telefono: item.telefono || '', zona_id: item.zona_id || '', comision_pct: item.comision_pct || '' })
     if (tab === 'zonas') setFormZona({ nombre: item.nombre, descripcion: item.descripcion || '' })
     if (tab === 'choferes') setFormChofer({ nombre: item.nombre, cedula: item.cedula || '', licencia: item.licencia || '', telefono: item.telefono || '', email: item.email || '', vehiculo: item.vehiculo || '', placa: item.placa || '' })
+    if (tab === 'usuarios') setFormOperador({ nombre: item.nombre, username: item.username, password: '', modulos_permitidos: item.modulos_permitidos || [] })
     setShowForm(true)
   }
 
   const handleEliminar = async (id) => {
     if (!confirm('¿Eliminar este registro?')) return
     try {
-      await API.delete(`/mantenimiento/${tab}/${id}`)
+      if (tab === 'usuarios') {
+        await API.delete(`/operadores/${id}`)
+      } else {
+        await API.delete(`/mantenimiento/${tab}/${id}`)
+      }
       fetchData()
     } catch (err) {
       console.error(err)
@@ -71,11 +132,23 @@ export default function Mantenimiento() {
     e.preventDefault()
     setError('')
     try {
-      const form = tab === 'vendedores' ? formVendedor : tab === 'zonas' ? formZona : formChofer
-      if (editando) {
-        await API.put(`/mantenimiento/${tab}/${editando}`, form)
+      if (tab === 'usuarios') {
+        if (editando) {
+          const { password, ...datosSinPassword } = formOperador
+          await API.put(`/operadores/${editando}`, datosSinPassword)
+          if (password && password.trim().length > 0) {
+            await API.put(`/operadores/${editando}/password`, { password })
+          }
+        } else {
+          await API.post('/operadores', formOperador)
+        }
       } else {
-        await API.post(`/mantenimiento/${tab}`, form)
+        const form = tab === 'vendedores' ? formVendedor : tab === 'zonas' ? formZona : formChofer
+        if (editando) {
+          await API.put(`/mantenimiento/${tab}/${editando}`, form)
+        } else {
+          await API.post(`/mantenimiento/${tab}`, form)
+        }
       }
       setShowForm(false)
       fetchData()
@@ -88,6 +161,7 @@ export default function Mantenimiento() {
     { id: 'vendedores', label: '🧑‍💼 Vendedores' },
     { id: 'zonas', label: '🗺️ Zonas' },
     { id: 'choferes', label: '🚗 Choferes' },
+    { id: 'usuarios', label: '👥 Usuarios' },
     { id: 'clave', label: '🔐 Clave Descuento' },
   ]
 
@@ -257,6 +331,86 @@ export default function Mantenimiento() {
         </div>
       )}
 
+      {/* Formulario Operador (Usuario) */}
+      {showForm && tab === 'usuarios' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
+          {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
+                <input value={formOperador.nombre} onChange={e => setFormOperador({...formOperador, nombre: e.target.value})} required
+                  placeholder="Ej: Juan Pérez"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
+                <input value={formOperador.username} onChange={e => setFormOperador({...formOperador, username: e.target.value})} required
+                  placeholder="Ej: juanp"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña {!editando && '*'}</label>
+                <input type="password" value={formOperador.password} onChange={e => setFormOperador({...formOperador, password: e.target.value})} required={!editando}
+                  placeholder={editando ? 'Dejar vacío para no cambiar' : 'Mínimo 4 caracteres'}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+
+            {/* Módulos y Permisos */}
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium text-gray-800">📋 Módulos y Permisos:</h4>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => {
+                    const todos = MODULOS_DISPONIBLES.flatMap(cat => cat.items.map(i => i.id))
+                    setFormOperador({...formOperador, modulos_permitidos: todos})
+                  }}
+                    className="px-3 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 font-medium">
+                    ✓ Todos
+                  </button>
+                  <button type="button" onClick={() => setFormOperador({...formOperador, modulos_permitidos: []})}
+                    className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 font-medium">
+                    ✗ Ninguno
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {MODULOS_DISPONIBLES.map(categoria => (
+                  <div key={categoria.categoria} className="border rounded-lg p-4 bg-gray-50">
+                    <h5 className="text-xs font-bold text-blue-600 mb-3 tracking-wide">{categoria.categoria}</h5>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {categoria.items.map(modulo => (
+                        <label key={modulo.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded">
+                          <input type="checkbox"
+                            checked={formOperador.modulos_permitidos.includes(modulo.id)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setFormOperador({...formOperador, modulos_permitidos: [...formOperador.modulos_permitidos, modulo.id]})
+                              } else {
+                                setFormOperador({...formOperador, modulos_permitidos: formOperador.modulos_permitidos.filter(m => m !== modulo.id)})
+                              }
+                            }}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                          <span className="text-sm text-gray-700">{modulo.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6 pt-4 border-t">
+              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">{editando ? 'Actualizar' : 'Guardar'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Tabla Vendedores */}
       {tab === 'vendedores' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -350,6 +504,55 @@ export default function Mantenimiento() {
                   <td className="px-4 py-3 flex gap-2">
                     <button onClick={() => handleEditar(c)} className="text-blue-600 hover:underline text-xs">Editar</button>
                     <button onClick={() => handleEliminar(c.id)} className="text-red-500 hover:underline text-xs">Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Tabla Usuarios (Operadores) */}
+      {tab === 'usuarios' && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-gray-600">Nombre</th>
+                <th className="px-4 py-3 text-left text-gray-600">Usuario</th>
+                <th className="px-4 py-3 text-left text-gray-600">Módulos</th>
+                <th className="px-4 py-3 text-left text-gray-600">Estado</th>
+                <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {operadores.length === 0 ? (
+                <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-400">No hay usuarios registrados</td></tr>
+              ) : operadores.map(op => (
+                <tr key={op.id} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium">{op.nombre}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{op.username}</td>
+                  <td className="px-4 py-3">
+                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium">
+                      {(op.modulos_permitidos || []).length} módulos
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${op.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                      {op.activo ? '✓ Activo' : '✗ Inactivo'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 flex gap-2">
+                    <button onClick={() => handleEditar(op)} className="text-blue-600 hover:underline text-xs">Editar</button>
+                    <button onClick={async () => {
+                      try {
+                        await API.put(`/operadores/${op.id}/toggle-activo`)
+                        fetchData()
+                      } catch (err) { console.error(err) }
+                    }} className={`${op.activo ? 'text-orange-600' : 'text-green-600'} hover:underline text-xs`}>
+                      {op.activo ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button onClick={() => handleEliminar(op.id)} className="text-red-500 hover:underline text-xs">Eliminar</button>
                   </td>
                 </tr>
               ))}

@@ -39,7 +39,7 @@ export default function Login({ onLogin }) {
         </h1>
         <p className="text-gray-500 text-center mb-6">Inicia sesión para continuar</p>
 
-        {/* Selector Admin / Vendedor */}
+        {/* Selector Admin / Operador / Vendedor */}
         <div className="flex mb-6 border border-gray-200 rounded overflow-hidden">
           <button
             type="button"
@@ -47,6 +47,13 @@ export default function Login({ onLogin }) {
             className={`flex-1 py-2 text-sm font-medium ${tipo === 'admin' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Administrador
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipo('operador')}
+            className={`flex-1 py-2 text-sm font-medium border-l border-r border-gray-200 ${tipo === 'operador' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            Operador
           </button>
           <button
             type="button"

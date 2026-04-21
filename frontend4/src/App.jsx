@@ -24,7 +24,16 @@ function App() {
 
   const handleLogin = (user) => {
     setUsuario(user)
-    setPagina(user.rol === 'vendedor' ? 'facturas' : 'dashboard')
+    if (user.rol === 'vendedor') {
+      setPagina('facturas')
+    } else if (user.rol === 'operador') {
+      const permitidos = user.modulos_permitidos || []
+      const mapa = { panel: 'dashboard', clientes: 'clientes', productos: 'productos', facturas: 'facturas', pagos: 'pagos', reportes: 'reportes', proveedores: 'proveedores', inventario: 'inventario', cuentas_cobrar: 'cuentascobrar', cuentas_pagar: 'cuentaspagar', mantenimiento: 'mantenimiento', configuracion: 'configuracion' }
+      const primerPermitido = permitidos.find(p => mapa[p])
+      setPagina(primerPermitido ? mapa[primerPermitido] : 'dashboard')
+    } else {
+      setPagina('dashboard')
+    }
   }
 
   const handleLogout = () => {
@@ -36,20 +45,21 @@ function App() {
   if (!usuario) return <Login onLogin={handleLogin} />
 
   const esVendedor = usuario.rol === 'vendedor'
+  const esOperador = usuario.rol === 'operador'
 
   const menuAdmin = [
-    { id: 'dashboard', label: '📊 Dashboard' },
-    { id: 'clientes', label: '👥 Clientes' },
-    { id: 'productos', label: '📦 Productos' },
-    { id: 'facturas', label: '🧾 Facturas' },
-    { id: 'pagos', label: '💰 Pagos' },
-    { id: 'reportes', label: '📈 Reportes' },
-    { id: 'proveedores', label: '🏭 Proveedores' },
-    { id: 'inventario', label: '📋 Inventario' },
-    { id: 'cuentascobrar', label: '💵 Cuentas por Cobrar' },
-    { id: 'cuentaspagar', label: '💳 Cuentas por Pagar' },
-    { id: 'mantenimiento', label: '🔧 Mantenimiento' },
-    { id: 'configuracion', label: '⚙️ Configuración' },
+    { id: 'dashboard', label: '📊 Dashboard', modulo: 'panel' },
+    { id: 'clientes', label: '👥 Clientes', modulo: 'clientes' },
+    { id: 'productos', label: '📦 Productos', modulo: 'productos' },
+    { id: 'facturas', label: '🧾 Facturas', modulo: 'facturas' },
+    { id: 'pagos', label: '💰 Pagos', modulo: 'pagos' },
+    { id: 'reportes', label: '📈 Reportes', modulo: 'reportes' },
+    { id: 'proveedores', label: '🏭 Proveedores', modulo: 'proveedores' },
+    { id: 'inventario', label: '📋 Inventario', modulo: 'inventario' },
+    { id: 'cuentascobrar', label: '💵 Cuentas por Cobrar', modulo: 'cuentas_cobrar' },
+    { id: 'cuentaspagar', label: '💳 Cuentas por Pagar', modulo: 'cuentas_pagar' },
+    { id: 'mantenimiento', label: '🔧 Mantenimiento', modulo: 'mantenimiento' },
+    { id: 'configuracion', label: '⚙️ Configuración', modulo: 'configuracion' },
   ]
 
   const menuVendedor = [
@@ -59,7 +69,13 @@ function App() {
     { id: 'listado_precios', label: '🏷️ Listado de Precios' },
   ]
 
-  const menuItems = esVendedor ? menuVendedor : menuAdmin
+  let menuItems = menuAdmin
+  if (esVendedor) {
+    menuItems = menuVendedor
+  } else if (esOperador) {
+    const permitidos = usuario.modulos_permitidos || []
+    menuItems = menuAdmin.filter(item => permitidos.includes(item.modulo))
+  }
 
   const handleNavegar = (id) => {
     setPagina(id)
@@ -150,18 +166,29 @@ function App() {
 
         {/* Contenido */}
         <div className="flex-1 overflow-auto">
-          {pagina === 'dashboard' && !esVendedor && <Dashboard />}
-          {pagina === 'clientes' && !esVendedor && <Clientes />}
-          {pagina === 'productos' && !esVendedor && <Productos />}
-          {pagina === 'facturas' && <Facturas vendedor_id={esVendedor ? usuario.id : null} />}
-          {pagina === 'pagos' && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
-          {pagina === 'reportes' && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
-          {pagina === 'proveedores' && !esVendedor && <Proveedores />}
-          {pagina === 'inventario' && !esVendedor && <Inventario />}
-          {pagina === 'cuentascobrar' && <CuentasCobrar vendedor_id={esVendedor ? usuario.id : null} />}
-          {pagina === 'cuentaspagar' && !esVendedor && <CuentasPagar />}
-          {pagina === 'mantenimiento' && !esVendedor && <Mantenimiento />}
-          {pagina === 'configuracion' && !esVendedor && <Configuracion />}
+          {(() => {
+            const permitidos = esOperador ? (usuario.modulos_permitidos || []) : null
+            const puedeVer = (modulo) => {
+              if (esOperador) return permitidos.includes(modulo)
+              return true
+            }
+            return (
+              <>
+                {pagina === 'dashboard' && !esVendedor && puedeVer('panel') && <Dashboard />}
+                {pagina === 'clientes' && !esVendedor && puedeVer('clientes') && <Clientes />}
+                {pagina === 'productos' && !esVendedor && puedeVer('productos') && <Productos />}
+                {pagina === 'facturas' && (esVendedor || puedeVer('facturas')) && <Facturas vendedor_id={esVendedor ? usuario.id : null} />}
+                {pagina === 'pagos' && (esVendedor || puedeVer('pagos')) && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
+                {pagina === 'reportes' && (esVendedor || puedeVer('reportes')) && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
+                {pagina === 'proveedores' && !esVendedor && puedeVer('proveedores') && <Proveedores />}
+                {pagina === 'inventario' && !esVendedor && puedeVer('inventario') && <Inventario />}
+                {pagina === 'cuentascobrar' && (esVendedor || puedeVer('cuentas_cobrar')) && <CuentasCobrar vendedor_id={esVendedor ? usuario.id : null} />}
+                {pagina === 'cuentaspagar' && !esVendedor && puedeVer('cuentas_pagar') && <CuentasPagar />}
+                {pagina === 'mantenimiento' && !esVendedor && puedeVer('mantenimiento') && <Mantenimiento />}
+                {pagina === 'configuracion' && !esVendedor && puedeVer('configuracion') && <Configuracion />}
+              </>
+            )
+          })()}
         </div>
       </div>
       {listadoPrecios && (
