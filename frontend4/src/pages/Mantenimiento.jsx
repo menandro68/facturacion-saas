@@ -120,6 +120,15 @@ export default function Mantenimiento() {
   const [mostrarClave, setMostrarClave] = useState(false)
   const [mensajeClave, setMensajeClave] = useState('')
 
+  // Estados para Secuencias NCF Electrónicas
+  const [ncfElectronicas, setNcfElectronicas] = useState([])
+  const [formNcfElec, setFormNcfElec] = useState({
+    tipo_ncf: 'E31',
+    secuencia_desde: 1,
+    secuencia_hasta: 1000,
+    fecha_vencimiento: ''
+  })
+
   const fetchData = async () => {
     setLoading(true)
     try {
@@ -140,6 +149,15 @@ export default function Mantenimiento() {
     }
   }
 
+  const fetchNcfElectronicas = async () => {
+    try {
+      const res = await API.get('/mantenimiento/ncf-electronicas')
+      setNcfElectronicas(res.data.data)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   useEffect(() => { fetchData() }, [])
 
   const handleNuevo = () => {
@@ -149,6 +167,7 @@ export default function Mantenimiento() {
     if (tab === 'zonas') setFormZona({ nombre: '', descripcion: '' })
     if (tab === 'choferes') setFormChofer({ nombre: '', cedula: '', licencia: '', telefono: '', email: '', vehiculo: '', placa: '' })
     if (tab === 'usuarios') setFormOperador({ nombre: '', username: '', password: '', modulos_permitidos: [] })
+    if (tab === 'ncf_electronicas') setFormNcfElec({ tipo_ncf: 'E31', secuencia_desde: 1, secuencia_hasta: 1000, fecha_vencimiento: '' })
     setShowForm(true)
   }
 
@@ -159,6 +178,12 @@ export default function Mantenimiento() {
     if (tab === 'zonas') setFormZona({ nombre: item.nombre, descripcion: item.descripcion || '' })
     if (tab === 'choferes') setFormChofer({ nombre: item.nombre, cedula: item.cedula || '', licencia: item.licencia || '', telefono: item.telefono || '', email: item.email || '', vehiculo: item.vehiculo || '', placa: item.placa || '' })
     if (tab === 'usuarios') setFormOperador({ nombre: item.nombre, username: item.username, password: '', modulos_permitidos: item.modulos_permitidos || [] })
+    if (tab === 'ncf_electronicas') setFormNcfElec({
+      tipo_ncf: item.tipo_ncf,
+      secuencia_desde: item.secuencia_desde,
+      secuencia_hasta: item.secuencia_hasta,
+      fecha_vencimiento: item.fecha_vencimiento ? item.fecha_vencimiento.split('T')[0] : ''
+    })
     setShowForm(true)
   }
 
@@ -167,10 +192,14 @@ export default function Mantenimiento() {
     try {
       if (tab === 'usuarios') {
         await API.delete(`/operadores/${id}`)
+        fetchData()
+      } else if (tab === 'ncf_electronicas') {
+        await API.delete(`/mantenimiento/ncf-electronicas/${id}`)
+        fetchNcfElectronicas()
       } else {
         await API.delete(`/mantenimiento/${tab}/${id}`)
+        fetchData()
       }
-      fetchData()
     } catch (err) {
       console.error(err)
     }
@@ -190,6 +219,16 @@ export default function Mantenimiento() {
         } else {
           await API.post('/operadores', formOperador)
         }
+        setShowForm(false)
+        fetchData()
+      } else if (tab === 'ncf_electronicas') {
+        if (editando) {
+          await API.put(`/mantenimiento/ncf-electronicas/${editando}`, formNcfElec)
+        } else {
+          await API.post('/mantenimiento/ncf-electronicas', formNcfElec)
+        }
+        setShowForm(false)
+        fetchNcfElectronicas()
       } else {
         const form = tab === 'vendedores' ? formVendedor : tab === 'zonas' ? formZona : formChofer
         if (editando) {
@@ -197,9 +236,9 @@ export default function Mantenimiento() {
         } else {
           await API.post(`/mantenimiento/${tab}`, form)
         }
+        setShowForm(false)
+        fetchData()
       }
-      setShowForm(false)
-      fetchData()
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al guardar')
     }
@@ -211,6 +250,7 @@ export default function Mantenimiento() {
     { id: 'choferes', label: '🚗 Choferes' },
     { id: 'usuarios', label: '👥 Usuarios' },
     { id: 'clave', label: '🔐 Clave Descuento' },
+    { id: 'ncf_electronicas', label: '🧾 Secuencias NCF' },
   ]
 
   if (loading) return <p className="text-gray-500 p-6">Cargando...</p>
@@ -231,6 +271,9 @@ export default function Mantenimiento() {
                 setNuevaClave('')
                 setMensajeClave('')
               } catch(e) { setMensajeClave('❌ Error al cargar clave') }
+            }
+            if (t.id === 'ncf_electronicas') {
+              fetchNcfElectronicas()
             }
           }}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
@@ -437,10 +480,8 @@ export default function Mantenimiento() {
                               checked={formOperador.modulos_permitidos.includes(modulo.id)}
                               onChange={e => {
                                 if (e.target.checked) {
-                                  // Al marcar padre, NO marcar sub-tabs automáticamente (el usuario debe elegir cuáles)
                                   setFormOperador({...formOperador, modulos_permitidos: [...formOperador.modulos_permitidos, modulo.id]})
                                 } else {
-                                  // Al desmarcar padre, desmarcar TAMBIÉN todos sus sub-tabs
                                   const subIds = (modulo.sub_tabs || []).map(s => s.id)
                                   setFormOperador({...formOperador, modulos_permitidos: formOperador.modulos_permitidos.filter(m => m !== modulo.id && !subIds.includes(m))})
                                 }
@@ -452,7 +493,6 @@ export default function Mantenimiento() {
                             )}
                           </label>
 
-                          {/* Sub-tabs anidados: solo se muestran si el módulo padre está marcado Y tiene sub_tabs */}
                           {modulo.sub_tabs && formOperador.modulos_permitidos.includes(modulo.id) && (
                             <div className="mt-3 ml-6 pl-3 border-l-2 border-blue-200">
                               <div className="flex justify-between items-center mb-2">
@@ -503,6 +543,49 @@ export default function Mantenimiento() {
             </div>
 
             <div className="flex gap-3 justify-end mt-6 pt-4 border-t">
+              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">{editando ? 'Actualizar' : 'Guardar'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Formulario NCF Electrónicas */}
+      {showForm && tab === 'ncf_electronicas' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Secuencia NCF' : 'Nueva Secuencia NCF Electrónica'}</h3>
+          {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de NCF *</label>
+              <select value={formNcfElec.tipo_ncf} onChange={e => setFormNcfElec({...formNcfElec, tipo_ncf: e.target.value})} required
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="E31">E31 - Crédito Fiscal Electrónico</option>
+                <option value="E32">E32 - Consumo Electrónico</option>
+                <option value="E34">E34 - Nota de Crédito Electrónica</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Vencimiento *</label>
+              <input type="date" value={formNcfElec.fecha_vencimiento} onChange={e => setFormNcfElec({...formNcfElec, fecha_vencimiento: e.target.value})} required
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Secuencia Desde *</label>
+              <input type="number" min="1" value={formNcfElec.secuencia_desde} onChange={e => setFormNcfElec({...formNcfElec, secuencia_desde: parseInt(e.target.value) || 1})} required
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Secuencia Hasta *</label>
+              <input type="number" min="2" value={formNcfElec.secuencia_hasta} onChange={e => setFormNcfElec({...formNcfElec, secuencia_hasta: parseInt(e.target.value) || 1000})} required
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+              <strong>📋 Vista previa:</strong> {formNcfElec.tipo_ncf}{String(formNcfElec.secuencia_desde).padStart(10, '0')} → {formNcfElec.tipo_ncf}{String(formNcfElec.secuencia_hasta).padStart(10, '0')}
+              <br />
+              <strong>Total disponibles:</strong> {(parseInt(formNcfElec.secuencia_hasta) - parseInt(formNcfElec.secuencia_desde) + 1).toLocaleString()} NCF
+            </div>
+            <div className="md:col-span-2 flex gap-3 justify-end">
               <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
               <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">{editando ? 'Actualizar' : 'Guardar'}</button>
             </div>
@@ -652,6 +735,63 @@ export default function Mantenimiento() {
                       {op.activo ? 'Desactivar' : 'Activar'}
                     </button>
                     <button onClick={() => handleEliminar(op.id)} className="text-red-500 hover:underline text-xs">Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Tabla NCF Electrónicas */}
+      {tab === 'ncf_electronicas' && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-gray-600">Tipo</th>
+                <th className="px-4 py-3 text-left text-gray-600">Desde</th>
+                <th className="px-4 py-3 text-left text-gray-600">Hasta</th>
+                <th className="px-4 py-3 text-left text-gray-600">Actual</th>
+                <th className="px-4 py-3 text-left text-gray-600">Disponibles</th>
+                <th className="px-4 py-3 text-left text-gray-600">Usados</th>
+                <th className="px-4 py-3 text-left text-gray-600">Vencimiento</th>
+                <th className="px-4 py-3 text-left text-gray-600">Estado</th>
+                <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ncfElectronicas.length === 0 ? (
+                <tr><td colSpan="9" className="px-4 py-8 text-center text-gray-400">No hay secuencias NCF registradas</td></tr>
+              ) : ncfElectronicas.map(n => (
+                <tr key={n.id} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold">
+                      {n.tipo_ncf}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">{n.prefijo}{String(n.secuencia_desde).padStart(10, '0')}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{n.prefijo}{String(n.secuencia_hasta).padStart(10, '0')}</td>
+                  <td className="px-4 py-3 font-mono text-xs font-bold">{n.prefijo}{String(n.secuencia_actual).padStart(10, '0')}</td>
+                  <td className="px-4 py-3">
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">
+                      {parseInt(n.disponibles).toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                      {parseInt(n.usados).toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">{n.fecha_vencimiento ? new Date(n.fecha_vencimiento).toLocaleDateString('es-DO') : '-'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${n.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                      {n.activo ? '✓ Activo' : '✗ Inactivo'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 flex gap-2">
+                    <button onClick={() => handleEditar(n)} className="text-blue-600 hover:underline text-xs">Editar</button>
+                    <button onClick={() => handleEliminar(n.id)} className="text-red-500 hover:underline text-xs">Eliminar</button>
                   </td>
                 </tr>
               ))}

@@ -131,7 +131,8 @@ export default function Clientes() {
                 <option value="consumidor_final">Consumidor Final</option>
                 <option value="credito_fiscal">Crédito Fiscal</option>
                 <option value="gubernamental">Gubernamental</option>
-                <option value="factura_electronica">Factura Electrónica</option>
+                <option value="e31_credito_fiscal_electronico">E31 - Crédito Fiscal Electrónico</option>
+                <option value="e32_consumo_electronico">E32 - Consumo Electrónico</option>
               </select>
             </div>
             <div>

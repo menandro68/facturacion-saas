@@ -131,6 +131,18 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  // Detectar automaticamente el tipo de NCF segun el tipo de cliente
+  const detectarNCFPorCliente = (tipoCliente) => {
+    const mapa = {
+      'consumidor_final': 'B02',
+      'credito_fiscal': 'B01',
+      'gubernamental': 'B15',
+      'e31_credito_fiscal_electronico': 'E31',
+      'e32_consumo_electronico': 'E32'
+    }
+    return mapa[tipoCliente] || 'B01'
+  }
+
   const handleItemChange = (index, e) => {
     const newItems = items.map((item, i) => {
       if (i !== index) return item
@@ -2760,7 +2772,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
                             setForm({...form, customer_id: ''}); setBuscarCliente(''); setMostrarDropdown(false); setClienteSeleccionado(null)
                           } else if (clienteIndex > 0 && filtrados[clienteIndex - 1]) {
                             const c = filtrados[clienteIndex - 1]
-                            setForm({...form, customer_id: c.id}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
+                         setForm({...form, customer_id: c.id, ncf_tipo: detectarNCFPorCliente(c.tipo)}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
                           }
                           setClienteIndex(-1)
                           setTimeout(() => buscarProductoRef.current?.focus(), 100)
@@ -2792,8 +2804,8 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
                                   ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'
                               }`}
                               onMouseEnter={() => setClienteIndex(clientes.filter(x => x.nombre.toLowerCase().includes(buscarCliente.toLowerCase())).indexOf(c) + 1)}
-                              onMouseDown={() => {
-                                setForm({...form, customer_id: c.id})
+                         onMouseDown={() => {
+                                setForm({...form, customer_id: c.id, ncf_tipo: detectarNCFPorCliente(c.tipo)})
                                 setBuscarCliente(c.nombre)
                                 setMostrarDropdown(false)
                                 setClienteSeleccionado(c)
