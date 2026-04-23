@@ -34,9 +34,10 @@ export default function Login({ onLogin }) {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-blue-600 text-center mb-2">
+     <h1 className="text-2xl font-bold text-blue-600 text-center mb-1">
           Sistema de Facturación
         </h1>
+        <p className="text-base font-semibold text-red-500 text-center mb-2 lowercase">saas</p>
         <p className="text-gray-500 text-center mb-6">Inicia sesión para continuar</p>
 
         {/* Selector Admin / Operador / Vendedor */}
