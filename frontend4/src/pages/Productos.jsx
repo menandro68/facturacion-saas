@@ -76,12 +76,15 @@ const handleChange = (e) => {
     setError('')
   }
 
-  const handleEliminar = async (id) => {
-    if (!confirm('¿Eliminar este producto?')) return
+  const handleEliminar = async (id, nombre) => {
+    if (!confirm(`¿Eliminar el articulo "${nombre}"?\n\nEsta accion no se puede deshacer.`)) return
     try {
       await API.delete(`/products/${id}`)
+      alert('✅ Articulo eliminado correctamente')
       fetchProductos()
     } catch (err) {
+      const mensajeError = err.response?.data?.mensaje || 'Error al eliminar el articulo'
+      alert(`⚠️ ${mensajeError}`)
       console.error(err)
     }
   }
@@ -224,7 +227,7 @@ const handleChange = (e) => {
                   <td className="px-4 py-3 flex gap-2">
                     <button onClick={() => handleEditar(p)}
                       className="text-blue-600 hover:underline text-xs">Editar</button>
-                    <button onClick={() => handleEliminar(p.id)}
+                    <button onClick={() => handleEliminar(p.id, p.nombre)}
                       className="text-red-500 hover:underline text-xs">Eliminar</button>
                   </td>
                 </tr>
