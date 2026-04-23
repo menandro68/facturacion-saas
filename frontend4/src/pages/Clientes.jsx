@@ -58,12 +58,16 @@ export default function Clientes() {
     setError('')
   }
 
-  const handleEliminar = async (id) => {
-    if (!confirm('¿Eliminar este cliente?')) return
+  const handleEliminar = async (id, nombre) => {
+    if (!confirm(`¿Eliminar al cliente "${nombre}"?\n\nEsta accion no se puede deshacer.`)) return
     try {
-      await API.delete(`/customers/${id}`)
+      const res = await API.delete(`/customers/${id}`)
+      alert('✅ Cliente eliminado correctamente')
       fetchClientes()
     } catch (err) {
+      // Mostrar el mensaje de error del backend (ej: cliente con deudas pendientes)
+      const mensajeError = err.response?.data?.mensaje || 'Error al eliminar el cliente'
+      alert(`⚠️ ${mensajeError}`)
       console.error(err)
     }
   }
@@ -210,7 +214,7 @@ export default function Clientes() {
                   <td className="px-4 py-3 flex gap-2">
                     <button onClick={() => handleEditar(c)}
                       className="text-blue-600 hover:underline text-xs">Editar</button>
-                    <button onClick={() => handleEliminar(c.id)}
+                    <button onClick={() => handleEliminar(c.id, c.nombre)}
                       className="text-red-500 hover:underline text-xs">Eliminar</button>
                   </td>
                 </tr>
