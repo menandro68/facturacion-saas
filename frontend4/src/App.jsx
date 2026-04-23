@@ -50,7 +50,7 @@ function App() {
   const menuAdmin = [
     { id: 'dashboard', label: '📊 Dashboard', modulo: 'panel' },
     { id: 'clientes', label: '👥 Clientes', modulo: 'clientes' },
-    { id: 'productos', label: '📦 Productos', modulo: 'productos' },
+    { id: 'productos', label: '📦 Articulos', modulo: 'productos' },
     { id: 'facturas', label: '🧾 Facturas', modulo: 'facturas' },
     { id: 'pagos', label: '💰 Pagos', modulo: 'pagos' },
     { id: 'reportes', label: '📈 Reportes', modulo: 'reportes' },
