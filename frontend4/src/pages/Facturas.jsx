@@ -309,7 +309,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
     { id: 'fecha', label: 'Venta por Fecha' },
     { id: 'zona', label: 'Venta por Zona' },
     { id: 'vendedor', label: 'Venta por Vendedor' },
-    { id: 'producto', label: 'Venta por Producto' },
+    { id: 'producto', label: 'Venta por Articulo' },
     { id: 'cliente', label: 'Venta por Cliente' },
     { id: 'chofer', label: 'Entregada Chofer' },
     { id: 'relacion_vendedor', label: 'Relacion Vendedor' },
@@ -1342,7 +1342,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
                 <div key={index} className="border rounded-lg p-3 mb-3 bg-gray-50">
                   {/* Búsqueda de producto */}
                   <div className="relative mb-2">
-                    <input type="text" placeholder="🔍 Buscar producto..."
+                    <input type="text" placeholder="🔍 Buscar Articulo..."
                       ref={el => pedProductoRefs.current[index] = el}
                       value={buscarProductoPed[index] || ''}
                       onChange={e => {
@@ -1769,7 +1769,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
               {itemsCot.map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-2 mb-2">
                   <div className="col-span-3 relative">
-                    <input type="text" placeholder="🔍 Buscar producto..."
+                    <input type="text" placeholder="🔍 Buscar Articulo..."
                       ref={el => cotProductoRefs.current[index] = el}
                       value={buscarProductoCot[index] || ''}
                       onChange={e => {
@@ -2848,7 +2848,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
                       <div className="col-span-3 relative">
                         <input
                           type="text"
-                          placeholder="🔍 Buscar producto..."
+                          placeholder="🔍 Buscar Articulos..."
                           ref={el => { buscarProductoRefs.current[index] = el; if (index === 0) buscarProductoRef.current = el }}
                           value={buscarProducto[index] || ''}
                           onChange={e => {
