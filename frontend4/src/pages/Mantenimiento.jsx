@@ -560,14 +560,24 @@ export default function Mantenimiento() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de NCF *</label>
               <select value={formNcfElec.tipo_ncf} onChange={e => setFormNcfElec({...formNcfElec, tipo_ncf: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="E31">E31 - Crédito Fiscal Electrónico</option>
-                <option value="E32">E32 - Consumo Electrónico</option>
-                <option value="E34">E34 - Nota de Crédito Electrónica</option>
+              <optgroup label="Tradicionales (DGII)">
+                  <option value="B01">B01 - Crédito Fiscal</option>
+                  <option value="B02">B02 - Consumidor Final</option>
+                  <option value="B15">B15 - Gubernamental</option>
+                </optgroup>
+                <optgroup label="Electrónicos (e-CF)">
+                  <option value="E31">E31 - Crédito Fiscal Electrónico</option>
+                  <option value="E32">E32 - Consumo Electrónico</option>
+                  <option value="E34">E34 - Nota de Crédito Electrónica</option>
+                </optgroup>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Vencimiento *</label>
-              <input type="date" value={formNcfElec.fecha_vencimiento} onChange={e => setFormNcfElec({...formNcfElec, fecha_vencimiento: e.target.value})} required
+           <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fecha de Vencimiento {['E31', 'E32', 'E34'].includes(formNcfElec.tipo_ncf) ? '*' : '(opcional)'}
+              </label>
+              <input type="date" value={formNcfElec.fecha_vencimiento} onChange={e => setFormNcfElec({...formNcfElec, fecha_vencimiento: e.target.value})}
+                required={['E31', 'E32', 'E34'].includes(formNcfElec.tipo_ncf)}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
@@ -581,7 +591,7 @@ export default function Mantenimiento() {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
-              <strong>📋 Vista previa:</strong> {formNcfElec.tipo_ncf}{String(formNcfElec.secuencia_desde).padStart(10, '0')} → {formNcfElec.tipo_ncf}{String(formNcfElec.secuencia_hasta).padStart(10, '0')}
+              <strong>📋 Vista previa:</strong> {formNcfElec.tipo_ncf}{String(formNcfElec.secuencia_desde).padStart(['E31', 'E32', 'E34'].includes(formNcfElec.tipo_ncf) ? 10 : 8, '0')} → {formNcfElec.tipo_ncf}{String(formNcfElec.secuencia_hasta).padStart(['E31', 'E32', 'E34'].includes(formNcfElec.tipo_ncf) ? 10 : 8, '0')}
               <br />
               <strong>Total disponibles:</strong> {(parseInt(formNcfElec.secuencia_hasta) - parseInt(formNcfElec.secuencia_desde) + 1).toLocaleString()} NCF
             </div>
