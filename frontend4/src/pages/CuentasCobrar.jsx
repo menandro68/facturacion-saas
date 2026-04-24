@@ -22,6 +22,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
   const [fechaFin, setFechaFin] = useState('')
   const [cxcFiltradas, setCxcFiltradas] = useState([])
   const [pagos, setPagos] = useState([])
+  const [invoiceItems, setInvoiceItems] = useState([])
   const [modalResumen, setModalResumen] = useState(null)
   const [btModal, setBtModal] = useState(false)
   const [btDevices, setBtDevices] = useState([])
@@ -43,6 +44,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
       setFacturas(fac.data.data.filter(f => f.estado === 'emitida'))
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
       API.get('/payments').then(r => setPagos(r.data.data)).catch(() => {})
+      API.get('/invoices/items/todos').then(r => setInvoiceItems(r.data.data)).catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -360,11 +362,37 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 const totalCobrado = filtradas.reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                 const totalItbis = 0
                 const totalSubtotal = totalCobrado
+
+          // Calcular comision del vendedor PROPORCIONAL al monto pagado
+                let totalComision = 0
+                filtradas.forEach(p => {
+                  const montoPagado = parseFloat(p.monto || 0)
+                  const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === p.invoice_id)
+                  if (itemsDeFactura.length === 0) return
+
+                  // Calcular el % ponderado de comision de la factura completa
+                  let subtotalTotal = 0
+                  let comisionTotal = 0
+                  itemsDeFactura.forEach(item => {
+                    const subtotalItem = parseFloat(item.subtotal || 0)
+                    const porcentaje = parseFloat(item.comision_vendedor || 0)
+                    subtotalTotal += subtotalItem
+                    comisionTotal += subtotalItem * (porcentaje / 100)
+                  })
+
+                  if (subtotalTotal === 0) return
+                  const porcentajePonderado = (comisionTotal / subtotalTotal) * 100
+
+                  // Aplicar el % ponderado al monto pagado real
+                  totalComision += montoPagado * (porcentajePonderado / 100)
+                })
+
                 document.getElementById('cob-resultado').innerHTML = `
                   <p class="text-sm text-gray-600">Facturas pagadas: <span class="font-bold text-gray-800">${filtradas.length}</span></p>
                   <p class="text-sm text-gray-600">Subtotal: <span class="font-medium">RD$${totalSubtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                   <p class="text-sm text-gray-600">ITBIS: <span class="font-medium">RD$${totalItbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
-                  <p class="text-lg font-bold text-green-700 mt-1">Total Cobrado: RD$${totalCobrado.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>`
+                  <p class="text-lg font-bold text-green-700 mt-1">Total Cobrado: RD$${totalCobrado.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                  <p class="text-base font-bold text-purple-700 mt-1">Comision Vendedor: RD$${totalComision.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>`
                 const tbody = document.getElementById('cob-tbody')
                 tbody.innerHTML = filtradas.length === 0
                   ? '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No hay facturas pagadas</td></tr>'
@@ -500,7 +528,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
                   @media print{button{display:none}}
                 </style></head><body>
-                <h2>Cobro por Vendedor</h2>
+              <h2>Cobro por Vendedor — ${vendedor_id ? (vendedores.find(v => v.id === vendedor_id)?.nombre || '') : (vendedores.find(v => v.id === document.getElementById('cob-vendedor')?.value)?.nombre || '')}</h2>
                 <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
                 <table>
                   <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total Cobrado</th><th>Fecha</th></tr></thead>
