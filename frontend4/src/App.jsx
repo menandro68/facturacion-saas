@@ -12,8 +12,14 @@ import Inventario from './pages/Inventario'
 import CuentasCobrar from './pages/CuentasCobrar'
 import CuentasPagar from './pages/CuentasPagar'
 import Mantenimiento from './pages/Mantenimiento'
+import SuperAdmin from './pages/SuperAdmin'
 
 function App() {
+  // Detectar si la URL es /super-admin para mostrar el panel super-admin
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/super-admin')) {
+    return <SuperAdmin />
+  }
+
   const [usuario, setUsuario] = useState(() => {
     const u = sessionStorage.getItem('usuario')
     return u ? JSON.parse(u) : null

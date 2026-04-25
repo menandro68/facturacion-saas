@@ -36,13 +36,22 @@ API.interceptors.response.use(
       return API(config)
     }
 
-    // Manejo de 401: sesión expirada
+    // Manejo de 401: sesion expirada
     if (error.response?.status === 401) {
       sessionStorage.clear()
       localStorage.clear()
       window.location.reload()
     }
-
+    // Manejo de 403: cuenta suspendida (bloqueo en tiempo real)
+    if (error.response?.status === 403) {
+      const mensaje = error.response?.data?.mensaje || ''
+      if (mensaje.toLowerCase().includes('suspendida') || mensaje.toLowerCase().includes('no encontrada')) {
+        alert('🚫 Su cuenta ha sido suspendida.\n\nContacte al administrador del sistema.')
+        sessionStorage.clear()
+        localStorage.clear()
+        window.location.reload()
+      }
+    }
     return Promise.reject(error)
   }
 )

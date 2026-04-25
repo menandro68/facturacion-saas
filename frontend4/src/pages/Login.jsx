@@ -7,6 +7,17 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Modal de cambio de credenciales en primer login
+  const [showCambioModal, setShowCambioModal] = useState(false)
+  const [tempToken, setTempToken] = useState('')
+  const [cambioForm, setCambioForm] = useState({
+    nuevo_usuario: '',
+    nueva_password: '',
+    repetir_password: ''
+  })
+  const [cambioError, setCambioError] = useState('')
+  const [cambioLoading, setCambioLoading] = useState(false)
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
@@ -21,6 +32,16 @@ export default function Login({ onLogin }) {
         : { usuario: form.usuario, password: form.password }
 
       const res = await API.post('/auth/login', payload)
+      
+      // Si es primer login, mostrar modal obligatorio
+      if (res.data.requiere_cambio) {
+        setTempToken(res.data.token)
+        sessionStorage.setItem('token', res.data.token)
+        setShowCambioModal(true)
+        setLoading(false)
+        return
+      }
+      
       sessionStorage.setItem('token', res.data.token)
       sessionStorage.setItem('usuario', JSON.stringify(res.data.usuario))
       onLogin(res.data.usuario)
@@ -31,10 +52,39 @@ export default function Login({ onLogin }) {
     }
   }
 
+  const handleCambioSubmit = async (e) => {
+    e.preventDefault()
+    setCambioLoading(true)
+    setCambioError('')
+    try {
+      // Validar contraseñas iguales en frontend
+      if (cambioForm.nueva_password !== cambioForm.repetir_password) {
+        setCambioError('Las contraseñas no coinciden')
+        setCambioLoading(false)
+        return
+      }
+
+      await API.post('/auth/cambiar-credenciales', cambioForm)
+      
+      alert('✅ Credenciales actualizadas correctamente.\n\nPor favor, inicie sesión nuevamente con sus nuevas credenciales.')
+      
+      // Limpiar todo y volver al login
+      sessionStorage.clear()
+      localStorage.clear()
+      setShowCambioModal(false)
+      setForm({ email: '', password: '', usuario: '' })
+      setCambioForm({ nuevo_usuario: '', nueva_password: '', repetir_password: '' })
+    } catch (err) {
+      setCambioError(err.response?.data?.mensaje || 'Error al cambiar credenciales')
+    } finally {
+      setCambioLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-     <h1 className="text-2xl font-bold text-blue-600 text-center mb-1">
+        <h1 className="text-2xl font-bold text-blue-600 text-center mb-1">
           Sistema de Facturación
         </h1>
         <p className="text-base font-semibold text-red-500 text-center mb-2 lowercase">saas</p>
@@ -122,6 +172,74 @@ export default function Login({ onLogin }) {
           </button>
         </form>
       </div>
+
+      {/* MODAL DE CAMBIO DE CREDENCIALES (Primer Login) */}
+      {showCambioModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md">
+            <div className="text-center mb-4">
+              <h2 className="text-xl font-bold text-blue-700">🔒 Configure sus Credenciales</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Por seguridad, debe configurar sus credenciales personales antes de continuar.
+              </p>
+            </div>
+
+            {cambioError && (
+              <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">
+                {cambioError}
+              </div>
+            )}
+
+            <form onSubmit={handleCambioSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
+                <input
+                  type="text"
+                  value={cambioForm.nuevo_usuario}
+                  onChange={(e) => setCambioForm({ ...cambioForm, nuevo_usuario: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña *</label>
+                <input
+                  type="password"
+                  value={cambioForm.nueva_password}
+                  onChange={(e) => setCambioForm({ ...cambioForm, nueva_password: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Repita la Contraseña *</label>
+                <input
+                  type="password"
+                  value={cambioForm.repetir_password}
+                  onChange={(e) => setCambioForm({ ...cambioForm, repetir_password: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={cambioLoading}
+                className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 disabled:opacity-50"
+              >
+                {cambioLoading ? 'Guardando...' : 'Guardar y Continuar'}
+              </button>
+            </form>
+
+            <p className="text-xs text-gray-500 text-center mt-4">
+              ⚠️ Este paso es obligatorio. Una vez configurado, podrá iniciar sesión normalmente.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
