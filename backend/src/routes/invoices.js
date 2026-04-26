@@ -742,7 +742,7 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
     };
 
     // ============ ENCABEZADO EMPRESA ============
-    centrado(data.empresa_nombre || 'EMPRESA', 13, true);
+    centrado(data.empresa_nombre || 'EMPRESA', 16, true);
     y += 2;
 
     if (data.empresa_rnc) izquierda(`RNC: ${data.empresa_rnc}`, 8);
@@ -758,7 +758,7 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
 
     // ============ INFO DE FACTURA ============
     if (data.ncf) {
-      const labelNCF = esElectronica ? 'e-NCF' : 'NCF';
+      const labelNCF = esElectronica ? 'NCF' : 'NCF';
       izquierda(`${labelNCF}: ${data.ncf}`, 8, true);
     }
 
@@ -823,7 +823,7 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
     y += 3;
 
     // TOTAL en grande y destacado
-    filaLR('TOTAL A PAGAR', parseFloat(data.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), 13, true);
+    filaLR('TOTAL A PAGAR', parseFloat(data.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), 11, true);
 
     y += 5;
     lineaGuiones();
