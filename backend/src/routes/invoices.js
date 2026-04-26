@@ -772,7 +772,7 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
       izquierda(`${labelNCF}: ${data.ncf}`, 8, true);
     }
 
-    const fecha = new Date(data.creado_en).toLocaleString('es-DO');
+    const fecha = new Date(data.creado_en).toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
     izquierda(`Fecha: ${fecha}`, 8);
 
     if (data.vendedor_nombre) {
@@ -868,7 +868,7 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
           centrado(`Codigo de seguridad: ${data.codigo_seguridad}`, 7);
         }
         if (data.fecha_firma_digital) {
-          const fechaFirma = new Date(data.fecha_firma_digital).toLocaleString('es-DO');
+          const fechaFirma = new Date(data.fecha_firma_digital).toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' });
           centrado(`Fecha de firma digital: ${fechaFirma}`, 7);
         }
       } catch (qrError) {
@@ -913,7 +913,7 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
     centrado('Este documento es valido como', 7);
     centrado('comprobante fiscal', 7);
     y += 3;
-    centrado(`Impreso: ${new Date().toLocaleString('es-DO')}`, 6);
+    centrado(`Impreso: ${new Date().toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' })}`, 6);
 
     doc.end();
   } catch (error) {
