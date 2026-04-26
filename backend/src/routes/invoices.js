@@ -5,6 +5,7 @@ const verifyToken = require('../middleware/auth');
 const tenantGuard = require('../middleware/tenantGuard');
 const { obtenerProximoNCFElectronico } = require('../helpers/ncfElectronico');
 const QRCode = require('qrcode');
+const bwipjs = require('bwip-js');
 
 // GET - Listar items de todas las facturas con comision del producto
 router.get('/items/todos', verifyToken, tenantGuard, async (req, res) => {
@@ -658,7 +659,7 @@ router.put('/:id/anular', verifyToken, tenantGuard, async (req, res) => {
   }
 });
 
-// GET - Generar PDF formato Punto de Venta 80mm (termica)
+// GET - Generar PDF formato Punto de Venta 80mm (termica) - DISEÑO PROFESIONAL
 router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
   try {
     const { tenant_id } = req.user;
@@ -668,10 +669,12 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
       `SELECT i.*, c.nombre as cliente_nombre, c.rnc_cedula, c.telefono as cliente_telefono,
               c.direccion as cliente_direccion,
               t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.telefono as empresa_telefono,
-              t.direccion as empresa_direccion
+              t.direccion as empresa_direccion,
+              v.nombre as vendedor_nombre
        FROM invoices i
        LEFT JOIN customers c ON i.customer_id = c.id
        LEFT JOIN tenants t ON i.tenant_id = t.id
+       LEFT JOIN vendedores v ON c.vendedor_id = v.id
        WHERE i.id=$1 AND i.tenant_id=$2`,
       [id, tenant_id]
     );
@@ -688,123 +691,210 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
     const data = invoice.rows[0];
     const PDFDocument = require('pdfkit');
 
-    // Punto de Venta 80mm: ancho real imprimible 204 puntos (72mm)
-    const W = 204;
-    const M = 5;
-    const doc = new PDFDocument({ margin: M, size: [W, 800] });
+    // Detectar si es e-CF (Factura Electronica DGII)
+    const esElectronica = ['E31', 'E32', 'E34'].includes(data.ncf_tipo);
+    const tituloDocumento = {
+      'E31': 'FACTURA CREDITO FISCAL ELECTRONICA',
+      'E32': 'FACTURA DE CONSUMO ELECTRONICA',
+      'E34': 'NOTA DE CREDITO ELECTRONICA'
+    }[data.ncf_tipo] || 'FACTURA';
+
+    // Punto de Venta 80mm: ancho seguro 200 puntos
+    const W = 200;
+    const M = 8;
+    const doc = new PDFDocument({ margin: M, size: [W, 1100] });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=ticket-${data.ncf || data.id}.pdf`);
     doc.pipe(res);
 
-    let y = 8;
-    const contentWidth = W - (M * 2);
+    let y = 10;
+    const cw = W - (M * 2);
 
     // Helper texto centrado
-    const textoCentrado = (texto, fontSize, bold = false) => {
+    const centrado = (texto, fontSize, bold = false) => {
       doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
-      doc.text(texto, M, y, { width: contentWidth, align: 'center' });
-      y += fontSize + 2;
-    };
-
-    // Helper linea separadora
-    const lineaSeparadora = () => {
-      doc.moveTo(M, y).lineTo(W - M, y).stroke();
-      y += 4;
-    };
-
-    // Helper fila izquierda-derecha
-    const filaLR = (izq, der, fontSize, bold = false) => {
-      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
-      doc.text(izq, M, y, { width: contentWidth / 2, align: 'left' });
-      doc.text(der, M + contentWidth / 2, y, { width: contentWidth / 2, align: 'right' });
+      doc.text(texto, M, y, { width: cw, align: 'center' });
       y += fontSize + 3;
     };
 
+    // Helper texto a la izquierda
+    const izquierda = (texto, fontSize, bold = false) => {
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
+      doc.text(texto, M, y, { width: cw });
+      y += fontSize + 3;
+    };
+
+    // Helper línea de guiones (estilo profesional)
+    const lineaGuiones = () => {
+      doc.font('Helvetica').fontSize(7);
+      doc.text('-'.repeat(35), M, y, { width: cw, align: 'center' });
+      y += 8;
+    };
+
+    // Helper fila izquierda-derecha con espacio cómodo
+    const filaLR = (izq, der, fontSize, bold = false) => {
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
+      const halfW = cw / 2;
+      doc.text(izq, M, y, { width: halfW, align: 'left' });
+      doc.text(der, M + halfW, y, { width: halfW, align: 'right' });
+      y += fontSize + 4;
+    };
+
     // ============ ENCABEZADO EMPRESA ============
-    textoCentrado(data.empresa_nombre || 'EMPRESA', 10, true);
+    centrado(data.empresa_nombre || 'EMPRESA', 11, true);
+    y += 2;
 
-    if (data.empresa_rnc) textoCentrado(`RNC: ${data.empresa_rnc}`, 7);
-    if (data.empresa_telefono) textoCentrado(`Tel: ${data.empresa_telefono}`, 7);
-    if (data.empresa_direccion) textoCentrado(data.empresa_direccion, 7);
+    if (data.empresa_rnc) izquierda(`RNC: ${data.empresa_rnc}`, 8);
+    if (data.empresa_telefono) izquierda(`Tel: ${data.empresa_telefono}`, 8);
+    if (data.empresa_direccion) izquierda(data.empresa_direccion, 8);
 
-    y += 3;
-    lineaSeparadora();
+    y += 4;
+    lineaGuiones();
 
-    // ============ TIPO DOCUMENTO Y NCF ============
-    textoCentrado('FACTURA', 9, true);
-    if (data.ncf) textoCentrado(`NCF: ${data.ncf}`, 7);
+    // ============ TIPO DE DOCUMENTO ============
+    centrado(tituloDocumento, esElectronica ? 8 : 10, true);
+    y += 2;
 
-    lineaSeparadora();
+    // ============ INFO DE FACTURA ============
+    if (data.ncf) {
+      const labelNCF = esElectronica ? 'e-NCF' : 'NCF';
+      izquierda(`${labelNCF}: ${data.ncf}`, 8, true);
+    }
+
+    const fecha = new Date(data.creado_en).toLocaleString('es-DO');
+    izquierda(`Fecha: ${fecha}`, 8);
+
+    if (data.vendedor_nombre) {
+      izquierda(`Vendedor: ${data.vendedor_nombre}`, 8);
+    }
+
+    y += 4;
+    lineaGuiones();
 
     // ============ INFO CLIENTE ============
-    doc.font('Helvetica').fontSize(7);
-    const fecha = new Date(data.creado_en).toLocaleString('es-DO');
-    doc.text(`Fecha: ${fecha}`, M, y, { width: contentWidth });
-    y += 9;
-
-    doc.text(`Cliente: ${data.cliente_nombre || 'Consumidor Final'}`, M, y, { width: contentWidth });
-    y += 9;
+    izquierda(`Cliente: ${data.cliente_nombre || 'Consumidor Final'}`, 8, true);
 
     if (data.rnc_cedula) {
-      doc.text(`RNC/Ced: ${data.rnc_cedula}`, M, y, { width: contentWidth });
-      y += 9;
+      izquierda(`RNC/Ced: ${data.rnc_cedula}`, 8);
     }
     if (data.cliente_telefono) {
-      doc.text(`Tel: ${data.cliente_telefono}`, M, y, { width: contentWidth });
-      y += 9;
+      izquierda(`Tel: ${data.cliente_telefono}`, 8);
     }
 
-    y += 2;
-    lineaSeparadora();
+    y += 4;
+    lineaGuiones();
 
     // ============ ENCABEZADO TABLA ============
-    doc.font('Helvetica-Bold').fontSize(7);
-    doc.text('CANT  DESCRIPCION', M, y);
-    doc.text('TOTAL', M, y, { width: contentWidth, align: 'right' });
-    y += 9;
+    doc.font('Helvetica-Bold').fontSize(8);
+    doc.text('DESCRIPCION', M, y, { width: cw / 2, align: 'left' });
+    doc.text('VALOR', M + cw / 2, y, { width: cw / 2, align: 'right' });
+    y += 11;
 
-    lineaSeparadora();
+    lineaGuiones();
 
     // ============ ITEMS ============
-    doc.font('Helvetica').fontSize(7);
     items.rows.forEach(it => {
-      const cant = parseFloat(it.cantidad).toFixed(0);
+      const cant = parseFloat(it.cantidad);
       const precio = parseFloat(it.precio_unitario);
-      const subtotal = cant * precio;
+      const subtotalItem = cant * precio;
 
-      const desc = `${cant}x ${it.descripcion}`;
-      doc.text(desc, M, y, { width: contentWidth });
-      y += 9;
+      // Linea 1: Descripcion completa
+      doc.font('Helvetica').fontSize(8);
+      doc.text(it.descripcion, M, y, { width: cw });
+      y += 11;
 
-      filaLR(`  @ RD$${precio.toLocaleString('es-DO',{minimumFractionDigits:2})}`,
-             `RD$${subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}`, 7);
-      y += 1;
+      // Linea 2: Cantidad x precio = total
+      filaLR(
+        `${cant.toFixed(2)} x ${precio.toLocaleString('es-DO', {minimumFractionDigits: 2})}`,
+        subtotalItem.toLocaleString('es-DO', {minimumFractionDigits: 2}),
+        8
+      );
+      y += 2;
     });
 
-    lineaSeparadora();
+    y += 2;
+    lineaGuiones();
 
     // ============ TOTALES ============
-    filaLR('Subtotal:', `RD$${parseFloat(data.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}`, 7);
-    filaLR('ITBIS (18%):', `RD$${parseFloat(data.itbis).toLocaleString('es-DO',{minimumFractionDigits:2})}`, 7);
-
-    y += 2;
-    lineaSeparadora();
-
-    // TOTAL en grande
-    filaLR('TOTAL:', `RD$${parseFloat(data.total).toLocaleString('es-DO',{minimumFractionDigits:2})}`, 10, true);
+    filaLR('SUBTOTAL', parseFloat(data.subtotal).toLocaleString('es-DO', {minimumFractionDigits: 2}), 9);
+    filaLR('ITBIS', parseFloat(data.itbis).toLocaleString('es-DO', {minimumFractionDigits: 2}), 9);
 
     y += 3;
-    lineaSeparadora();
+
+    // TOTAL en grande y destacado
+    filaLR('TOTAL A PAGAR', parseFloat(data.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), 11, true);
+
+    y += 5;
+    lineaGuiones();
+
+    // ============ BLOQUE e-CF (Solo facturas electronicas DGII) ============
+    if (esElectronica) {
+      y += 4;
+
+      // Generar QR con datos DGII
+      const qrData = `https://ecf.dgii.gov.do/ecf/ConsultaTimbre?RncEmisor=${data.empresa_rnc || ''}&ENCF=${data.ncf || ''}&MontoTotal=${parseFloat(data.total).toFixed(2)}&FechaEmision=${data.fecha_emision ? new Date(data.fecha_emision).toISOString().split('T')[0] : ''}&CodigoSeguridad=${data.codigo_seguridad || ''}`;
+
+      try {
+        const qrPng = await QRCode.toBuffer(qrData, { width: 200, margin: 1 });
+
+        // QR centrado
+        const qrSize = 100;
+        const qrX = (W - qrSize) / 2;
+        doc.image(qrPng, qrX, y, { width: qrSize, height: qrSize });
+        y += qrSize + 6;
+
+        // Datos DGII
+        if (data.codigo_seguridad) {
+          centrado(`Codigo de seguridad: ${data.codigo_seguridad}`, 7);
+        }
+        if (data.fecha_firma_digital) {
+          const fechaFirma = new Date(data.fecha_firma_digital).toLocaleString('es-DO');
+          centrado(`Fecha de firma digital: ${fechaFirma}`, 7);
+        }
+      } catch (qrError) {
+        console.error('Error QR:', qrError.message);
+      }
+
+      y += 4;
+    }
+
+    // ============ CODIGO DE BARRAS DEL NCF ============
+    if (data.ncf) {
+      try {
+        const barcodePng = await bwipjs.toBuffer({
+          bcid: 'code128',
+          text: data.ncf,
+          scale: 2,
+          height: 10,
+          includetext: false,
+          textxalign: 'center'
+        });
+
+        // Codigo de barras centrado
+        const bcWidth = cw;
+        doc.image(barcodePng, M, y, { width: bcWidth, height: 30 });
+        y += 32;
+
+        // NCF en texto debajo del codigo
+        centrado(data.ncf, 7);
+        y += 3;
+      } catch (bcError) {
+        console.error('Error codigo barras:', bcError.message);
+      }
+    }
+
+    y += 4;
+    lineaGuiones();
 
     // ============ FOOTER ============
     y += 2;
-    textoCentrado('GRACIAS POR SU COMPRA', 8, true);
-    y += 1;
-    textoCentrado('Este documento es valido como', 6);
-    textoCentrado('comprobante fiscal', 6);
+    centrado('GRACIAS POR SU COMPRA', 9, true);
     y += 2;
-    textoCentrado(`Impreso: ${new Date().toLocaleString('es-DO')}`, 6);
+    centrado('Este documento es valido como', 7);
+    centrado('comprobante fiscal', 7);
+    y += 3;
+    centrado(`Impreso: ${new Date().toLocaleString('es-DO')}`, 6);
 
     doc.end();
   } catch (error) {
