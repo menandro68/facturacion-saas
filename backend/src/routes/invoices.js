@@ -983,6 +983,9 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     doc.fontSize(8).font('Helvetica').text(`NCF: ${data.ncf || 'N/A'}`, M, 28, { width: col, align: 'right' });
     doc.fontSize(7).text(`Estado: ${data.estado.toUpperCase()}`, M, 40, { width: col, align: 'right' });
     doc.fontSize(7).text(`Fecha: ${data.fecha_emision ? new Date(data.fecha_emision).toLocaleDateString('es-DO') : new Date().toLocaleDateString('es-DO')}`, M, 52, { width: col, align: 'right' });
+    if (data.numero_factura) {
+      doc.fontSize(7).font('Helvetica-Bold').text(`Factura No.: ${String(data.numero_factura).padStart(8, '0')}`, M, 64, { width: col, align: 'right' });
+    }
 
     let y = 90;
 
@@ -1079,7 +1082,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
            .text(`NCF: ${data.ncf || '-'}`, infoX, y + 11)
            .text(`Codigo Seguridad: ${data.codigo_seguridad || '-'}`, infoX, y + 21)
            .text(`Fecha Firma: ${data.fecha_firma_digital ? new Date(data.fecha_firma_digital).toLocaleString('es-DO') : '-'}`, infoX, y + 31)
-           .text(`Vence NCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 41)
+           .text(`Vence eNCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 41)
            .text('Escanee el QR para validar en DGII', infoX, y + 55, { width: col - 90 });
 
         y += 80;
@@ -1168,6 +1171,9 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
     doc.fontSize(11).font('Helvetica').text(`NCF: ${data.ncf || 'N/A'}`, M, 42, { width: col, align: 'right' });
     doc.fontSize(10).text(`Estado: ${data.estado.toUpperCase()}`, M, 60, { width: col, align: 'right' });
     doc.fontSize(10).text(`Fecha: ${data.fecha_emision ? new Date(data.fecha_emision).toLocaleDateString('es-DO') : new Date().toLocaleDateString('es-DO')}`, M, 78, { width: col, align: 'right' });
+    if (data.numero_factura) {
+      doc.fontSize(10).font('Helvetica-Bold').text(`Factura No.: ${String(data.numero_factura).padStart(8, '0')}`, M, 96, { width: col, align: 'right' });
+    }
 
     let y = 125;
 
@@ -1261,10 +1267,10 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
         doc.fillColor('#1E40AF').fontSize(11).font('Helvetica-Bold')
            .text('VALIDACION DGII (e-CF)', infoX, y);
         doc.fillColor('#1E293B').fontSize(9).font('Helvetica')
-           .text(`NCF: ${data.ncf || '-'}`, infoX, y + 18)
+           .text(`eNCF: ${data.ncf || '-'}`, infoX, y + 18)
            .text(`Codigo Seguridad: ${data.codigo_seguridad || '-'}`, infoX, y + 32)
            .text(`Fecha Firma: ${data.fecha_firma_digital ? new Date(data.fecha_firma_digital).toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' }) : '-'}`, infoX, y + 46)
-           .text(`Vence NCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 60)
+           .text(`Vence eNCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 60)
            .text('Escanee el QR para validar en DGII', infoX, y + 80, { width: col - 130 });
 
         y += 120;
