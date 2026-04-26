@@ -3,6 +3,8 @@ import API from '../services/api'
 
 export default function Facturas({ vendedor_id = null, modulos_permitidos = null }) {
   const [tab, setTab] = useState(vendedor_id ? 'pedidos' : 'fecha')
+  const [formatoImpresion, setFormatoImpresion] = useState(localStorage.getItem('formato_impresion') || 'media')
+  const [showFormatoMenu, setShowFormatoMenu] = useState(false)
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
   const [facturas, setFacturas] = useState([])
@@ -283,9 +285,18 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
     }
   }
 
-  const handlePDF = (id) => {
+const handlePDF = (id) => {
     const token = sessionStorage.getItem('token')
-    window.open(`https://facturacion-saas-production.up.railway.app/invoices/${id}/pdf?token=${token}`, '_blank')
+    let endpoint = '/pdf'
+    if (formatoImpresion === 'pos') endpoint = '/pdf-pos'
+    else if (formatoImpresion === 'carta') endpoint = '/pdf-carta'
+    window.open(`https://facturacion-saas-production.up.railway.app/invoices/${id}${endpoint}?token=${token}`, '_blank')
+  }
+
+  const cambiarFormato = (formato) => {
+    setFormatoImpresion(formato)
+    localStorage.setItem('formato_impresion', formato)
+    setShowFormatoMenu(false)
   }
 
   const { subtotal, itbis, total } = useMemo(() => {
@@ -445,8 +456,8 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
         ))}
       </div>
 
-      {/* Tabs fila 2 */}
-      <div className="flex gap-2 border-b mb-6">
+{/* Tabs fila 2 */}
+      <div className="flex gap-2 border-b mb-6 items-center">
         {tabsFila2.map(t => (
           <button key={t.id} onClick={() => { if (vendedor_id && t.id !== 'pedidos') { alert('Usted no tiene permiso para este módulo'); return }; setTab(t.id) }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -457,6 +468,62 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
             {t.label}
           </button>
         ))}
+        
+        {/* Botón Tipo de Impresión */}
+        <div className="relative ml-auto mb-2">
+          <button onClick={() => setShowFormatoMenu(!showFormatoMenu)}
+            className="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700 flex items-center gap-2 font-medium shadow">
+            🖨️ Tipo de Impresión
+            <span className="text-xs bg-white text-purple-700 px-2 py-0.5 rounded font-bold">
+              {formatoImpresion === 'pos' ? 'POS' : formatoImpresion === 'carta' ? 'CARTA' : 'MEDIA'}
+            </span>
+            <span className="text-xs">▼</span>
+          </button>
+          
+          {showFormatoMenu && (
+            <>
+              {/* Overlay para cerrar al hacer clic afuera */}
+              <div className="fixed inset-0 z-40" onClick={() => setShowFormatoMenu(false)}></div>
+              
+              {/* Menú dropdown */}
+              <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-xl z-50 w-64 overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b">
+                  <p className="text-xs font-semibold text-gray-700">Selecciona el formato de impresión</p>
+                </div>
+                
+                <button onClick={() => cambiarFormato('carta')}
+                  className={`w-full px-4 py-3 text-left hover:bg-blue-50 border-b text-sm flex items-start gap-3 ${formatoImpresion === 'carta' ? 'bg-blue-100' : ''}`}>
+                  <span className="text-2xl">📄</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800">Carta Entera</p>
+                    <p className="text-xs text-gray-500">8.5 × 11 pulgadas</p>
+                  </div>
+                  {formatoImpresion === 'carta' && <span className="text-blue-600 font-bold">✓</span>}
+                </button>
+                
+                <button onClick={() => cambiarFormato('media')}
+                  className={`w-full px-4 py-3 text-left hover:bg-blue-50 border-b text-sm flex items-start gap-3 ${formatoImpresion === 'media' ? 'bg-blue-100' : ''}`}>
+                  <span className="text-2xl">📋</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800">Media Carta</p>
+                    <p className="text-xs text-gray-500">5.5 × 8.5 pulgadas</p>
+                  </div>
+                  {formatoImpresion === 'media' && <span className="text-blue-600 font-bold">✓</span>}
+                </button>
+                
+                <button onClick={() => cambiarFormato('pos')}
+                  className={`w-full px-4 py-3 text-left hover:bg-blue-50 text-sm flex items-start gap-3 ${formatoImpresion === 'pos' ? 'bg-blue-100' : ''}`}>
+                  <span className="text-2xl">🧾</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800">Punto de Venta</p>
+                    <p className="text-xs text-gray-500">Térmica 80mm</p>
+                  </div>
+                  {formatoImpresion === 'pos' && <span className="text-blue-600 font-bold">✓</span>}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Contenido por tab */}

@@ -78,11 +78,73 @@ router.put('/:id', verifyToken, tenantGuard, async (req, res) => {
   }
 });
 
-// DELETE - Eliminar cliente (soft delete)
+// DELETE - Eliminar cliente (soft delete) - DOBLE VALIDACION DE DEUDAS
 router.delete('/:id', verifyToken, tenantGuard, async (req, res) => {
   try {
     const { tenant_id } = req.user;
     const { id } = req.params;
+
+    // 1. Verificar que el cliente existe
+    const clienteResult = await pool.query(
+      `SELECT nombre FROM customers WHERE id = $1 AND tenant_id = $2`,
+      [id, tenant_id]
+    );
+    if (clienteResult.rows.length === 0) {
+      return res.status(404).json({ success: false, mensaje: 'Cliente no encontrado' });
+    }
+    const nombreCliente = clienteResult.rows[0].nombre;
+
+    // 2. FUENTE 1: Verificar deudas en accounts_receivable
+    const deudaARResult = await pool.query(
+      `SELECT 
+         COALESCE(SUM(monto_pendiente), 0) as deuda_total,
+         COUNT(*) as facturas_pendientes
+       FROM accounts_receivable 
+       WHERE customer_id = $1 
+         AND tenant_id = $2 
+         AND monto_pendiente > 0
+         AND estado != 'anulada'`,
+      [id, tenant_id]
+    );
+    const deudaAR = parseFloat(deudaARResult.rows[0].deuda_total);
+    const facturasAR = parseInt(deudaARResult.rows[0].facturas_pendientes);
+
+    // 3. FUENTE 2: Verificar deudas directamente en invoices (facturas emitidas sin pagar)
+    const deudaInvResult = await pool.query(
+      `SELECT 
+         COALESCE(SUM(i.total - COALESCE(p.pagado, 0)), 0) as deuda_total,
+         COUNT(*) as facturas_pendientes
+       FROM invoices i
+       LEFT JOIN (
+         SELECT invoice_id, SUM(monto) as pagado 
+         FROM payments 
+         WHERE estado = 'confirmado' 
+         GROUP BY invoice_id
+       ) p ON p.invoice_id = i.id
+       WHERE i.customer_id = $1 
+         AND i.tenant_id = $2 
+         AND i.estado = 'emitida'
+         AND (i.total - COALESCE(p.pagado, 0)) > 0.01`,
+      [id, tenant_id]
+    );
+    const deudaInv = parseFloat(deudaInvResult.rows[0].deuda_total);
+    const facturasInv = parseInt(deudaInvResult.rows[0].facturas_pendientes);
+
+    // 4. Tomar el mayor de los dos valores (la deuda real)
+    const deudaTotal = Math.max(deudaAR, deudaInv);
+    const facturasPendientes = Math.max(facturasAR, facturasInv);
+
+    // 5. Si tiene deuda en CUALQUIERA de las fuentes, rechazar eliminacion
+    if (deudaTotal > 0.01) {
+      return res.status(400).json({
+        success: false,
+        mensaje: `No se puede eliminar al cliente "${nombreCliente}". Tiene ${facturasPendientes} factura(s) con deuda pendiente por RD$${deudaTotal.toLocaleString('es-DO', { minimumFractionDigits: 2 })}. Debe liquidar las deudas antes de eliminar.`,
+        deuda_total: deudaTotal,
+        facturas_pendientes: facturasPendientes
+      });
+    }
+
+    // 6. Si no tiene deuda, eliminar (soft delete)
     await pool.query(
       `UPDATE customers SET estado='inactivo', actualizado_en=NOW() WHERE id=$1 AND tenant_id=$2`,
       [id, tenant_id]

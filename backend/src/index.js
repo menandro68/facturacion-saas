@@ -19,6 +19,9 @@ const arRoutes = require('./routes/accounts_receivable');
 const apRoutes = require('./routes/accounts_payable');
 const mantenimientoRoutes = require('./routes/mantenimiento');
 const purchaseOrderRoutes = require('./routes/purchase_orders');
+const devolucionesRoutes = require('./routes/devoluciones');
+const operadoresRoutes = require('./routes/operadores');
+const superAdminRoutes = require('./routes/superAdmin');
 
 const app = express();
 app.set('trust proxy', 1)
@@ -60,6 +63,9 @@ app.use('/accounts-receivable', arRoutes);
 app.use('/accounts-payable', apRoutes);
 app.use('/mantenimiento', mantenimientoRoutes);
 app.use('/purchase-orders', purchaseOrderRoutes);
+app.use('/devoluciones', devolucionesRoutes);
+app.use('/operadores', operadoresRoutes);
+app.use('/super-admin', superAdminRoutes);
 
 // SPA - servir index.html con no-cache
 app.get('/{*path}', (req, res) => {
@@ -69,6 +75,7 @@ app.get('/{*path}', (req, res) => {
       !req.path.startsWith('/suppliers') && !req.path.startsWith('/inventory') &&
       !req.path.startsWith('/accounts') && !req.path.startsWith('/mantenimiento') &&
       !req.path.startsWith('/purchase') && !req.path.startsWith('/tenant') &&
+   !req.path.startsWith('/devoluciones') && !req.path.startsWith('/operadores') &&
       !req.path.startsWith('/db-test')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
     res.setHeader('Pragma', 'no-cache')
