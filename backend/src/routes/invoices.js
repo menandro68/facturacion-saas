@@ -1079,7 +1079,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
            .text(`NCF: ${data.ncf || '-'}`, infoX, y + 11)
            .text(`Codigo Seguridad: ${data.codigo_seguridad || '-'}`, infoX, y + 21)
            .text(`Fecha Firma: ${data.fecha_firma_digital ? new Date(data.fecha_firma_digital).toLocaleString('es-DO') : '-'}`, infoX, y + 31)
-           .text(`Vence eNCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 41)
+           .text(`Vence NCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 41)
            .text('Escanee el QR para validar en DGII', infoX, y + 55, { width: col - 90 });
 
         y += 80;
@@ -1264,7 +1264,7 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
            .text(`NCF: ${data.ncf || '-'}`, infoX, y + 18)
            .text(`Codigo Seguridad: ${data.codigo_seguridad || '-'}`, infoX, y + 32)
            .text(`Fecha Firma: ${data.fecha_firma_digital ? new Date(data.fecha_firma_digital).toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' }) : '-'}`, infoX, y + 46)
-           .text(`Vence eNCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 60)
+           .text(`Vence NCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 60)
            .text('Escanee el QR para validar en DGII', infoX, y + 80, { width: col - 130 });
 
         y += 120;
