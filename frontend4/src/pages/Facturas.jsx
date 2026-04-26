@@ -2650,14 +2650,18 @@ const handlePDF = (id) => {
             <div className="flex justify-center gap-6">
               <button
                 autoFocus
-                onClick={() => {
+            onClick={() => {
                   const token = sessionStorage.getItem('token')
-                  window.open(`https://facturacion-saas-production.up.railway.app/invoices/${ncGuardadaId}/pdf?token=${token}`, '_blank')
+                  const formato = localStorage.getItem('formato_impresion') || 'media'
+                  let endpoint = '/pdf'
+                  if (formato === 'pos') endpoint = '/pdf-pos'
+                  else if (formato === 'carta') endpoint = '/pdf-carta'
+                  window.open(`https://facturacion-saas-production.up.railway.app/invoices/${ncGuardadaId}${endpoint}?token=${token}`, '_blank')
                   setMostrarImprimirNC(false)
                 }}
                 onKeyDown={e => {
                   if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-no-nc')?.focus() }
-                  if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); window.open(`https://facturacion-saas-production.up.railway.app/invoices/${ncGuardadaId}/pdf?token=${token}`, '_blank'); setMostrarImprimirNC(false) }
+                  if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); const formato = localStorage.getItem('formato_impresion') || 'media'; let endpoint = '/pdf'; if (formato === 'pos') endpoint = '/pdf-pos'; else if (formato === 'carta') endpoint = '/pdf-carta'; window.open(`https://facturacion-saas-production.up.railway.app/invoices/${ncGuardadaId}${endpoint}?token=${token}`, '_blank'); setMostrarImprimirNC(false) }
                 }}
                 className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 text-sm font-medium">
                 Sí
@@ -2685,14 +2689,18 @@ const handlePDF = (id) => {
             <div className="flex justify-center gap-6">
               <button
                 autoFocus
-                onClick={() => {
+            onClick={() => {
                   const token = sessionStorage.getItem('token')
-                  window.open(`https://facturacion-saas-production.up.railway.app/invoices/${facturaGuardadaId}/pdf?token=${token}`, '_blank')
+                  const formato = localStorage.getItem('formato_impresion') || 'media'
+                  let endpoint = '/pdf'
+                  if (formato === 'pos') endpoint = '/pdf-pos'
+                  else if (formato === 'carta') endpoint = '/pdf-carta'
+                  window.open(`https://facturacion-saas-production.up.railway.app/invoices/${facturaGuardadaId}${endpoint}?token=${token}`, '_blank')
                   setMostrarImprimir(false)
                 }}
                 onKeyDown={e => {
                   if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-no-imprimir')?.focus() }
-                  if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); window.open(`https://facturacion-saas-production.up.railway.app/invoices/${facturaGuardadaId}/pdf?token=${token}`, '_blank'); setMostrarImprimir(false) }
+                 if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); const formato = localStorage.getItem('formato_impresion') || 'media'; let endpoint = '/pdf'; if (formato === 'pos') endpoint = '/pdf-pos'; else if (formato === 'carta') endpoint = '/pdf-carta'; window.open(`https://facturacion-saas-production.up.railway.app/invoices/${facturaGuardadaId}${endpoint}?token=${token}`, '_blank'); setMostrarImprimir(false) }
                 }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
                 Sí
