@@ -742,7 +742,7 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
     };
 
     // ============ ENCABEZADO EMPRESA ============
-    centrado(data.empresa_nombre || 'EMPRESA', 11, true);
+    centrado(data.empresa_nombre || 'EMPRESA', 13, true);
     y += 2;
 
     if (data.empresa_rnc) izquierda(`RNC: ${data.empresa_rnc}`, 8);
@@ -823,7 +823,7 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
     y += 3;
 
     // TOTAL en grande y destacado
-    filaLR('TOTAL A PAGAR', parseFloat(data.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), 11, true);
+    filaLR('TOTAL A PAGAR', parseFloat(data.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), 13, true);
 
     y += 5;
     lineaGuiones();
