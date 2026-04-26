@@ -213,4 +213,182 @@ router.delete('/choferes/:id', verifyToken, tenantGuard, async (req, res) => {
   }
 });
 
+// ==========================================
+// CLAVE DE DESCUENTO (autorización de precios menores al oficial)
+// ==========================================
+
+// GET clave actual - solo admin
+router.get('/clave-descuento', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    let result = await pool.query(
+      `SELECT valor FROM configuracion_sistema WHERE tenant_id = $1 AND clave = 'clave_descuento'`,
+      [tenant_id]
+    );
+    // Si no existe, la creamos con valor por defecto
+    if (result.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO configuracion_sistema (tenant_id, clave, valor, descripcion)
+         VALUES ($1, 'clave_descuento', 'ADMIN123', 'Clave de autorización para vender productos por debajo del precio oficial')`,
+        [tenant_id]
+      );
+      return res.json({ success: true, data: { valor: 'ADMIN123' } });
+    }
+    res.json({ success: true, data: { valor: result.rows[0].valor } });
+  } catch (error) {
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+// PUT cambiar clave - solo admin
+router.put('/clave-descuento', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const { nueva_clave } = req.body;
+    if (!nueva_clave || nueva_clave.trim().length < 4) {
+      return res.status(400).json({ success: false, mensaje: 'La clave debe tener al menos 4 caracteres' });
+    }
+    await pool.query(
+      `INSERT INTO configuracion_sistema (tenant_id, clave, valor, descripcion)
+       VALUES ($1, 'clave_descuento', $2, 'Clave de autorización para vender productos por debajo del precio oficial')
+       ON CONFLICT (tenant_id, clave)
+       DO UPDATE SET valor = EXCLUDED.valor, actualizado_en = NOW()`,
+      [tenant_id, nueva_clave.trim()]
+    );
+    res.json({ success: true, mensaje: 'Clave actualizada correctamente' });
+  } catch (error) {
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+// POST validar clave - lo usa el frontend cuando un vendedor intenta dar descuento
+router.post('/validar-clave-descuento', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const { clave } = req.body;
+    if (!clave) return res.status(400).json({ success: false, mensaje: 'Clave requerida' });
+    const result = await pool.query(
+      `SELECT valor FROM configuracion_sistema WHERE tenant_id = $1 AND clave = 'clave_descuento'`,
+      [tenant_id]
+    );
+    const claveActual = result.rows.length > 0 ? result.rows[0].valor : 'ADMIN123';
+    if (clave.trim() === claveActual) {
+      return res.json({ success: true, valido: true });
+    }
+    res.json({ success: true, valido: false });
+  } catch (error) {
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+// ==========================================
+// NCF SECUENCIAS ELECTRÓNICAS (E31, E32, E34)
+// Facturación Electrónica DGII
+// ==========================================
+
+// GET - Listar todas las secuencias NCF electrónicas
+router.get('/ncf-electronicas', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const result = await pool.query(
+      `SELECT *, 
+              (secuencia_hasta - secuencia_actual + 1) as disponibles,
+              (secuencia_actual - secuencia_desde) as usados
+       FROM ncf_secuencias_electronicas 
+       WHERE tenant_id = $1 
+       ORDER BY tipo_ncf, creado_en DESC`,
+      [tenant_id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+// POST - Crear nueva secuencia NCF electrónica
+router.post('/ncf-electronicas', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const { tipo_ncf, secuencia_desde, secuencia_hasta, fecha_vencimiento } = req.body;
+
+    // Validaciones
+    if (!tipo_ncf) return res.status(400).json({ success: false, mensaje: 'El tipo de NCF es requerido' });
+
+    const tiposValidos = ['B01', 'B02', 'B15', 'E31', 'E32', 'E34'];
+    if (!tiposValidos.includes(tipo_ncf)) {
+      return res.status(400).json({ success: false, mensaje: 'Tipo NCF debe ser B01, B02, B15, E31, E32 o E34' });
+    }
+
+    const esElectronico = ['E31', 'E32', 'E34'].includes(tipo_ncf);
+
+    if (!secuencia_desde || !secuencia_hasta) {
+      return res.status(400).json({ success: false, mensaje: 'Secuencia desde y hasta son requeridos' });
+    }
+    if (parseInt(secuencia_desde) >= parseInt(secuencia_hasta)) {
+      return res.status(400).json({ success: false, mensaje: 'Secuencia desde debe ser menor a hasta' });
+    }
+    // Fecha de vencimiento: obligatoria para e-CF, opcional para tradicionales
+    if (esElectronico && !fecha_vencimiento) {
+      return res.status(400).json({ success: false, mensaje: 'La fecha de vencimiento es requerida para NCF electronicos (E31, E32, E34)' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO ncf_secuencias_electronicas 
+       (tenant_id, tipo_ncf, prefijo, secuencia_desde, secuencia_hasta, secuencia_actual, fecha_vencimiento, activo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING *`,
+      [tenant_id, tipo_ncf, tipo_ncf, secuencia_desde, secuencia_hasta, secuencia_desde, fecha_vencimiento || null]
+    );
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+// PUT - Editar secuencia NCF electrónica
+router.put('/ncf-electronicas/:id', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const { id } = req.params;
+    const { tipo_ncf, secuencia_desde, secuencia_hasta, fecha_vencimiento, activo } = req.body;
+
+    const tiposValidos = ['B01', 'B02', 'B15', 'E31', 'E32', 'E34'];
+    if (!tiposValidos.includes(tipo_ncf)) {
+      return res.status(400).json({ success: false, mensaje: 'Tipo NCF debe ser B01, B02, B15, E31, E32 o E34' });
+    }
+
+    const result = await pool.query(
+      `UPDATE ncf_secuencias_electronicas 
+       SET tipo_ncf=$1, prefijo=$2, secuencia_desde=$3, secuencia_hasta=$4, 
+           fecha_vencimiento=$5, activo=$6, actualizado_en=NOW()
+       WHERE id=$7 AND tenant_id=$8 RETURNING *`,
+      [tipo_ncf, tipo_ncf, secuencia_desde, secuencia_hasta, fecha_vencimiento || null, activo !== false, id, tenant_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, mensaje: 'Secuencia no encontrada' });
+    }
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+// DELETE - Eliminar secuencia NCF electrónica
+router.delete('/ncf-electronicas/:id', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const { id } = req.params;
+    const result = await pool.query(
+      `DELETE FROM ncf_secuencias_electronicas WHERE id=$1 AND tenant_id=$2 RETURNING *`,
+      [id, tenant_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, mensaje: 'Secuencia no encontrada' });
+    }
+    res.json({ success: true, mensaje: 'Secuencia eliminada' });
+  } catch (error) {
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
 module.exports = router;

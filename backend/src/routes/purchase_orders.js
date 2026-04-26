@@ -62,7 +62,7 @@ router.get('/:id', async (req, res) => {
 
 // POST crear orden
 router.post('/', async (req, res) => {
-  const { supplier_id, fecha_entrega, notas, items } = req.body
+  const { supplier_id, fecha_entrega, fecha_vencimiento_pago, notas, items } = req.body
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -72,9 +72,9 @@ router.post('/', async (req, res) => {
     const numero = `OC-${String(parseInt(count.rows[0].count) + 1).padStart(4, '0')}`
     const total = items.reduce((sum, i) => sum + (i.cantidad * i.precio_unitario), 0)
     const orden = await client.query(`
-      INSERT INTO purchase_orders (tenant_id, numero, supplier_id, fecha_entrega, notas, total)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
-    `, [req.user.tenant_id, numero, supplier_id || null, fecha_entrega || null, notas || '', total])
+      INSERT INTO purchase_orders (tenant_id, numero, supplier_id, fecha_entrega, fecha_vencimiento_pago, notas, total)
+      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
+    `, [req.user.tenant_id, numero, supplier_id || null, fecha_entrega || null, fecha_vencimiento_pago || null, notas || '', total])
 
     for (const item of items) {
       const subtotal = item.cantidad * item.precio_unitario
@@ -95,14 +95,14 @@ router.post('/', async (req, res) => {
 
 // PUT editar orden
 router.put('/:id/editar', async (req, res) => {
-  const { supplier_id, fecha_entrega, notas, items } = req.body
+  const { supplier_id, fecha_entrega, fecha_vencimiento_pago, notas, items } = req.body
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const total = items ? items.reduce((sum, i) => sum + (i.cantidad * i.precio_unitario), 0) : 0
     await client.query(
-      'UPDATE purchase_orders SET supplier_id = $1, fecha_entrega = $2, notas = $3, total = $4 WHERE id = $5 AND tenant_id = $6',
-      [supplier_id || null, fecha_entrega || null, notas || '', total, req.params.id, req.user.tenant_id]
+      'UPDATE purchase_orders SET supplier_id = $1, fecha_entrega = $2, fecha_vencimiento_pago = $3, notas = $4, total = $5 WHERE id = $6 AND tenant_id = $7',
+      [supplier_id || null, fecha_entrega || null, fecha_vencimiento_pago || null, notas || '', total, req.params.id, req.user.tenant_id]
     )
     if (items && items.length > 0) {
       await client.query('DELETE FROM purchase_order_items WHERE order_id = $1', [req.params.id])
@@ -196,6 +196,52 @@ router.put('/:id/estado', async (req, res) => {
   }
 })
 
+// PUT pagar orden de compra
+router.put('/:id/pagar', async (req, res) => {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { monto, metodo, notas } = req.body
+    const { tenant_id } = req.user
+    const { id } = req.params
+
+    const orden = await client.query(
+      'SELECT * FROM purchase_orders WHERE id=$1 AND tenant_id=$2',
+      [id, tenant_id]
+    )
+    if (!orden.rows[0]) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ mensaje: 'Orden no encontrada' })
+    }
+
+    const o = orden.rows[0]
+    const nuevoPagado = parseFloat(o.monto_pagado || 0) + parseFloat(monto)
+    const total = parseFloat(o.total)
+    const estadoPago = nuevoPagado >= total ? 'pagada' : 'parcial'
+
+    // Actualizar orden
+    await client.query(
+      'UPDATE purchase_orders SET monto_pagado=$1, estado_pago=$2 WHERE id=$3 AND tenant_id=$4',
+      [nuevoPagado, estadoPago, id, tenant_id]
+    )
+
+    // Registrar pago en el historial
+    await client.query(
+      `INSERT INTO purchase_order_payments (tenant_id, order_id, monto, metodo, notas, fecha_pago)
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [tenant_id, id, parseFloat(monto), metodo || 'efectivo', notas || null]
+    )
+
+    await client.query('COMMIT')
+    res.json({ success: true, mensaje: 'Pago registrado', monto_pagado: nuevoPagado, estado_pago: estadoPago })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    res.status(500).json({ mensaje: err.message })
+  } finally {
+    client.release()
+  }
+})
+
 // DELETE eliminar orden
 router.delete('/:id', async (req, res) => {
   try {
@@ -204,6 +250,34 @@ router.delete('/:id', async (req, res) => {
       [req.params.id, req.user.tenant_id]
     )
     res.json({ mensaje: 'Orden eliminada' })
+  } catch (err) {
+    res.status(500).json({ mensaje: err.message })
+  }
+})
+
+// GET historial de todos los pagos del tenant
+router.get('/payments/all', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        pop.id,
+        pop.order_id,
+        pop.monto,
+        pop.metodo,
+        pop.notas,
+        pop.fecha_pago,
+        po.numero as orden_numero,
+        po.total as orden_total,
+        po.monto_pagado as orden_pagado,
+        po.estado_pago as orden_estado_pago,
+        s.nombre as proveedor_nombre
+      FROM purchase_order_payments pop
+      JOIN purchase_orders po ON pop.order_id = po.id
+      LEFT JOIN suppliers s ON po.supplier_id = s.id
+      WHERE pop.tenant_id = $1
+      ORDER BY pop.fecha_pago DESC
+    `, [req.user.tenant_id])
+    res.json({ data: result.rows })
   } catch (err) {
     res.status(500).json({ mensaje: err.message })
   }
