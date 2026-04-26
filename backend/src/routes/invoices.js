@@ -838,6 +838,15 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
     y += 5;
     lineaGuiones();
 
+    // ============ NUMERO DE FACTURA CONSECUTIVO ============
+    if (data.numero_factura) {
+      y += 2;
+      const numeroFormateado = String(data.numero_factura).padStart(8, '0');
+      izquierda(`Factura No.: ${numeroFormateado}`, 9, true);
+      y += 3;
+      lineaGuiones();
+    }
+
     // ============ BLOQUE e-CF (Solo facturas electronicas DGII) ============
     if (esElectronica) {
       y += 4;
