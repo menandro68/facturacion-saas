@@ -3,6 +3,28 @@ const router = express.Router();
 const pool = require('../config/db');
 const verifyToken = require('../middleware/auth');
 const tenantGuard = require('../middleware/tenantGuard');
+const { obtenerProximoNCFElectronico } = require('../helpers/ncfElectronico');
+const QRCode = require('qrcode');
+
+// GET - Listar items de todas las facturas con comision del producto
+router.get('/items/todos', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const result = await pool.query(
+      `SELECT ii.invoice_id, ii.product_id, ii.descripcion, ii.cantidad, 
+              ii.precio_unitario, ii.subtotal, ii.total,
+              COALESCE(p.comision_vendedor, 0) as comision_vendedor
+       FROM invoice_items ii
+       LEFT JOIN products p ON ii.product_id = p.id
+       INNER JOIN invoices i ON ii.invoice_id = i.id
+       WHERE i.tenant_id = $1`,
+      [tenant_id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
 
 // GET - Listar facturas
 router.get('/', verifyToken, tenantGuard, async (req, res) => {
@@ -446,33 +468,65 @@ router.post('/', verifyToken, tenantGuard, async (req, res) => {
     }
     const total = subtotal + itbis;
 
-    // Asignar NCF automáticamente
-    let seq = await client.query(
-      `SELECT * FROM ncf_sequences WHERE tenant_id = $1 AND tipo = $2 AND estado = 'activo'`,
-      [tenant_id, ncf_tipo || 'B01']
-    );
-    if (seq.rows.length === 0) {
-      await client.query(
-        `INSERT INTO ncf_sequences (tenant_id, tipo, prefijo, secuencia_actual, secuencia_max)
-         VALUES ($1, $2, $3, 0, 9999999)`,
-        [tenant_id, ncf_tipo || 'B01', ncf_tipo || 'B01']
+    // Detectar si es NCF Electronico (e-CF) o tradicional (B01/B02)
+    let ncf;
+    let codigo_seguridad = null;
+    let fecha_vencimiento_encf = null;
+
+    if (['E31', 'E32', 'E34'].includes(ncf_tipo)) {
+      // NCF ELECTRONICO (e-CF) - Facturacion Electronica DGII
+      const encfResult = await obtenerProximoNCFElectronico(tenant_id, ncf_tipo);
+      ncf = encfResult.ncf;
+      codigo_seguridad = encfResult.codigo_seguridad;
+      fecha_vencimiento_encf = encfResult.fecha_vencimiento;
+    } else {
+      // NCF TRADICIONAL (B01, B02, B15) - Logica inteligente de 2 niveles
+      const tipoTradicional = ncf_tipo || 'B01';
+
+      // NIVEL 1: Buscar si existe secuencia configurada en tabla NUEVA (Mantenimiento)
+      const secuenciaNueva = await client.query(
+        `SELECT id FROM ncf_secuencias_electronicas
+         WHERE tenant_id = $1 AND tipo_ncf = $2 AND activo = true
+           AND secuencia_actual <= secuencia_hasta
+         LIMIT 1`,
+        [tenant_id, tipoTradicional]
       );
-      seq = await client.query(
-        `SELECT * FROM ncf_sequences WHERE tenant_id = $1 AND tipo = $2`,
-        [tenant_id, ncf_tipo || 'B01']
-      );
+
+      if (secuenciaNueva.rows.length > 0) {
+        // Existe secuencia en tabla nueva - usar helper unificado
+        const resultado = await obtenerProximoNCFElectronico(tenant_id, tipoTradicional);
+        ncf = resultado.ncf;
+        // codigo_seguridad y fecha_vencimiento_encf se quedan null (son solo para e-CF)
+      } else {
+        // NIVEL 2: No existe en tabla nueva - usar logica VIEJA (sin cambios)
+        let seq = await client.query(
+          `SELECT * FROM ncf_sequences WHERE tenant_id = $1 AND tipo = $2 AND estado = 'activo'`,
+          [tenant_id, tipoTradicional]
+        );
+        if (seq.rows.length === 0) {
+          await client.query(
+            `INSERT INTO ncf_sequences (tenant_id, tipo, prefijo, secuencia_actual, secuencia_max)
+             VALUES ($1, $2, $3, 0, 9999999)`,
+            [tenant_id, tipoTradicional, tipoTradicional]
+          );
+          seq = await client.query(
+            `SELECT * FROM ncf_sequences WHERE tenant_id = $1 AND tipo = $2`,
+            [tenant_id, tipoTradicional]
+          );
+        }
+        const nueva_secuencia = seq.rows[0].secuencia_actual + 1;
+        await client.query(
+          `UPDATE ncf_sequences SET secuencia_actual = $1 WHERE id = $2`,
+          [nueva_secuencia, seq.rows[0].id]
+        );
+        ncf = `${tipoTradicional}${String(nueva_secuencia).padStart(8, '0')}`;
+      }
     }
-    const nueva_secuencia = seq.rows[0].secuencia_actual + 1;
-    await client.query(
-      `UPDATE ncf_sequences SET secuencia_actual = $1 WHERE id = $2`,
-      [nueva_secuencia, seq.rows[0].id]
-    );
-    const ncf = `${ncf_tipo || 'B01'}${String(nueva_secuencia).padStart(8, '0')}`;
 
     const invoice = await client.query(
-      `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, ncf, estado, subtotal, itbis, total, notas, fecha_vencimiento, fecha_emision) 
-       VALUES ($1, $2, $3, $4, 'emitida', $5, $6, $7, $8, $9, NOW()) RETURNING *`,
-      [tenant_id, customer_id || null, ncf_tipo || 'B01', ncf, subtotal, itbis, total, notas || null, fecha_vencimiento || null]
+      `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, ncf, estado, subtotal, itbis, total, notas, fecha_vencimiento, fecha_emision, codigo_seguridad, fecha_vencimiento_encf, fecha_firma_digital)
+       VALUES ($1, $2, $3, $4, 'emitida', $5, $6, $7, $8, $9, NOW(), $10, $11, $12) RETURNING *`,
+      [tenant_id, customer_id || null, ncf_tipo || 'B01', ncf, subtotal, itbis, total, notas || null, fecha_vencimiento || null, codigo_seguridad, fecha_vencimiento_encf, codigo_seguridad ? new Date() : null]
     );
     const invoice_id = invoice.rows[0].id;
 
@@ -604,6 +658,162 @@ router.put('/:id/anular', verifyToken, tenantGuard, async (req, res) => {
   }
 });
 
+// GET - Generar PDF formato Punto de Venta 80mm (termica)
+router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const { id } = req.params;
+
+    const invoice = await pool.query(
+      `SELECT i.*, c.nombre as cliente_nombre, c.rnc_cedula, c.telefono as cliente_telefono,
+              c.direccion as cliente_direccion,
+              t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.telefono as empresa_telefono,
+              t.direccion as empresa_direccion
+       FROM invoices i
+       LEFT JOIN customers c ON i.customer_id = c.id
+       LEFT JOIN tenants t ON i.tenant_id = t.id
+       WHERE i.id=$1 AND i.tenant_id=$2`,
+      [id, tenant_id]
+    );
+
+    if (invoice.rows.length === 0) {
+      return res.status(404).json({ success: false, mensaje: 'Factura no encontrada' });
+    }
+
+    const items = await pool.query(
+      `SELECT * FROM invoice_items WHERE invoice_id=$1`,
+      [id]
+    );
+
+    const data = invoice.rows[0];
+    const PDFDocument = require('pdfkit');
+
+    // Punto de Venta 80mm: ancho real imprimible 204 puntos (72mm)
+    const W = 204;
+    const M = 5;
+    const doc = new PDFDocument({ margin: M, size: [W, 800] });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=ticket-${data.ncf || data.id}.pdf`);
+    doc.pipe(res);
+
+    let y = 8;
+    const contentWidth = W - (M * 2);
+
+    // Helper texto centrado
+    const textoCentrado = (texto, fontSize, bold = false) => {
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
+      doc.text(texto, M, y, { width: contentWidth, align: 'center' });
+      y += fontSize + 2;
+    };
+
+    // Helper linea separadora
+    const lineaSeparadora = () => {
+      doc.moveTo(M, y).lineTo(W - M, y).stroke();
+      y += 4;
+    };
+
+    // Helper fila izquierda-derecha
+    const filaLR = (izq, der, fontSize, bold = false) => {
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
+      doc.text(izq, M, y, { width: contentWidth / 2, align: 'left' });
+      doc.text(der, M + contentWidth / 2, y, { width: contentWidth / 2, align: 'right' });
+      y += fontSize + 3;
+    };
+
+    // ============ ENCABEZADO EMPRESA ============
+    textoCentrado(data.empresa_nombre || 'EMPRESA', 10, true);
+
+    if (data.empresa_rnc) textoCentrado(`RNC: ${data.empresa_rnc}`, 7);
+    if (data.empresa_telefono) textoCentrado(`Tel: ${data.empresa_telefono}`, 7);
+    if (data.empresa_direccion) textoCentrado(data.empresa_direccion, 7);
+
+    y += 3;
+    lineaSeparadora();
+
+    // ============ TIPO DOCUMENTO Y NCF ============
+    textoCentrado('FACTURA', 9, true);
+    if (data.ncf) textoCentrado(`NCF: ${data.ncf}`, 7);
+
+    lineaSeparadora();
+
+    // ============ INFO CLIENTE ============
+    doc.font('Helvetica').fontSize(7);
+    const fecha = new Date(data.creado_en).toLocaleString('es-DO');
+    doc.text(`Fecha: ${fecha}`, M, y, { width: contentWidth });
+    y += 9;
+
+    doc.text(`Cliente: ${data.cliente_nombre || 'Consumidor Final'}`, M, y, { width: contentWidth });
+    y += 9;
+
+    if (data.rnc_cedula) {
+      doc.text(`RNC/Ced: ${data.rnc_cedula}`, M, y, { width: contentWidth });
+      y += 9;
+    }
+    if (data.cliente_telefono) {
+      doc.text(`Tel: ${data.cliente_telefono}`, M, y, { width: contentWidth });
+      y += 9;
+    }
+
+    y += 2;
+    lineaSeparadora();
+
+    // ============ ENCABEZADO TABLA ============
+    doc.font('Helvetica-Bold').fontSize(7);
+    doc.text('CANT  DESCRIPCION', M, y);
+    doc.text('TOTAL', M, y, { width: contentWidth, align: 'right' });
+    y += 9;
+
+    lineaSeparadora();
+
+    // ============ ITEMS ============
+    doc.font('Helvetica').fontSize(7);
+    items.rows.forEach(it => {
+      const cant = parseFloat(it.cantidad).toFixed(0);
+      const precio = parseFloat(it.precio_unitario);
+      const subtotal = cant * precio;
+
+      const desc = `${cant}x ${it.descripcion}`;
+      doc.text(desc, M, y, { width: contentWidth });
+      y += 9;
+
+      filaLR(`  @ RD$${precio.toLocaleString('es-DO',{minimumFractionDigits:2})}`,
+             `RD$${subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}`, 7);
+      y += 1;
+    });
+
+    lineaSeparadora();
+
+    // ============ TOTALES ============
+    filaLR('Subtotal:', `RD$${parseFloat(data.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}`, 7);
+    filaLR('ITBIS (18%):', `RD$${parseFloat(data.itbis).toLocaleString('es-DO',{minimumFractionDigits:2})}`, 7);
+
+    y += 2;
+    lineaSeparadora();
+
+    // TOTAL en grande
+    filaLR('TOTAL:', `RD$${parseFloat(data.total).toLocaleString('es-DO',{minimumFractionDigits:2})}`, 10, true);
+
+    y += 3;
+    lineaSeparadora();
+
+    // ============ FOOTER ============
+    y += 2;
+    textoCentrado('GRACIAS POR SU COMPRA', 8, true);
+    y += 1;
+    textoCentrado('Este documento es valido como', 6);
+    textoCentrado('comprobante fiscal', 6);
+    y += 2;
+    textoCentrado(`Impreso: ${new Date().toLocaleString('es-DO')}`, 6);
+
+    doc.end();
+  } catch (error) {
+    console.error('Error generando PDF POS:', error);
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+
 // GET - Generar PDF de factura
 router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
   try {
@@ -632,6 +842,14 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     // Media carta: 5.5 x 8.5 pulgadas = 396 x 612 puntos
     const doc = new PDFDocument({ margin: 30, size: [396, 612] });
 
+    // Detectar si es e-CF (Factura Electronica DGII)
+    const esElectronica = ['E31', 'E32', 'E34'].includes(data.ncf_tipo);
+    const tituloDocumento = {
+      'E31': 'FACTURA CREDITO FISCAL ELECTRONICA',
+      'E32': 'FACTURA CONSUMO ELECTRONICA',
+      'E34': 'NOTA DE CREDITO ELECTRONICA'
+    }[data.ncf_tipo] || 'FACTURA';
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=factura-${data.ncf || data.id}.pdf`);
     doc.pipe(res);
@@ -652,7 +870,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     doc.fontSize(8).text(data.empresa_email || '', M, 47, { width: col });
 
     // Número de factura (derecha)
-    doc.fontSize(9).font('Helvetica-Bold').text('FACTURA', M, 15, { width: col, align: 'right' });
+    doc.fontSize(esElectronica ? 7 : 9).font('Helvetica-Bold').text(tituloDocumento, M, 15, { width: col, align: 'right' });
     doc.fontSize(8).font('Helvetica').text(`NCF: ${data.ncf || 'N/A'}`, M, 28, { width: col, align: 'right' });
     doc.fontSize(7).text(`Estado: ${data.estado.toUpperCase()}`, M, 40, { width: col, align: 'right' });
     doc.fontSize(7).text(`Fecha: ${data.fecha_emision ? new Date(data.fecha_emision).toLocaleDateString('es-DO') : new Date().toLocaleDateString('es-DO')}`, M, 52, { width: col, align: 'right' });
@@ -730,6 +948,43 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
        .text('TOTAL:', tx + 4, y + 4)
        .text(`RD$${parseFloat(data.total).toLocaleString('es-DO', {minimumFractionDigits: 2})}`, tx, y + 4, { width: tw - 4, align: 'right' });
     y += 26;
+
+    // === BLOQUE e-CF (Solo facturas electronicas DGII) ===
+    if (esElectronica) {
+      y += 4;
+
+      // Generar QR con datos DGII
+      const qrData = `https://ecf.dgii.gov.do/ecf/ConsultaTimbre?RncEmisor=${data.empresa_rnc || ''}&ENCF=${data.ncf || ''}&MontoTotal=${parseFloat(data.total).toFixed(2)}&FechaEmision=${data.fecha_emision ? new Date(data.fecha_emision).toISOString().split('T')[0] : ''}&CodigoSeguridad=${data.codigo_seguridad || ''}`;
+
+      try {
+        const qrPng = await QRCode.toBuffer(qrData, { width: 90, margin: 1 });
+
+        // Dibujar QR a la izquierda
+        doc.image(qrPng, M, y, { width: 75, height: 75 });
+
+        // Datos DGII a la derecha del QR
+        const infoX = M + 85;
+        doc.fillColor('#1E40AF').fontSize(7).font('Helvetica-Bold')
+           .text('VALIDACION DGII (e-CF)', infoX, y);
+        doc.fillColor('#1E293B').fontSize(6).font('Helvetica')
+           .text(`eNCF: ${data.ncf || '-'}`, infoX, y + 11)
+           .text(`Codigo Seguridad: ${data.codigo_seguridad || '-'}`, infoX, y + 21)
+           .text(`Fecha Firma: ${data.fecha_firma_digital ? new Date(data.fecha_firma_digital).toLocaleString('es-DO') : '-'}`, infoX, y + 31)
+           .text(`Vence eNCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 41)
+           .text('Escanee el QR para validar en DGII', infoX, y + 55, { width: col - 90 });
+
+        y += 80;
+      } catch (qrError) {
+        // Si falla el QR, continuar sin el
+        doc.fillColor('#EF4444').fontSize(6).text('Error generando QR', M, y);
+        y += 10;
+      }
+
+      // Leyenda DGII obligatoria
+      doc.fillColor('#475569').fontSize(6).font('Helvetica-Oblique')
+         .text('Representacion Impresa del e-CF (Comprobante Fiscal Electronico)', M, y, { width: col, align: 'center' });
+      y += 8;
+    }
 
     // === FOOTER ===
     doc.moveTo(M, y).lineTo(M + col, y).strokeColor('#CBD5E1').lineWidth(0.5).stroke();
