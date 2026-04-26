@@ -323,8 +323,15 @@ const createTables = async () => {
         estado VARCHAR(20) DEFAULT 'pendiente',
         notas TEXT,
         total DECIMAL(12,2) DEFAULT 0,
+        monto_pagado DECIMAL(12,2) DEFAULT 0,
+        estado_pago VARCHAR(20) DEFAULT 'pendiente',
         creado_en TIMESTAMP DEFAULT NOW()
       )
+    `);
+    await pool.query(`
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS monto_pagado DECIMAL(12,2) DEFAULT 0;
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS estado_pago VARCHAR(20) DEFAULT 'pendiente';
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS fecha_vencimiento_pago DATE;
     `);
     console.log('✅ Tabla purchase_orders creada');
 
@@ -340,6 +347,238 @@ const createTables = async () => {
       )
     `);
     console.log('✅ Tabla purchase_order_items creada');
+
+    // Tabla historial de pagos de órdenes de compra
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS purchase_order_payments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        order_id UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+        monto DECIMAL(12,2) NOT NULL,
+        metodo VARCHAR(30) DEFAULT 'efectivo',
+        notas TEXT,
+        fecha_pago TIMESTAMP DEFAULT NOW(),
+        creado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_po_payments_tenant ON purchase_order_payments(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_po_payments_order ON purchase_order_payments(order_id);
+      CREATE INDEX IF NOT EXISTS idx_po_payments_fecha ON purchase_order_payments(fecha_pago);
+    `);
+    console.log('✅ Tabla purchase_order_payments creada');
+
+    // Tabla de operadores (personal de oficina con permisos por módulo)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS operadores (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        nombre VARCHAR(100) NOT NULL,
+        username VARCHAR(50) NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        activo BOOLEAN DEFAULT true,
+        modulos_permitidos TEXT DEFAULT '[]',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tenant_id, username)
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_operadores_tenant ON operadores(tenant_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_operadores_username ON operadores(username)`);
+    console.log('✅ Tabla operadores creada');
+
+    // Tabla configuracion_sistema (clave de descuentos y otras configuraciones futuras)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS configuracion_sistema (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        clave VARCHAR(100) NOT NULL,
+        valor TEXT,
+        descripcion VARCHAR(255),
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tenant_id, clave)
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_config_tenant ON configuracion_sistema(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_config_clave ON configuracion_sistema(clave);
+    `);
+    console.log('✅ Tabla configuracion_sistema creada');
+
+    // Tabla devoluciones (encabezado) - Flujo profesional: almacen registra -> contabilidad aprueba -> NC generada
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS devoluciones (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        numero VARCHAR(20) NOT NULL,
+        factura_id UUID REFERENCES invoices(id),
+        factura_ncf VARCHAR(20),
+        customer_id UUID REFERENCES customers(id),
+        cliente_nombre VARCHAR(150),
+        motivo TEXT,
+        estado VARCHAR(20) DEFAULT 'pendiente',
+        subtotal DECIMAL(12,2) DEFAULT 0,
+        itbis DECIMAL(12,2) DEFAULT 0,
+        total DECIMAL(12,2) DEFAULT 0,
+        nota_credito_id UUID REFERENCES invoices(id),
+        creado_por VARCHAR(150),
+        aprobada_por VARCHAR(150),
+        procesada_por VARCHAR(150),
+        cancelada_por VARCHAR(150),
+        aprobada_en TIMESTAMP,
+        procesada_en TIMESTAMP,
+        cancelada_en TIMESTAMP,
+        creado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_devoluciones_tenant ON devoluciones(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_devoluciones_factura ON devoluciones(factura_id);
+      CREATE INDEX IF NOT EXISTS idx_devoluciones_customer ON devoluciones(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_devoluciones_estado ON devoluciones(estado);
+      CREATE INDEX IF NOT EXISTS idx_devoluciones_creado ON devoluciones(creado_en);
+    `);
+    console.log('✅ Tabla devoluciones creada');
+
+    // Tabla items de devoluciones
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS devoluciones_items (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        devolucion_id UUID NOT NULL REFERENCES devoluciones(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id),
+        descripcion VARCHAR(255) NOT NULL,
+        cantidad DECIMAL(12,2) NOT NULL,
+        precio_unitario DECIMAL(12,2) NOT NULL,
+        itbis_rate DECIMAL(5,2) DEFAULT 18.00,
+        subtotal DECIMAL(12,2) DEFAULT 0
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_dev_items_devolucion ON devoluciones_items(devolucion_id);
+    `);
+    console.log('✅ Tabla devoluciones_items creada');
+
+    // Tabla ncf_secuencias_electronicas (E31, E32, E34 - Factura Electrónica DGII)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ncf_secuencias_electronicas (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        tipo_ncf VARCHAR(3) NOT NULL,
+        prefijo VARCHAR(3) NOT NULL,
+        secuencia_desde BIGINT NOT NULL DEFAULT 1,
+        secuencia_hasta BIGINT NOT NULL DEFAULT 1000,
+        secuencia_actual BIGINT NOT NULL DEFAULT 1,
+        fecha_vencimiento DATE NOT NULL,
+        activo BOOLEAN DEFAULT true,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_ncf_elec_tenant ON ncf_secuencias_electronicas(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_ncf_elec_tipo ON ncf_secuencias_electronicas(tipo_ncf);
+      CREATE INDEX IF NOT EXISTS idx_ncf_elec_activo ON ncf_secuencias_electronicas(activo);
+    `);
+    console.log('✅ Tabla ncf_secuencias_electronicas creada');
+
+    // Tabla admin_users (usuarios super-admin que controlan todos los tenants)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        nombre VARCHAR(100),
+        creado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tabla admin_users creada');
+
+    // Crear usuario super-admin por defecto si no existe
+    const bcrypt = require('bcryptjs');
+    const hashAdmin = await bcrypt.hash('132312ml', 10);
+    await pool.query(`
+      INSERT INTO admin_users (username, password, nombre)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (username) DO NOTHING
+    `, ['menandro68', hashAdmin, 'Super Administrador']);
+    console.log('✅ Usuario super-admin verificado');
+
+    // Agregar columnas de Facturacion Electronica (e-CF) a la tabla invoices
+    await pool.query(`
+      ALTER TABLE invoices
+        ADD COLUMN IF NOT EXISTS codigo_seguridad VARCHAR(10),
+        ADD COLUMN IF NOT EXISTS fecha_vencimiento_encf DATE,
+        ADD COLUMN IF NOT EXISTS fecha_firma_digital TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS qr_data TEXT
+    `);
+  console.log('Columnas e-CF agregadas a invoices');
+
+    // Agregar columna primer_login a users (forzar cambio de credenciales en primer acceso)
+    await pool.query(`
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS primer_login BOOLEAN DEFAULT FALSE
+    `);
+    console.log('Columna primer_login agregada a users');
+
+    // ============================================================
+    // MIGRACION: Numero de factura consecutivo por tenant
+    // ============================================================
+
+    // 1. Agregar columna numero_factura a invoices (no destructivo)
+    await pool.query(`
+      ALTER TABLE invoices
+        ADD COLUMN IF NOT EXISTS numero_factura INTEGER
+    `);
+
+    // 2. Crear tabla contador secuencial por tenant
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tenant_invoice_counter (
+        tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+        ultimo_numero INTEGER NOT NULL DEFAULT 0,
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 3. Indice para busquedas rapidas
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_invoices_numero_tenant
+      ON invoices(tenant_id, numero_factura)
+    `);
+
+    // 4. Backfill: asignar numeros a facturas existentes sin numero (orden cronologico por tenant)
+    const facturasSinNumero = await pool.query(`
+      SELECT COUNT(*) as total FROM invoices WHERE numero_factura IS NULL
+    `);
+
+    if (parseInt(facturasSinNumero.rows[0].total) > 0) {
+      await pool.query(`
+        WITH numeradas AS (
+          SELECT id,
+                 ROW_NUMBER() OVER (PARTITION BY tenant_id ORDER BY creado_en ASC) as nuevo_numero
+          FROM invoices
+          WHERE numero_factura IS NULL
+        )
+        UPDATE invoices i
+        SET numero_factura = n.nuevo_numero
+        FROM numeradas n
+        WHERE i.id = n.id
+      `);
+      console.log('✅ Backfill: numeros asignados a facturas existentes');
+    }
+
+    // 5. Inicializar contador con el ultimo numero usado por cada tenant
+    await pool.query(`
+      INSERT INTO tenant_invoice_counter (tenant_id, ultimo_numero)
+      SELECT tenant_id, COALESCE(MAX(numero_factura), 0)
+      FROM invoices
+      GROUP BY tenant_id
+      ON CONFLICT (tenant_id) DO UPDATE
+        SET ultimo_numero = GREATEST(tenant_invoice_counter.ultimo_numero, EXCLUDED.ultimo_numero),
+            actualizado_en = NOW()
+    `);
+
+    console.log('✅ Migracion numero_factura completada');
 
     console.log('🎉 Base de datos lista');
   } catch (error) {
