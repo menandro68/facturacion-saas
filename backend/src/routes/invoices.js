@@ -1076,7 +1076,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
         doc.fillColor('#1E40AF').fontSize(7).font('Helvetica-Bold')
            .text('VALIDACION DGII (e-CF)', infoX, y);
         doc.fillColor('#1E293B').fontSize(6).font('Helvetica')
-           .text(`eNCF: ${data.ncf || '-'}`, infoX, y + 11)
+           .text(`NCF: ${data.ncf || '-'}`, infoX, y + 11)
            .text(`Codigo Seguridad: ${data.codigo_seguridad || '-'}`, infoX, y + 21)
            .text(`Fecha Firma: ${data.fecha_firma_digital ? new Date(data.fecha_firma_digital).toLocaleString('es-DO') : '-'}`, infoX, y + 31)
            .text(`Vence eNCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 41)
@@ -1261,7 +1261,7 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
         doc.fillColor('#1E40AF').fontSize(11).font('Helvetica-Bold')
            .text('VALIDACION DGII (e-CF)', infoX, y);
         doc.fillColor('#1E293B').fontSize(9).font('Helvetica')
-           .text(`eNCF: ${data.ncf || '-'}`, infoX, y + 18)
+           .text(`NCF: ${data.ncf || '-'}`, infoX, y + 18)
            .text(`Codigo Seguridad: ${data.codigo_seguridad || '-'}`, infoX, y + 32)
            .text(`Fecha Firma: ${data.fecha_firma_digital ? new Date(data.fecha_firma_digital).toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' }) : '-'}`, infoX, y + 46)
            .text(`Vence eNCF: ${data.fecha_vencimiento_encf ? new Date(data.fecha_vencimiento_encf).toLocaleDateString('es-DO') : '-'}`, infoX, y + 60)
