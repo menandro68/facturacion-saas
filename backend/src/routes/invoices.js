@@ -6,6 +6,7 @@ const tenantGuard = require('../middleware/tenantGuard');
 const { obtenerProximoNCFElectronico } = require('../helpers/ncfElectronico');
 const QRCode = require('qrcode');
 const bwipjs = require('bwip-js');
+const { obtenerProximoNumeroFactura } = require('../helpers/numeroFactura');
 
 // GET - Listar items de todas las facturas con comision del producto
 router.get('/items/todos', verifyToken, tenantGuard, async (req, res) => {
@@ -296,10 +297,13 @@ router.put('/pedido/:id/convertir', verifyToken, tenantGuard, async (req, res) =
         );
       }
     }
+    // Obtener proximo numero de factura consecutivo por tenant
+    const numero_factura = await obtenerProximoNumeroFactura(client, tenant_id);
+
     const updated = await client.query(
-      `UPDATE invoices SET estado='emitida', ncf=$1, ncf_tipo='B01', fecha_emision=NOW(), actualizado_en=NOW()
+      `UPDATE invoices SET estado='emitida', ncf=$1, ncf_tipo='B01', fecha_emision=NOW(), actualizado_en=NOW(), numero_factura=$3
        WHERE id=$2 RETURNING *`,
-      [ncf, id]
+      [ncf, id, numero_factura]
     );
     await client.query('COMMIT');
     res.json({ success: true, data: updated.rows[0] });
@@ -373,12 +377,15 @@ router.post('/nota-credito', verifyToken, tenantGuard, async (req, res) => {
     }
     const total = subtotal + itbis;
 
+    // Obtener proximo numero de factura consecutivo por tenant
+    const numero_factura = await obtenerProximoNumeroFactura(client, tenant_id);
+
     // Crear nota de crédito
     const nota = await client.query(
-      `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, ncf, estado, subtotal, itbis, total, notas, fecha_emision, referencia_id)
-       VALUES ($1, $2, 'NC', $3, 'nota_credito', $4, $5, $6, $7, NOW(), $8) RETURNING *`,
+      `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, ncf, estado, subtotal, itbis, total, notas, fecha_emision, referencia_id, numero_factura)
+       VALUES ($1, $2, 'NC', $3, 'nota_credito', $4, $5, $6, $7, NOW(), $8, $9) RETURNING *`,
       [tenant_id, facturaOrig.rows[0].customer_id, nc_numero, subtotal, itbis, total,
-       motivo || `Nota de crédito por factura ${facturaOrig.rows[0].ncf}`, factura_id]
+       motivo || `Nota de crédito por factura ${facturaOrig.rows[0].ncf}`, factura_id, numero_factura]
     );
     const nota_id = nota.rows[0].id;
 
@@ -524,10 +531,13 @@ router.post('/', verifyToken, tenantGuard, async (req, res) => {
       }
     }
 
+    // Obtener proximo numero de factura consecutivo por tenant
+    const numero_factura = await obtenerProximoNumeroFactura(client, tenant_id);
+
     const invoice = await client.query(
-      `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, ncf, estado, subtotal, itbis, total, notas, fecha_vencimiento, fecha_emision, codigo_seguridad, fecha_vencimiento_encf, fecha_firma_digital)
-       VALUES ($1, $2, $3, $4, 'emitida', $5, $6, $7, $8, $9, NOW(), $10, $11, $12) RETURNING *`,
-      [tenant_id, customer_id || null, ncf_tipo || 'B01', ncf, subtotal, itbis, total, notas || null, fecha_vencimiento || null, codigo_seguridad, fecha_vencimiento_encf, codigo_seguridad ? new Date() : null]
+      `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, ncf, estado, subtotal, itbis, total, notas, fecha_vencimiento, fecha_emision, codigo_seguridad, fecha_vencimiento_encf, fecha_firma_digital, numero_factura)
+       VALUES ($1, $2, $3, $4, 'emitida', $5, $6, $7, $8, $9, NOW(), $10, $11, $12, $13) RETURNING *`,
+      [tenant_id, customer_id || null, ncf_tipo || 'B01', ncf, subtotal, itbis, total, notas || null, fecha_vencimiento || null, codigo_seguridad, fecha_vencimiento_encf, codigo_seguridad ? new Date() : null, numero_factura]
     );
     const invoice_id = invoice.rows[0].id;
 
