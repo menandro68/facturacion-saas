@@ -293,6 +293,36 @@ const handlePDF = (id) => {
     window.open(`https://facturacion-saas-production.up.railway.app/invoices/${id}${endpoint}?token=${token}`, '_blank')
   }
 
+  const handleImprimir = (id) => {
+    const token = sessionStorage.getItem('token')
+    let endpoint = '/pdf'
+    if (formatoImpresion === 'pos') endpoint = '/pdf-pos'
+    else if (formatoImpresion === 'carta') endpoint = '/pdf-carta'
+    const url = `https://facturacion-saas-production.up.railway.app/invoices/${id}${endpoint}?token=${token}`
+
+    // Crear iframe oculto para impresion automatica con escalado
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    iframe.src = url
+    document.body.appendChild(iframe)
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus()
+          iframe.contentWindow.print()
+        } catch (e) {
+          // Fallback: abrir en nueva pestaña si falla
+          window.open(url, '_blank')
+        }
+        // Limpiar iframe despues de 60 segundos
+        setTimeout(() => {
+          if (iframe.parentNode) document.body.removeChild(iframe)
+        }, 60000)
+      }, 1000)
+    }
+  }
+
   const cambiarFormato = (formato) => {
     setFormatoImpresion(formato)
     localStorage.setItem('formato_impresion', formato)
@@ -3092,9 +3122,13 @@ const handlePDF = (id) => {
                           <button onClick={() => handleAnular(f.id)}
                             className="text-red-500 hover:underline text-xs">Anular</button>
                         )}
-                        {f.estado !== 'borrador' && (
-                          <button onClick={() => handlePDF(f.id)}
-                            className="text-green-600 hover:underline text-xs">PDF</button>
+                     {f.estado !== 'borrador' && (
+                          <>
+                            <button onClick={() => handleImprimir(f.id)}
+                              className="text-blue-600 hover:underline text-xs">Imprimir</button>
+                            <button onClick={() => handlePDF(f.id)}
+                              className="text-green-600 hover:underline text-xs">PDF</button>
+                          </>
                         )}
                       </td>
                     </tr>
