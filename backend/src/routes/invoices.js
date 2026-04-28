@@ -990,25 +990,25 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     let y = 90;
 
     // === BLOQUE CLIENTE ===
-    doc.rect(M, y, col, 75).fill(gris).stroke('#E2E8F0');
-    doc.fillColor(azul).fontSize(8).font('Helvetica-Bold').text('CLIENTE', M + 6, y + 6);
-    doc.fillColor(negro).fontSize(8).font('Helvetica-Bold')
-       .text(data.cliente_nombre || 'Consumidor Final', M + 6, y + 17, { width: (col / 2) - 10 });
-    doc.fontSize(7).font('Helvetica')
-       .text(`RNC/Cédula: ${data.rnc_cedula || 'N/A'}`, M + 6, y + 29)
-       .text(`Tel: ${data.cliente_telefono || 'N/A'}`, M + 6, y + 40)
-       .text(`Dir: ${data.cliente_direccion || 'N/A'}`, M + 6, y + 51, { width: (col / 2) - 10 });
+    doc.rect(M, y, col, 150).fill(gris).stroke('#E2E8F0');
+    doc.fillColor(azul).fontSize(11).font('Helvetica-Bold').text('CLIENTE', M + 10, y + 10);
+    doc.fillColor(negro).fontSize(11).font('Helvetica-Bold')
+       .text(data.cliente_nombre || 'Consumidor Final', M + 10, y + 26, { width: (col / 2) - 15 });
+    doc.fontSize(10).font('Helvetica')
+       .text(`RNC/Cédula: ${data.rnc_cedula || 'N/A'}`, M + 10, y + 44)
+       .text(`Tel: ${data.cliente_telefono || 'N/A'}`, M + 10, y + 60)
+       .text(`Dir: ${data.cliente_direccion || 'N/A'}`, M + 10, y + 76, { width: (col / 2) - 15 });
 
     // Lado derecho del bloque cliente
-    const rx = M + col / 2 + 6;
-    doc.fillColor(azul).fontSize(8).font('Helvetica-Bold').text('CONDICIONES', rx, y + 6);
+    const rx = M + col / 2 + 10;
+    doc.fillColor(azul).fontSize(11).font('Helvetica-Bold').text('CONDICIONES', rx, y + 10);
     const condMap = { contado: 'Contado', '7_dias': '7 Días', '15_dias': '15 Días', '30_dias': '30 Días', '45_dias': '45 Días', '60_dias': '60 Días' };
-    doc.fillColor(negro).fontSize(7).font('Helvetica')
-       .text(condMap[data.cliente_condiciones] || 'Contado', rx, y + 17)
-       .text(`Vendedor: ${data.vendedor_nombre || 'N/A'}`, rx, y + 29)
-       .text(`Negocio: ${data.cliente_negocio || 'N/A'}`, rx, y + 40, { width: col / 2 - 10 });
+    doc.fillColor(negro).fontSize(10).font('Helvetica')
+       .text(condMap[data.cliente_condiciones] || 'Contado', rx, y + 26)
+       .text(`Vendedor: ${data.vendedor_nombre || 'N/A'}`, rx, y + 44)
+       .text(`Negocio: ${data.cliente_negocio || 'N/A'}`, rx, y + 60, { width: col / 2 - 15 });
 
-    y += 82;
+    y += 160;
 
     // === TABLA ENCABEZADO ===
     doc.rect(M, y, col, 16).fill(azul);
