@@ -949,7 +949,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
 
     const PDFDocument = require('pdfkit');
 // Media carta: 5.5 x 8.5 pulgadas = 396 x 612 puntos
-    const doc = new PDFDocument({ margin: 30, size: [396, 612] });
+  const doc = new PDFDocument({ margin: 30, size: 'HALF-LETTER' });
 
     // Detectar si es e-CF (Factura Electronica DGII)
     const esElectronica = ['E31', 'E32', 'E34'].includes(data.ncf_tipo);
