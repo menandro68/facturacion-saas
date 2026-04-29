@@ -949,7 +949,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
 
     const PDFDocument = require('pdfkit');
 // Media carta: 8.5 x 5.5 horizontal con landscape - papel se mete horizontal
-    const doc = new PDFDocument({ margin: 30, size: [396, 612], layout: 'landscape' });
+    const doc = new PDFDocument({ margin: 30, size: [396, 612], layout: 'portrait' });
 
     // Detectar si es e-CF (Factura Electronica DGII)
     const esElectronica = ['E31', 'E32', 'E34'].includes(data.ncf_tipo);
