@@ -948,8 +948,8 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     const data = invoice.rows[0];
 
     const PDFDocument = require('pdfkit');
-// Media carta: 5.5 x 8.5 pulgadas = 396 x 612 puntos
-   const doc = new PDFDocument({ margin: 30, size: [396, 612] });
+// Media carta: 8.5 x 5.5 pulgadas = 612 x 396 puntos (horizontal)
+    const doc = new PDFDocument({ margin: 30, size: [612, 396] });
 
     // Detectar si es e-CF (Factura Electronica DGII)
     const esElectronica = ['E31', 'E32', 'E34'].includes(data.ncf_tipo);
@@ -963,7 +963,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     res.setHeader('Content-Disposition', `inline; filename=factura-${data.ncf || data.id}.pdf`);
     doc.pipe(res);
 
-    const W = 396;
+    const W = 612;
     const M = 30;
     const col = W - M * 2;
     const azul = '#1E40AF';
