@@ -948,8 +948,8 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     const data = invoice.rows[0];
 
     const PDFDocument = require('pdfkit');
-// Media carta: 8.5 x 5.5 horizontal con landscape - papel se mete horizontal
-    const doc = new PDFDocument({ margin: 30, size: [396, 612], layout: 'portrait' });
+// Media carta: 5.5 x 8.5 pulgadas = 396 x 612 puntos
+    const doc = new PDFDocument({ margin: 30, size: [396, 612] });
 
     // Detectar si es e-CF (Factura Electronica DGII)
     const esElectronica = ['E31', 'E32', 'E34'].includes(data.ncf_tipo);
@@ -963,7 +963,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     res.setHeader('Content-Disposition', `inline; filename=factura-${data.ncf || data.id}.pdf`);
     doc.pipe(res);
 
-    const W = 612;
+    const W = 396;
     const M = 30;
     const col = W - M * 2;
     const azul = '#1E40AF';
@@ -1011,31 +1011,31 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     y += 160;
 
     // === TABLA ENCABEZADO ===
-    doc.rect(M, y, col, 22).fill(azul);
-    doc.fillColor('white').fontSize(8).font('Helvetica-Bold');
-doc.text('DESCRIPCIÓN', M + 6, y + 7, { width: 200 });
-    doc.text('CANT', M + 216, y + 7, { width: 50, align: 'right' });
-    doc.text('P. UNIT', M + 276, y + 7, { width: 70, align: 'right' });
-    doc.text('SUBTOTAL', M + 356, y + 7, { width: 70, align: 'right' });
-    doc.text('ITBIS', M + 436, y + 7, { width: 50, align: 'right' });
-    doc.text('TOTAL', M + 496, y + 7, { width: 56, align: 'right' });
-    y += 22;
+    doc.rect(M, y, col, 16).fill(azul);
+    doc.fillColor('white').fontSize(6.5).font('Helvetica-Bold');
+    doc.text('DESCRIPCIÓN', M + 4, y + 4, { width: 100 });
+    doc.text('CANT', M + 108, y + 4, { width: 28, align: 'right' });
+    doc.text('P. UNIT', M + 140, y + 4, { width: 48, align: 'right' });
+    doc.text('SUBTOTAL', M + 192, y + 4, { width: 48, align: 'right' });
+    doc.text('ITBIS', M + 244, y + 4, { width: 38, align: 'right' });
+    doc.text('TOTAL', M + 286, y + 4, { width: 46, align: 'right' });
+    y += 16;
 
     // === ITEMS ===
-    doc.fontSize(8).font('Helvetica');
+    doc.fontSize(6.5).font('Helvetica');
     let rowColor = true;
     for (const item of items.rows) {
-      const rowH = 24;
+      const rowH = 14;
       if (rowColor) doc.rect(M, y, col, rowH).fill('#F8FAFC');
       rowColor = !rowColor;
       const subtotalLinea = parseFloat(item.cantidad) * parseFloat(item.precio_unitario);
-doc.fillColor(negro)
-         .text(item.descripcion, M + 6, y + 8, { width: 200 })
-         .text(parseFloat(item.cantidad).toFixed(0), M + 216, y + 8, { width: 50, align: 'right' })
-         .text(parseFloat(item.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2}), M + 276, y + 8, { width: 70, align: 'right' })
-         .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2}), M + 356, y + 8, { width: 70, align: 'right' })
-         .text(parseFloat(item.itbis_monto).toLocaleString('es-DO', {minimumFractionDigits: 2}), M + 436, y + 8, { width: 50, align: 'right' })
-         .text(parseFloat(item.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), M + 496, y + 8, { width: 56, align: 'right' });
+      doc.fillColor(negro)
+         .text(item.descripcion, M + 4, y + 3, { width: 100 })
+         .text(parseFloat(item.cantidad).toFixed(0), M + 108, y + 3, { width: 28, align: 'right' })
+         .text(parseFloat(item.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2}), M + 140, y + 3, { width: 48, align: 'right' })
+         .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2}), M + 192, y + 3, { width: 48, align: 'right' })
+         .text(parseFloat(item.itbis_monto).toLocaleString('es-DO', {minimumFractionDigits: 2}), M + 244, y + 3, { width: 38, align: 'right' })
+         .text(parseFloat(item.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), M + 286, y + 3, { width: 46, align: 'right' });
       doc.moveTo(M, y + rowH).lineTo(M + col, y + rowH).strokeColor('#E2E8F0').lineWidth(0.5).stroke();
       y += rowH;
     }
