@@ -293,33 +293,25 @@ const handlePDF = (id) => {
     window.open(`https://facturacion-saas-production.up.railway.app/invoices/${id}${endpoint}?token=${token}`, '_blank')
   }
 
-  const handleImprimir = (id) => {
+const handleImprimir = (id) => {
     const token = sessionStorage.getItem('token')
     let endpoint = '/pdf'
     if (formatoImpresion === 'pos') endpoint = '/pdf-pos'
     else if (formatoImpresion === 'carta') endpoint = '/pdf-carta'
     const url = `https://facturacion-saas-production.up.railway.app/invoices/${id}${endpoint}?token=${token}`
 
-    // Crear iframe oculto para impresion automatica con escalado
-    const iframe = document.createElement('iframe')
-    iframe.style.display = 'none'
-    iframe.src = url
-    document.body.appendChild(iframe)
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        try {
-          iframe.contentWindow.focus()
-          iframe.contentWindow.print()
-        } catch (e) {
-          // Fallback: abrir en nueva pestaña si falla
-          window.open(url, '_blank')
-        }
-        // Limpiar iframe despues de 60 segundos
+    // Abrir PDF en nueva pestaña y disparar impresion automatica
+    const ventana = window.open(url, '_blank')
+    if (ventana) {
+      ventana.addEventListener('load', () => {
         setTimeout(() => {
-          if (iframe.parentNode) document.body.removeChild(iframe)
-        }, 60000)
-      }, 1000)
+          ventana.focus()
+          ventana.print()
+        }, 1000)
+      })
+    } else {
+      // Fallback si bloquea ventanas emergentes
+      alert('Por favor permite las ventanas emergentes para imprimir')
     }
   }
 
