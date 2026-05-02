@@ -109,6 +109,20 @@ const handleChange = (e) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    // Validar codigo duplicado
+    if (form.codigo && form.codigo.trim() !== '') {
+      const codigoNormalizado = form.codigo.trim().toLowerCase()
+      const duplicado = productos.find(p =>
+        (p.codigo || '').trim().toLowerCase() === codigoNormalizado &&
+        p.id !== editando
+      )
+      if (duplicado) {
+        alert(`⚠️ Este código ya existe\n\nEl código "${form.codigo}" ya está asignado al producto: ${duplicado.nombre}`)
+        return
+      }
+    }
+
     try {
       if (editando) {
         await API.put(`/products/${editando}`, form)
