@@ -214,7 +214,11 @@ export default function Pagos() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Pagos</h2>
         <div className="flex gap-2">
-          <button onClick={() => setShowPendientes(true)}
+       <button onClick={() => {
+              const u = JSON.parse(sessionStorage.getItem('usuario') || '{}')
+              if (u.rol === 'vendedor') { alert('Usted no tiene permiso para este módulo'); return }
+              setShowPendientes(true)
+            }}
             className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 text-sm">
             ⏳ Pagos por Confirmar
           </button>
