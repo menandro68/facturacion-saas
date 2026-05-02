@@ -145,7 +145,19 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
     return mapa[tipoCliente] || 'B01'
   }
 
-  const handleItemChange = (index, e) => {
+const handleItemChange = (index, e) => {
+    // Si selecciona un producto que YA existe en otra linea: sumar cantidad y eliminar linea actual
+    if (e.target.name === 'product_id' && e.target.value) {
+      const yaExisteIndex = items.findIndex((it, i) => i !== index && it.product_id === e.target.value)
+      if (yaExisteIndex !== -1) {
+        const newItems = items
+          .map((it, i) => i === yaExisteIndex ? { ...it, cantidad: parseFloat(it.cantidad || 0) + 1 } : it)
+          .filter((_, i) => i !== index)
+        setItems(newItems)
+        return
+      }
+    }
+    // Comportamiento normal
     const newItems = items.map((item, i) => {
       if (i !== index) return item
       const updated = { ...item, [e.target.name]: e.target.value }
@@ -2967,8 +2979,16 @@ const handleImprimir = (id) => {
                               const idx = productoIndex[index] ?? -1
                               if (idx >= 0 && filtrados[idx]) {
                                 const p = filtrados[idx]
-                                setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
-                                setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
+                            const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
+                                if (yaExisteIdx !== -1) {
+                                  setItems(prev => prev
+                                    .map((it, i) => i === yaExisteIdx ? {...it, cantidad: parseFloat(it.cantidad || 0) + 1} : it)
+                                    .filter((_, i) => i !== index))
+                                  setBuscarProducto(prev => { const n = {...prev}; delete n[index]; return n })
+                                } else {
+                                  setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
+                                  setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
+                                }
                                 setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
                                 setProductoIndex(prev => ({...prev, [index]: -1}))
                                 setTimeout(() => cantidadRefs.current[index]?.focus(), 100)
@@ -2987,9 +3007,17 @@ const handleImprimir = (id) => {
                                 <div key={p.id}
                                   className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                                   onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
-                                  onMouseDown={() => {
-                                    setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
-                                    setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
+                             onMouseDown={() => {
+                                    const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
+                                    if (yaExisteIdx !== -1) {
+                                      setItems(prev => prev
+                                        .map((it, i) => i === yaExisteIdx ? {...it, cantidad: parseFloat(it.cantidad || 0) + 1} : it)
+                                        .filter((_, i) => i !== index))
+                                      setBuscarProducto(prev => { const n = {...prev}; delete n[index]; return n })
+                                    } else {
+                                      setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
+                                      setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
+                                    }
                                     setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
                                   }}>
                                   {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
