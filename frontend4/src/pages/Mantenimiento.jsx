@@ -160,6 +160,23 @@ export default function Mantenimiento() {
 
   useEffect(() => { fetchData() }, [])
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      const target = e.target
+      if (target.tagName === 'INPUT' || target.tagName === 'SELECT') {
+        e.preventDefault()
+        const formEl = target.form
+        const campos = Array.from(formEl.querySelectorAll('input, select'))
+        const idx = campos.indexOf(target)
+        if (idx >= 0 && idx < campos.length - 1) {
+          campos[idx + 1].focus()
+        } else if (idx === campos.length - 1) {
+          formEl.requestSubmit()
+        }
+      }
+    }
+  }
+
   const handleNuevo = () => {
     setEditando(null)
     setError('')
@@ -298,7 +315,7 @@ export default function Mantenimiento() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Vendedor' : 'Nuevo Vendedor'}</h3>
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
               <input value={formVendedor.nombre} onChange={e => setFormVendedor({...formVendedor, nombre: e.target.value})} required
@@ -357,7 +374,7 @@ export default function Mantenimiento() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Zona' : 'Nueva Zona'}</h3>
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
               <input value={formZona.nombre} onChange={e => setFormZona({...formZona, nombre: e.target.value})} required
@@ -381,7 +398,7 @@ export default function Mantenimiento() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Chofer' : 'Nuevo Chofer'}</h3>
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
               <input value={formChofer.nombre} onChange={e => setFormChofer({...formChofer, nombre: e.target.value})} required

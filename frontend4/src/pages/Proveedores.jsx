@@ -28,6 +28,23 @@ export default function Proveedores() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      const target = e.target
+      if (target.tagName === 'INPUT' || target.tagName === 'SELECT') {
+        e.preventDefault()
+        const formEl = target.form
+        const campos = Array.from(formEl.querySelectorAll('input, select'))
+        const idx = campos.indexOf(target)
+        if (idx >= 0 && idx < campos.length - 1) {
+          campos[idx + 1].focus()
+        } else if (idx === campos.length - 1) {
+          formEl.requestSubmit()
+        }
+      }
+    }
+  }
+
   const handleNuevo = () => {
     setForm({ nombre: '', rnc: '', email: '', telefono: '', direccion: '', contacto: '' })
     setEditando(null)
@@ -94,7 +111,7 @@ export default function Proveedores() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h3>
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
               <input name="nombre" value={form.nombre} onChange={handleChange} required
