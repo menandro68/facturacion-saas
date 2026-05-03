@@ -350,9 +350,14 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 const vendedorId = document.getElementById('cob-vendedor').value
                 if (!vendedorId) return
                 const vendedorNombreSeleccionado = vendedores.find(v => v.id === vendedorId)?.nombre || ''
-                const filtradas = pagos.filter(p => {
-                  const matchVendedor = p.vendedor_nombre && p.vendedor_nombre.toLowerCase().includes(vendedorNombreSeleccionado.toLowerCase())
-                  if (!matchVendedor) return false
+         const filtradas = pagos.filter(p => {
+                  // Filtrar por vendedor del CLIENTE de la factura (no por quien registro el pago)
+                  const factura = todasFacturas.find(f => f.id === p.invoice_id)
+                  if (!factura) return false
+                  const cliente = clientes.find(c => c.id === factura.customer_id)
+                  if (!cliente) return false
+                  if (cliente.vendedor_id !== vendedorId) return false
+
                   const d = new Date(p.creado_en)
                   const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
                   if (fechaInicio && fecha < fechaInicio) return false
@@ -363,28 +368,30 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 const totalItbis = 0
                 const totalSubtotal = totalCobrado
 
-          // Calcular comision del vendedor PROPORCIONAL al monto pagado
+     // Calcular comision SOLO si la factura esta pagada al 100%
                 let totalComision = 0
+                const facturasYaProcesadas = new Set()
                 filtradas.forEach(p => {
-                  const montoPagado = parseFloat(p.monto || 0)
-                  const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === p.invoice_id)
-                  if (itemsDeFactura.length === 0) return
+                  if (facturasYaProcesadas.has(p.invoice_id)) return
+                  facturasYaProcesadas.add(p.invoice_id)
 
-                  // Calcular el % ponderado de comision de la factura completa
-                  let subtotalTotal = 0
-                  let comisionTotal = 0
+                  const factura = todasFacturas.find(f => f.id === p.invoice_id)
+                  if (!factura) return
+
+                  const totalFactura = parseFloat(factura.total || 0)
+                  const totalPagadoFactura = pagos
+                    .filter(pg => pg.invoice_id === p.invoice_id)
+                    .reduce((s, pg) => s + parseFloat(pg.monto || 0), 0)
+
+                  // Solo dar comision si la factura esta pagada al 100% (o mas)
+                  if (totalPagadoFactura < totalFactura - 0.01) return
+
+           const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === p.invoice_id)
                   itemsDeFactura.forEach(item => {
-                    const subtotalItem = parseFloat(item.subtotal || 0)
+                    const totalItem = parseFloat(item.total || 0)
                     const porcentaje = parseFloat(item.comision_vendedor || 0)
-                    subtotalTotal += subtotalItem
-                    comisionTotal += subtotalItem * (porcentaje / 100)
+                    totalComision += totalItem * (porcentaje / 100)
                   })
-
-                  if (subtotalTotal === 0) return
-                  const porcentajePonderado = (comisionTotal / subtotalTotal) * 100
-
-                  // Aplicar el % ponderado al monto pagado real
-                  totalComision += montoPagado * (porcentajePonderado / 100)
                 })
 
                 document.getElementById('cob-resultado').innerHTML = `
