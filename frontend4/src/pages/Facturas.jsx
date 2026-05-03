@@ -20,6 +20,8 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [facturasCliente, setFacturasCliente] = useState([])
   const [resumenCliente, setResumenCliente] = useState(null)
   const [facturasChofer, setFacturasChofer] = useState([])
+  const [choferesLista, setChoferesLista] = useState([])
+  const [choferSeleccionado, setChoferSeleccionado] = useState('')
   const [relacionVendedor, setRelacionVendedor] = useState([])
   const [cotizaciones, setCotizaciones] = useState([])
   const [pedidos, setPedidos] = useState([])
@@ -128,6 +130,12 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   }
 
   useEffect(() => { fetchData() }, [])
+
+  useEffect(() => {
+    API.get('/mantenimiento/choferes')
+      .then(r => setChoferesLista(r.data.data || []))
+      .catch(() => {})
+  }, [])
 
   const handleFormChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -1142,17 +1150,36 @@ const handleImprimir = (id) => {
                 }}
               />
             </div>
+    <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar Chofer</label>
+              <select
+                value={choferSeleccionado}
+                onChange={e => setChoferSeleccionado(e.target.value)}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+              >
+                <option value="">-- Seleccione un chofer --</option>
+                {choferesLista.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
+            </div>
             <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-              onClick={() => {
+              onClick={async () => {
                 const input = document.getElementById('chofer-ncf-input')
                 const val = input.value.trim().toUpperCase()
                 if (!val) return
+                if (!choferSeleccionado) { alert('Debe seleccionar un chofer'); return }
                 const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
                 if (!factura) { alert('Factura no encontrada: ' + val); return }
                 if (facturasChofer.find(f => f.id === factura.id)) { alert('Ya está en la lista'); input.value = ''; return }
-                setFacturasChofer(prev => [...prev, factura])
-                input.value = ''
-                input.focus()
+                try {
+                  await API.put(`/invoices/${factura.id}/asignar-chofer`, { chofer_id: choferSeleccionado })
+                  setFacturasChofer(prev => [...prev, factura])
+                  input.value = ''
+                  input.focus()
+                } catch (err) {
+                  alert('Error al asignar chofer: ' + (err.response?.data?.mensaje || err.message))
+                }
               }}>
               Agregar
             </button>
@@ -1180,7 +1207,7 @@ const handleImprimir = (id) => {
                       .total-row{font-weight:bold;background:#f1f5f9}
                       @media print{button{display:none}}
                     </style></head><body>
-                    <h2>Relación de Entregas - Chofer</h2>
+                    <h2>Relación de Entregas - Chofer: ${(choferesLista.find(c => c.id === choferSeleccionado) || {}).nombre || ''}</h2>
                     <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')} — Total facturas: ${facturasChofer.length}</p>
                     <table>
                       <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th></tr></thead>

@@ -1244,6 +1244,47 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
 });
 
 // =====================================================
+// ENDPOINT ASIGNAR CHOFER A FACTURA (Entrega Chofer)
+// =====================================================
+router.put('/:id/asignar-chofer', verifyToken, tenantGuard, async (req, res) => {
+  try {
+    const { tenant_id } = req.user;
+    const { id } = req.params;
+    const { chofer_id } = req.body;
+
+    if (!chofer_id) {
+      return res.status(400).json({ success: false, mensaje: 'Debe seleccionar un chofer' });
+    }
+
+    const factura = await pool.query(
+      `SELECT * FROM invoices WHERE id=$1 AND tenant_id=$2`,
+      [id, tenant_id]
+    );
+    if (factura.rows.length === 0) {
+      return res.status(404).json({ success: false, mensaje: 'Factura no encontrada' });
+    }
+
+    const chofer = await pool.query(
+      `SELECT * FROM choferes WHERE id=$1 AND tenant_id=$2`,
+      [chofer_id, tenant_id]
+    );
+    if (chofer.rows.length === 0) {
+      return res.status(404).json({ success: false, mensaje: 'Chofer no encontrado' });
+    }
+
+    const result = await pool.query(
+      `UPDATE invoices SET chofer_id=$1, actualizado_en=NOW() WHERE id=$2 RETURNING *`,
+      [chofer_id, id]
+    );
+
+    res.json({ success: true, data: result.rows[0], mensaje: 'Chofer asignado correctamente' });
+  } catch (error) {
+    console.error('Error asignar chofer:', error);
+    res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+// =====================================================
 // ENDPOINTS DE COTIZACIONES
 // =====================================================
 
