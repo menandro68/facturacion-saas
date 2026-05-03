@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import API from '../services/api'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 export default function OrdenCompra({ onInventarioUpdate }) {
   const [ordenes, setOrdenes] = useState([])
@@ -412,9 +414,47 @@ const handleItemChange = async (idx, field, value) => {
               </tbody>
             </table>
             <div className="flex justify-end gap-3 mt-4">
-              <button onClick={() => window.print()}
+              <button onClick={() => {
+                const doc = new jsPDF()
+                const empresa = sessionStorage.getItem('tenant_name') || 'MI EMPRESA'
+                doc.setFontSize(16)
+                doc.setFont('helvetica', 'bold')
+                doc.text(empresa.toUpperCase(), 105, 18, { align: 'center' })
+                doc.setFontSize(13)
+                doc.text(`ORDEN DE COMPRA — ${verOrden.numero}`, 105, 27, { align: 'center' })
+                doc.setFontSize(10)
+                doc.setFont('helvetica', 'normal')
+                let y = 40
+                doc.text(`Proveedor: ${verOrden.proveedor_nombre || '-'}`, 14, y)
+                doc.text(`Estado: ${verOrden.estado?.toUpperCase()}`, 130, y)
+                y += 7
+                doc.text(`Fecha: ${new Date(verOrden.creado_en).toLocaleDateString('es-DO')}`, 14, y)
+                doc.text(`Entrega: ${verOrden.fecha_entrega ? new Date(verOrden.fecha_entrega).toLocaleDateString('es-DO') : '-'}`, 130, y)
+                y += 7
+                doc.text(`Vence Pago: ${verOrden.fecha_vencimiento_pago ? new Date(verOrden.fecha_vencimiento_pago).toLocaleDateString('es-DO') : '-'}`, 14, y)
+                doc.text(`Notas: ${verOrden.notas || '-'}`, 130, y)
+                y += 10
+                autoTable(doc, {
+                  startY: y,
+                  head: [['Descripción', 'Cantidad', 'Precio Unit.', 'Subtotal']],
+                  body: verOrden.items?.map(it => [
+                    it.descripcion,
+                    parseFloat(it.cantidad).toLocaleString('es-DO'),
+                    `RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits:2})}`,
+                    `RD$${parseFloat(it.subtotal).toLocaleString('es-DO', {minimumFractionDigits:2})}`
+                  ]) || [],
+                  theme: 'grid',
+                  headStyles: { fillColor: [55, 65, 81], textColor: 255, fontStyle: 'bold' },
+                  styles: { fontSize: 10, cellPadding: 3 }
+                })
+                const finalY = doc.lastAutoTable.finalY + 8
+                doc.setFont('helvetica', 'bold')
+                doc.setFontSize(12)
+                doc.text(`TOTAL: RD$${parseFloat(verOrden.total).toLocaleString('es-DO', {minimumFractionDigits:2})}`, 196, finalY, { align: 'right' })
+                doc.save(`Orden-${verOrden.numero}.pdf`)
+              }}
                 className="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 flex items-center gap-2">
-                🖨️ Exportar PDF
+                📄 Exportar PDF
               </button>
               <button onClick={() => setVerOrden(null)}
                 className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cerrar</button>
