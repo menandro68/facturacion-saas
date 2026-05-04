@@ -72,6 +72,8 @@ export default function Proveedores() {
       await API.delete(`/suppliers/${id}`)
       fetchProveedores()
     } catch (err) {
+      const mensajeError = err.response?.data?.mensaje || 'Error al eliminar el proveedor'
+      alert(`⚠️ ${mensajeError}`)
       console.error(err)
     }
   }
