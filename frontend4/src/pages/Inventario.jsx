@@ -448,8 +448,8 @@ export default function Inventario({ modulos_permitidos = null }) {
                         )}
                       </td>
                       <td className="px-4 py-3 flex gap-2">
-                        <button onClick={() => { setShowMovimiento(item.id); setError('') }}
-                          className="text-blue-600 hover:underline text-xs">Movimiento</button>
+                      {/* <button onClick={() => { setShowMovimiento(item.id); setError('') }}
+                          className="text-blue-600 hover:underline text-xs">Movimiento</button> */}
                         <button onClick={() => fetchMovimientos(item.id)}
                           className="text-gray-600 hover:underline text-xs">Historial</button>
                       </td>
