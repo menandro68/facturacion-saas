@@ -5,6 +5,7 @@ import { listarDispositivos, imprimirEnDispositivo } from '../utils/bluetoothPri
 export default function Pagos() {
   const [pagos, setPagos] = useState([])
   const [facturas, setFacturas] = useState([])
+  const [notasCredito, setNotasCredito] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showMetodo, setShowMetodo] = useState(false)
@@ -38,6 +39,7 @@ export default function Pagos() {
       ])
       setPagos(p.data.data)
       setFacturas(f.data.data.filter(f => f.estado === 'emitida'))
+      setNotasCredito(f.data.data.filter(f => f.estado === 'nota_credito'))
       if (t.data.data?.nombre) {
         sessionStorage.setItem('tenant_name', t.data.data.nombre)
       }
@@ -248,8 +250,12 @@ export default function Pagos() {
                       if (!factura) { setError('Factura no encontrada: ' + val); return }
                       setError('')
                       setForm(prev => ({ ...prev, invoice_id: factura.id, monto: '' }))
+                      const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
+                      const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                      const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
                       document.getElementById('pago-ncf-resultado').innerHTML =
-                        `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${parseFloat(factura.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
+                        `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                     }
                   }} />
                 <button type="button"
@@ -259,8 +265,12 @@ export default function Pagos() {
                     if (!factura) { setError('Factura no encontrada: ' + val); return }
                     setError('')
                     setForm(prev => ({ ...prev, invoice_id: factura.id, monto: '' }))
+                    const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
+                    const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                    const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                    const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
                     document.getElementById('pago-ncf-resultado').innerHTML =
-                      `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${parseFloat(factura.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
+                      `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                   }}
                   className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 whitespace-nowrap">
                   Buscar
