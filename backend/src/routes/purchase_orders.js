@@ -133,11 +133,16 @@ router.put('/:id/estado', async (req, res) => {
     const tenant_id = req.user.tenant_id
     const id = req.params.id
 
-    // Verificar estado anterior
+    // Verificar estado anterior y obtener nombre del proveedor
     const ordenActual = await client.query(
-      'SELECT estado FROM purchase_orders WHERE id=$1 AND tenant_id=$2', [id, tenant_id]
+      `SELECT po.estado, s.nombre as proveedor_nombre
+       FROM purchase_orders po
+       LEFT JOIN suppliers s ON po.supplier_id = s.id
+       WHERE po.id=$1 AND po.tenant_id=$2`,
+      [id, tenant_id]
     )
     if (!ordenActual.rows[0]) return res.status(404).json({ mensaje: 'Orden no encontrada' })
+    const proveedorNombre = ordenActual.rows[0].proveedor_nombre || null
 
     await client.query(
       'UPDATE purchase_orders SET estado=$1 WHERE id=$2 AND tenant_id=$3',
@@ -151,6 +156,42 @@ router.put('/:id/estado', async (req, res) => {
       )
       for (const item of items.rows) {
         if (!item.product_id) continue
+
+        // Actualizar costo y precio de venta del producto si el precio_unitario de esta OC es diferente
+        const prodActual = await client.query(
+          'SELECT costo, beneficio FROM products WHERE id=$1 AND tenant_id=$2',
+          [item.product_id, tenant_id]
+        )
+        if (prodActual.rows.length > 0) {
+          const costoActual = parseFloat(prodActual.rows[0].costo || 0)
+          const costoNuevo = parseFloat(item.precio_unitario || 0)
+          if (costoNuevo > 0 && costoActual !== costoNuevo) {
+            const beneficio = parseFloat(prodActual.rows[0].beneficio || 0)
+            // Recalcular precio de venta con la misma formula del frontend: precio = costo + (costo × beneficio / 100)
+            const precioNuevo = beneficio > 0
+              ? parseFloat((costoNuevo + (costoNuevo * beneficio / 100)).toFixed(2))
+              : null
+
+            if (precioNuevo !== null) {
+              await client.query(
+                'UPDATE products SET costo=$1, precio=$2, suplidor=$3 WHERE id=$4 AND tenant_id=$5',
+                [costoNuevo, precioNuevo, proveedorNombre, item.product_id, tenant_id]
+              )
+            } else {
+              await client.query(
+                'UPDATE products SET costo=$1, suplidor=$2 WHERE id=$3 AND tenant_id=$4',
+                [costoNuevo, proveedorNombre, item.product_id, tenant_id]
+              )
+            }
+          } else if (proveedorNombre) {
+            // Si el costo no cambió pero hay proveedor, igual actualizar el suplidor
+            await client.query(
+              'UPDATE products SET suplidor=$1 WHERE id=$2 AND tenant_id=$3',
+              [proveedorNombre, item.product_id, tenant_id]
+            )
+          }
+        }
+
         const inv = await client.query(
           'SELECT * FROM inventory WHERE product_id=$1 AND tenant_id=$2',
           [item.product_id, tenant_id]
