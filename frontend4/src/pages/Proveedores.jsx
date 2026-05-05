@@ -3,6 +3,7 @@ import API from '../services/api'
 
 export default function Proveedores() {
   const [proveedores, setProveedores] = useState([])
+  const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -106,6 +107,13 @@ export default function Proveedores() {
         >
           + Nuevo Proveedor
         </button>
+        <input
+          type="text"
+          placeholder="Buscar..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2"
+        />
       </div>
 
       {/* Formulario */}
@@ -167,10 +175,14 @@ export default function Proveedores() {
             </tr>
           </thead>
           <tbody>
-            {proveedores.length === 0 ? (
-              <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-400">No hay proveedores registrados</td></tr>
+            {proveedores.filter(p =>
+              !busqueda || (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase())
+            ).length === 0 ? (
+              <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-400">{busqueda ? 'No se encontraron resultados' : 'No hay proveedores registrados'}</td></tr>
             ) : (
-              proveedores.map((p) => (
+              proveedores.filter(p =>
+                !busqueda || (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase())
+              ).map((p) => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{p.nombre}</td>
                   <td className="px-4 py-3">{p.email || '-'}</td>

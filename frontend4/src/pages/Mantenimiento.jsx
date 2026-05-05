@@ -26,7 +26,10 @@ const MODULOS_DISPONIBLES = [
           { id: 'facturas:pedidos', label: 'Pedidos' },
           { id: 'facturas:cotizacion', label: 'Cotización' },
           { id: 'facturas:nota_credito', label: 'Nota de Crédito' },
-          { id: 'facturas:devoluciones', label: 'Devoluciones' }
+          { id: 'facturas:devoluciones', label: 'Devoluciones' },
+          { id: 'facturas:anular', label: 'Anular Factura' },
+          { id: 'facturas:imprimir', label: 'Imprimir Factura' },
+          { id: 'facturas:pdf', label: 'PDF Factura' }
         ]
       },
       { id: 'pedidos', label: 'Pedidos' },

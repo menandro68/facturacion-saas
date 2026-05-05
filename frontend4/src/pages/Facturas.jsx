@@ -9,6 +9,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [fechaFin, setFechaFin] = useState('')
   const [facturas, setFacturas] = useState([])
   const [facturasFiltradas, setFacturasFiltradas] = useState([])
+  const [busquedaNcf, setBusquedaNcf] = useState('')
   const [resumen, setResumen] = useState(null)
   const [zonaSeleccionada, setZonaSeleccionada] = useState('')
   const [facturasZona, setFacturasZona] = useState([])
@@ -393,8 +394,17 @@ const handleImprimir = (id) => {
         <h2 className="text-xl font-bold text-gray-800">Facturas</h2>
         <button onClick={() => { setShowForm(true); setTimeout(() => buscarClienteRef.current?.focus(), 100) }}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-          + Nueva Factura
+      + Nueva Factura
         </button>
+        {tab === 'fecha' && (
+          <input
+            type="text"
+            placeholder="Buscar NCF..."
+            value={busquedaNcf}
+            onChange={e => setBusquedaNcf(e.target.value.toUpperCase())}
+            className="border rounded px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2"
+          />
+        )}
       </div>
 
       {/* Filtro de fechas */}
@@ -3146,10 +3156,14 @@ const handleImprimir = (id) => {
                 </tr>
               </thead>
               <tbody>
-                {facturasFiltradas.length === 0 ? (
-                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay facturas</td></tr>
+             {facturasFiltradas.filter(f =>
+                  !busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase())
+                ).length === 0 ? (
+                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">{busquedaNcf ? 'No se encontraron facturas con ese NCF' : 'No hay facturas'}</td></tr>
                 ) : (
-                  facturasFiltradas.map((f) => (
+                  facturasFiltradas.filter(f =>
+                    !busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase())
+                  ).map((f) => (
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
@@ -3165,16 +3179,16 @@ const handleImprimir = (id) => {
                           <button onClick={() => handleEmitir(f.id)}
                             className="text-blue-600 hover:underline text-xs">Emitir</button>
                         )}
-                        {f.estado !== 'anulada' && (
+                   {f.estado !== 'anulada' && puedeVerSubTab('anular') && (
                           <button onClick={() => handleAnular(f.id)}
                             className="text-red-500 hover:underline text-xs">Anular</button>
                         )}
                      {f.estado !== 'borrador' && (
                           <>
-                            <button onClick={() => handleImprimir(f.id)}
-                              className="text-blue-600 hover:underline text-xs">Imprimir</button>
-                            <button onClick={() => handlePDF(f.id)}
-                              className="text-green-600 hover:underline text-xs">PDF</button>
+                            {puedeVerSubTab('imprimir') && <button onClick={() => handleImprimir(f.id)}
+                              className="text-blue-600 hover:underline text-xs">Imprimir</button>}
+                            {puedeVerSubTab('pdf') && <button onClick={() => handlePDF(f.id)}
+                              className="text-green-600 hover:underline text-xs">PDF</button>}
                           </>
                         )}
                       </td>

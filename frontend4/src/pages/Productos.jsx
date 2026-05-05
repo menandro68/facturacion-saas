@@ -3,6 +3,7 @@ import API from '../services/api'
 
 export default function Productos() {
   const [productos, setProductos] = useState([])
+  const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -148,6 +149,13 @@ const handleChange = (e) => {
         >
           + Nuevo Articulo
         </button>
+        <input
+          type="text"
+          placeholder="Buscar..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2"
+        />
       </div>
 
       {showForm && (
@@ -243,10 +251,18 @@ const handleChange = (e) => {
             </tr>
           </thead>
           <tbody>
-            {productos.length === 0 ? (
-              <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay productos registrados</td></tr>
+            {productos.filter(p =>
+              !busqueda ||
+              (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+              (p.codigo || '').toLowerCase().includes(busqueda.toLowerCase())
+            ).length === 0 ? (
+              <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">{busqueda ? 'No se encontraron resultados' : 'No hay productos registrados'}</td></tr>
             ) : (
-              productos.map((p) => (
+              productos.filter(p =>
+                !busqueda ||
+                (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+                (p.codigo || '').toLowerCase().includes(busqueda.toLowerCase())
+              ).map((p) => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3">{p.codigo || '-'}</td>
                   <td className="px-4 py-3 font-medium">{p.nombre}</td>

@@ -3,6 +3,7 @@ import API from '../services/api'
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([])
+  const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -117,6 +118,13 @@ export default function Clientes() {
         >
           + Nuevo Cliente
         </button>
+        <input
+          type="text"
+          placeholder="Buscar..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2"
+        />
       </div>
 
       {/* Formulario */}
@@ -218,10 +226,22 @@ export default function Clientes() {
             </tr>
           </thead>
           <tbody>
-            {clientes.length === 0 ? (
-              <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay clientes registrados</td></tr>
+            {clientes.filter(c =>
+              !busqueda ||
+              (c.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+              (c.rnc_cedula || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+              (c.email || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+              (c.telefono || '').toLowerCase().includes(busqueda.toLowerCase())
+            ).length === 0 ? (
+              <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">{busqueda ? 'No se encontraron resultados' : 'No hay clientes registrados'}</td></tr>
             ) : (
-              clientes.map((c) => (
+              clientes.filter(c =>
+                !busqueda ||
+                (c.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+                (c.rnc_cedula || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+                (c.email || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+                (c.telefono || '').toLowerCase().includes(busqueda.toLowerCase())
+              ).map((c) => (
                 <tr key={c.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{c.nombre}</td>
                   <td className="px-4 py-3">{c.rnc_cedula || '-'}</td>
