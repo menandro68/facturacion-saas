@@ -123,7 +123,7 @@ export default function Mantenimiento() {
   const [mostrarClave, setMostrarClave] = useState(false)
   const [mensajeClave, setMensajeClave] = useState('')
 
-  // Estados para Secuencias NCF Electrónicas
+// Estados para Secuencias NCF Electrónicas
   const [ncfElectronicas, setNcfElectronicas] = useState([])
   const [formNcfElec, setFormNcfElec] = useState({
     tipo_ncf: 'E31',
@@ -132,6 +132,12 @@ export default function Mantenimiento() {
     fecha_vencimiento: ''
   })
 
+  // Estados para Reporte de Operador
+  const [reporteOpId, setReporteOpId] = useState('')
+  const [reporteDesde, setReporteDesde] = useState('')
+  const [reporteHasta, setReporteHasta] = useState('')
+  const [reporteData, setReporteData] = useState(null)
+  const [reporteLoading, setReporteLoading] = useState(false)
   const fetchData = async () => {
     setLoading(true)
     try {
@@ -270,7 +276,8 @@ export default function Mantenimiento() {
     { id: 'choferes', label: '🚗 Choferes' },
     { id: 'usuarios', label: '👥 Usuarios' },
     { id: 'clave', label: '🔐 Clave Descuento' },
-    { id: 'ncf_electronicas', label: '🧾 Secuencias NCF' },
+  { id: 'ncf_electronicas', label: '🧾 Secuencias NCF' },
+    { id: 'reporte_operador', label: '📊 Operador' },
   ]
 
   if (loading) return <p className="text-gray-500 p-6">Cargando...</p>
@@ -882,9 +889,186 @@ export default function Mantenimiento() {
               }}
                 className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 whitespace-nowrap">
                 💾 Guardar
-              </button>
+</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Tab Reporte de Operador */}
+      {tab === 'reporte_operador' && (
+        <div>
+          {/* Filtros */}
+          <div className="bg-white rounded-lg shadow p-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Operador *</label>
+                <select value={reporteOpId} onChange={e => setReporteOpId(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">-- Seleccionar operador --</option>
+                  {operadores.map(op => (
+                    <option key={op.id} value={op.id}>{op.nombre} ({op.username})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                <input type="date" value={reporteDesde} onChange={e => setReporteDesde(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                <input type="date" value={reporteHasta} onChange={e => setReporteHasta(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <button onClick={async () => {
+                  if (!reporteOpId) {
+                    alert('Selecciona un operador primero')
+                    return
+                  }
+                  setReporteLoading(true)
+                  try {
+                    const params = new URLSearchParams({ operador_id: reporteOpId })
+                    if (reporteDesde) params.append('desde', reporteDesde)
+                    if (reporteHasta) params.append('hasta', reporteHasta)
+                    const res = await API.get(`/operadores/reporte/actividad?${params.toString()}`)
+                    setReporteData(res.data.data)
+                  } catch (err) {
+                    alert('Error al generar reporte: ' + (err.response?.data?.mensaje || err.message))
+                  } finally {
+                    setReporteLoading(false)
+                  }
+                }}
+       disabled={reporteLoading}
+                  className="w-full bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50">
+                  {reporteLoading ? 'Generando...' : '🔍 Generar Reporte'}
+                </button>
+              </div>
+            </div>
+            {reporteData && (
+              <div className="mt-3 flex justify-end no-print">
+                <button onClick={() => window.print()}
+                  className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
+                  🖨️ Imprimir Reporte
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Tarjetas KPI */}
+          {reporteData && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+                  <div className="text-xs text-gray-500 mb-1">🧾 Facturas emitidas</div>
+                  <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.facturas.cantidad}</div>
+                  <div className="text-sm text-blue-600 font-medium">RD$ {reporteData.kpis.facturas.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+                  <div className="text-xs text-gray-500 mb-1">💰 Pagos recibidos</div>
+                  <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.pagos.cantidad}</div>
+                  <div className="text-sm text-green-600 font-medium">RD$ {reporteData.kpis.pagos.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+                  <div className="text-xs text-gray-500 mb-1">📋 Pedidos creados</div>
+                  <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.pedidos.cantidad}</div>
+                  <div className="text-sm text-purple-600 font-medium">RD$ {reporteData.kpis.pedidos.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+                  <div className="text-xs text-gray-500 mb-1">📝 Cotizaciones</div>
+                  <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.cotizaciones.cantidad}</div>
+                  <div className="text-sm text-yellow-600 font-medium">RD$ {reporteData.kpis.cotizaciones.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+                  <div className="text-xs text-gray-500 mb-1">❌ Anulaciones</div>
+                  <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.anuladas.cantidad}</div>
+                  <div className="text-sm text-red-600 font-medium">RD$ {reporteData.kpis.anuladas.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+                  <div className="text-xs text-gray-500 mb-1">💵 Notas de crédito</div>
+                  <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.notas_credito.cantidad}</div>
+                  <div className="text-sm text-orange-600 font-medium">RD$ {reporteData.kpis.notas_credito.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                </div>
+              </div>
+
+              {/* Tabla Detalle de Facturas/Transacciones */}
+              <div className="bg-white rounded-lg shadow overflow-hidden mb-4">
+                <div className="bg-gray-50 px-4 py-3 border-b">
+                  <h3 className="font-semibold text-gray-800">📋 Detalle de Transacciones ({reporteData.detalle_facturas.length})</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-gray-600">Tipo</th>
+                        <th className="px-4 py-2 text-left text-gray-600">NCF</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Cliente</th>
+                        <th className="px-4 py-2 text-right text-gray-600">Total</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Estado</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reporteData.detalle_facturas.length === 0 ? (
+                        <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Sin transacciones en el período</td></tr>
+                      ) : reporteData.detalle_facturas.map(f => (
+                        <tr key={f.id} className="border-t hover:bg-gray-50">
+                          <td className="px-4 py-2"><span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">{f.tipo}</span></td>
+                          <td className="px-4 py-2 font-mono text-xs">{f.ncf || '-'}</td>
+                          <td className="px-4 py-2">{f.cliente_nombre || 'Consumidor Final'}</td>
+                          <td className="px-4 py-2 text-right font-medium">RD$ {parseFloat(f.total).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                          <td className="px-4 py-2"><span className="text-xs">{f.estado}</span></td>
+                          <td className="px-4 py-2 text-xs text-gray-500">{new Date(f.creado_en).toLocaleString('es-DO')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Tabla Detalle de Pagos */}
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 border-b">
+                  <h3 className="font-semibold text-gray-800">💰 Detalle de Pagos ({reporteData.detalle_pagos.length})</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-gray-600">NCF Factura</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Cliente</th>
+                        <th className="px-4 py-2 text-right text-gray-600">Monto</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Método</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Estado</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reporteData.detalle_pagos.length === 0 ? (
+                        <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Sin pagos en el período</td></tr>
+                      ) : reporteData.detalle_pagos.map(p => (
+                        <tr key={p.id} className="border-t hover:bg-gray-50">
+                          <td className="px-4 py-2 font-mono text-xs">{p.ncf || '-'}</td>
+                          <td className="px-4 py-2">{p.cliente_nombre || 'Consumidor Final'}</td>
+                          <td className="px-4 py-2 text-right font-medium text-green-600">RD$ {parseFloat(p.monto).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                          <td className="px-4 py-2 text-xs">{p.metodo}</td>
+                          <td className="px-4 py-2"><span className="text-xs">{p.estado}</span></td>
+                          <td className="px-4 py-2 text-xs text-gray-500">{new Date(p.creado_en).toLocaleString('es-DO')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!reporteData && !reporteLoading && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center text-blue-700 text-sm">
+              📊 Selecciona un operador y haz clic en <strong>"Generar Reporte"</strong> para ver su actividad
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,1 +1,61 @@
 @import "tailwindcss";
+
+/* Estilos para impresión del reporte de operador */
+@media print {
+  /* Ocultar elementos que no queremos imprimir */
+  .no-print,
+  nav,
+  aside,
+  header,
+  button,
+  .border-b.flex,
+  .flex.gap-2.mb-6.border-b {
+    display: none !important;
+  }
+
+  /* Quitar fondos, sombras y bordes para ahorrar tinta */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .bg-white,
+  .bg-gray-100,
+  .bg-gray-50,
+  .bg-blue-50 {
+    background: white !important;
+  }
+
+  .shadow,
+  .shadow-md,
+  .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  /* Asegurar que las tablas se vean completas */
+  table {
+    page-break-inside: auto;
+    width: 100% !important;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  /* Que las tarjetas KPI no se corten */
+  .grid > div {
+    page-break-inside: avoid;
+  }
+
+  /* Mostrar bordes de tarjetas KPI en impresión */
+  .border-l-4 {
+    border: 1px solid #333 !important;
+  }
+
+  /* Márgenes de la página impresa */
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+}
