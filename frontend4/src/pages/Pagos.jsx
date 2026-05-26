@@ -198,7 +198,7 @@ export default function Pagos() {
                     return
                   }
                   const token = sessionStorage.getItem('token')
-                  window.open(`https://facturacion-saas-production.up.railway.app/payments/${pagoGuardadoId}/recibo?token=${token}`, '_blank')
+                  window.open(`https://facturacion.squidapps.org/payments/${pagoGuardadoId}/recibo?token=${token}`, '_blank')
                   setMostrarImprimirPago(false)
                 }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium">

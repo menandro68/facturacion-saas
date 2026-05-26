@@ -111,8 +111,8 @@ function App() {
               <button key={item.id} onClick={async () => {
                 if (item.id === 'listado_precios') {
                   const token = sessionStorage.getItem('token')
-                  const res = await fetch('https://facturacion-saas-production.up.railway.app/products', { headers: { Authorization: `Bearer ${token}` } })
-                  const resInv = await fetch('https://facturacion-saas-production.up.railway.app/inventory', { headers: { Authorization: `Bearer ${token}` } })
+                  const res = await fetch('https://facturacion.squidapps.org/products', { headers: { Authorization: `Bearer ${token}` } })
+                  const resInv = await fetch('https://facturacion.squidapps.org/inventory', { headers: { Authorization: `Bearer ${token}` } })
                   const data = await res.json()
                   const invData = await resInv.json()
                   const prods = data.data.filter(p => p.precio).map(p => {

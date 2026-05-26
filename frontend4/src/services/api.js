@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const API = axios.create({
-  baseURL: 'https://facturacion-saas-production.up.railway.app'
+ baseURL: 'https://facturacion.squidapps.org'
 })
 
 // Interceptor de request: agregar token JWT
