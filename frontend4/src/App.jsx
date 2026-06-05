@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Clientes from './pages/Clientes'
 import Productos from './pages/Productos'
 import Facturas from './pages/Facturas'
+import Conduces from './pages/Conduces'
 import Pagos from './pages/Pagos'
 import Reportes from './pages/Reportes'
 import Configuracion from './pages/Configuracion'
@@ -58,6 +59,7 @@ function App() {
     { id: 'clientes', label: '👥 Clientes', modulo: 'clientes' },
     { id: 'productos', label: '📦 Articulos', modulo: 'productos' },
     { id: 'facturas', label: '🧾 Facturas', modulo: 'facturas' },
+    { id: 'conduces', label: '🚚 Conduce', modulo: 'conduces' },
     { id: 'pagos', label: '💰 Pagos', modulo: 'pagos' },
     { id: 'reportes', label: '📈 Reportes', modulo: 'reportes' },
     { id: 'proveedores', label: '🏭 Proveedores', modulo: 'proveedores' },
@@ -184,6 +186,7 @@ function App() {
                 {pagina === 'clientes' && !esVendedor && puedeVer('clientes') && <Clientes />}
                 {pagina === 'productos' && !esVendedor && puedeVer('productos') && <Productos />}
                 {pagina === 'facturas' && (esVendedor || puedeVer('facturas')) && <Facturas vendedor_id={esVendedor ? usuario.id : null} modulos_permitidos={esOperador ? permitidos : null} />}
+                {pagina === 'conduces' && !esVendedor && puedeVer('conduces') && <Conduces />}
                 {pagina === 'pagos' && (esVendedor || puedeVer('pagos')) && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
                 {pagina === 'reportes' && (esVendedor || puedeVer('reportes')) && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
                 {pagina === 'proveedores' && !esVendedor && puedeVer('proveedores') && <Proveedores />}
