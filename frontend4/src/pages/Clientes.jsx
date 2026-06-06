@@ -32,6 +32,11 @@ export default function Clientes() {
   }, [])
 
   const handleChange = (e) => {
+    if (e.target.name === 'telefono') {
+      const soloNumeros = e.target.value.replace(/\D/g, '').slice(0, 10)
+      setForm({ ...form, telefono: soloNumeros })
+      return
+    }
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
@@ -93,6 +98,10 @@ export default function Clientes() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    if (form.telefono.length !== 10) {
+      setError('El teléfono debe tener exactamente 10 dígitos')
+      return
+    }
     try {
       if (editando) {
         await API.put(`/customers/${editando}`, form)
@@ -139,22 +148,23 @@ export default function Clientes() {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">RNC/Cédula</label>
-              <input name="rnc_cedula" value={form.rnc_cedula} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">RNC/Cédula *</label>
+              <input name="rnc_cedula" value={form.rnc_cedula} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Negocio</label>
-              <input name="email" type="text" value={form.email} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Negocio *</label>
+              <input name="email" type="text" value={form.email} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-              <input name="telefono" value={form.telefono} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+              <input name="telefono" value={form.telefono} onChange={handleChange} required
+                maxLength={10} inputMode="numeric" placeholder="8095551234"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
               <select name="tipo" value={form.tipo} onChange={handleChange}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="consumidor_final">Consumidor Final</option>
@@ -181,8 +191,8 @@ export default function Clientes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Condiciones</label>
-              <select name="condiciones" value={form.condiciones || ''} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Condiciones *</label>
+              <select name="condiciones" value={form.condiciones || ''} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">-- Sin condición --</option>
                 <option value="contado">Contado</option>
@@ -194,8 +204,8 @@ export default function Clientes() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-              <input name="direccion" value={form.direccion} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección *</label>
+              <input name="direccion" value={form.direccion} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2 flex gap-3 justify-end">

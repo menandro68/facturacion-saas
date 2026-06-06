@@ -164,8 +164,8 @@ const handleChange = (e) => {
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
          <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
-              <input name="codigo" value={form.codigo || ''} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Código *</label>
+              <input name="codigo" value={form.codigo || ''} onChange={handleChange} required
                 placeholder="Código del Articulo"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
@@ -181,13 +181,13 @@ const handleChange = (e) => {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
-              <input name="costo" type="number" step="0.01" value={form.costo} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Costo *</label>
+              <input name="costo" type="number" step="0.01" value={form.costo} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ITBIS %</label>
-              <select name="itbis_rate" value={form.itbis_rate} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">ITBIS % *</label>
+              <select name="itbis_rate" value={form.itbis_rate} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="18">18%</option>
                 <option value="16">16%</option>
@@ -195,32 +195,32 @@ const handleChange = (e) => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">% del Vendedor</label>
-              <input name="comision_vendedor" type="number" step="0.01" min="0" max="100" value={form.comision_vendedor || ''} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">% del Vendedor *</label>
+              <input name="comision_vendedor" type="number" step="0.01" min="0" max="100" value={form.comision_vendedor || ''} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="0.00" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">% de Beneficio</label>
-              <input name="beneficio" type="number" step="0.01" min="0" max="100" value={form.beneficio || ''} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">% de Beneficio *</label>
+              <input name="beneficio" type="number" step="0.01" min="0" max="100" value={form.beneficio || ''} onChange={handleChange} required
                 placeholder="0.00"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Suplidor</label>
-              <input name="suplidor" value={form.suplidor || ''} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Suplidor *</label>
+              <input name="suplidor" value={form.suplidor || ''} onChange={handleChange} required
                 placeholder="Nombre del suplidor"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo</label>
-              <input name="stock_minimo" type="number" step="1" min="0" value={form.stock_minimo || ''} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo *</label>
+              <input name="stock_minimo" type="number" step="1" min="0" value={form.stock_minimo || ''} onChange={handleChange} required
                 placeholder="0"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Máximo</label>
-              <input name="stock_maximo" type="number" step="1" min="0" value={form.stock_maximo || ''} onChange={handleChange}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Stock Máximo *</label>
+              <input name="stock_maximo" type="number" step="1" min="0" value={form.stock_maximo || ''} onChange={handleChange} required
                 placeholder="0"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
