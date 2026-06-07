@@ -32,10 +32,10 @@ const MODULOS_DISPONIBLES = [
           { id: 'facturas:pdf', label: 'PDF Factura' }
         ]
       },
-      { id: 'pedidos', label: 'Pedidos' },
-      { id: 'cotizaciones', label: 'Cotizaciones' },
-      { id: 'notas_credito', label: 'Notas de Crédito' },
-      { id: 'devoluciones', label: 'Devoluciones' }
+// { id: 'pedidos', label: 'Pedidos' },
+      // { id: 'cotizaciones', label: 'Cotizaciones' },
+      // { id: 'notas_credito', label: 'Notas de Crédito' },
+      // { id: 'devoluciones', label: 'Devoluciones' }
     ]
   },
   {
@@ -275,9 +275,8 @@ export default function Mantenimiento() {
     { id: 'zonas', label: '🗺️ Zonas' },
     { id: 'choferes', label: '🚗 Choferes' },
     { id: 'usuarios', label: '👥 Usuarios' },
-    { id: 'clave', label: '🔐 Clave Descuento' },
+{ id: 'clave', label: '🔐 Clave Descuento' },
   { id: 'ncf_electronicas', label: '🧾 Secuencias NCF' },
-    { id: 'reporte_operador', label: '📊 Operador' },
   ]
 
   if (loading) return <p className="text-gray-500 p-6">Cargando...</p>
@@ -332,8 +331,8 @@ export default function Mantenimiento() {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
-              <input value={formVendedor.cedula} onChange={e => setFormVendedor({...formVendedor, cedula: e.target.value})}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cédula *</label>
+              <input value={formVendedor.cedula} onChange={e => setFormVendedor({...formVendedor, cedula: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
@@ -342,13 +341,13 @@ export default function Mantenimiento() {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-              <input value={formVendedor.telefono} onChange={e => setFormVendedor({...formVendedor, telefono: e.target.value})}
+             <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+              <input value={formVendedor.telefono} onChange={e => setFormVendedor({...formVendedor, telefono: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zona</label>
-              <select value={formVendedor.zona_id} onChange={e => setFormVendedor({...formVendedor, zona_id: e.target.value})}
+             <label className="block text-sm font-medium text-gray-700 mb-1">Zona *</label>
+              <select value={formVendedor.zona_id} onChange={e => setFormVendedor({...formVendedor, zona_id: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Sin zona</option>
                 {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
@@ -360,14 +359,14 @@ export default function Mantenimiento() {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
-              <input value={formVendedor.usuario} onChange={e => setFormVendedor({...formVendedor, usuario: e.target.value})}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
+              <input value={formVendedor.usuario} onChange={e => setFormVendedor({...formVendedor, usuario: e.target.value})} required
                 placeholder="Nombre de usuario para login"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-              <input type="password" value={formVendedor.password} onChange={e => setFormVendedor({...formVendedor, password: e.target.value})}
+      <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña {!editando && '*'}</label>
+              <input type="password" value={formVendedor.password} onChange={e => setFormVendedor({...formVendedor, password: e.target.value})} required={!editando}
                 placeholder={editando ? 'Dejar vacío para no cambiar' : 'Contraseña de acceso'}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
@@ -390,9 +389,9 @@ export default function Mantenimiento() {
               <input value={formZona.nombre} onChange={e => setFormZona({...formZona, nombre: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-              <input value={formZona.descripcion} onChange={e => setFormZona({...formZona, descripcion: e.target.value})}
+          <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
+              <input value={formZona.descripcion} onChange={e => setFormZona({...formZona, descripcion: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2 flex gap-3 justify-end">
@@ -415,29 +414,29 @@ export default function Mantenimiento() {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
-              <input value={formChofer.cedula} onChange={e => setFormChofer({...formChofer, cedula: e.target.value})}
+           <label className="block text-sm font-medium text-gray-700 mb-1">Cédula *</label>
+              <input value={formChofer.cedula} onChange={e => setFormChofer({...formChofer, cedula: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Licencia</label>
-              <input value={formChofer.licencia} onChange={e => setFormChofer({...formChofer, licencia: e.target.value})}
+           <label className="block text-sm font-medium text-gray-700 mb-1">Licencia *</label>
+              <input value={formChofer.licencia} onChange={e => setFormChofer({...formChofer, licencia: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-              <input value={formChofer.telefono} onChange={e => setFormChofer({...formChofer, telefono: e.target.value})}
+             <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+              <input value={formChofer.telefono} onChange={e => setFormChofer({...formChofer, telefono: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vehículo</label>
-              <input value={formChofer.vehiculo} onChange={e => setFormChofer({...formChofer, vehiculo: e.target.value})}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vehículo *</label>
+              <input value={formChofer.vehiculo} onChange={e => setFormChofer({...formChofer, vehiculo: e.target.value})} required
                 placeholder="Ej: Toyota Hilux"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Placa</label>
-              <input value={formChofer.placa} onChange={e => setFormChofer({...formChofer, placa: e.target.value})}
+             <label className="block text-sm font-medium text-gray-700 mb-1">Placa *</label>
+              <input value={formChofer.placa} onChange={e => setFormChofer({...formChofer, placa: e.target.value})} required
                 placeholder="Ej: A123456"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>

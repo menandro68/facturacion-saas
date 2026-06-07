@@ -59,12 +59,16 @@ export default function Pagos() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleEnviarMetodo = () => {
+const handleEnviarMetodo = () => {
     const efectivo = parseFloat(metodos.efectivo || 0)
     const transferencia = parseFloat(metodos.transferencia || 0)
     const tarjeta = parseFloat(metodos.tarjeta || 0)
     const cheque = parseFloat(metodos.cheque_valor || 0)
     const total = efectivo + transferencia + tarjeta + cheque
+    if (total <= 0) {
+      alert('⚠️ Debe llenar al menos un método de pago con un monto mayor a 0.')
+      return
+    }
     let metodoLabel = 'efectivo'
     let maxVal = efectivo
     if (transferencia > maxVal) { metodoLabel = 'transferencia'; maxVal = transferencia }
@@ -249,11 +253,11 @@ export default function Pagos() {
                       const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
                       if (!factura) { setError('Factura no encontrada: ' + val); return }
                       setError('')
-                      setForm(prev => ({ ...prev, invoice_id: factura.id, monto: '' }))
-                      const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
+                const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                       const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                       const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                       const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                      setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '' }))
                       document.getElementById('pago-ncf-resultado').innerHTML =
                         `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                     }
@@ -264,11 +268,11 @@ export default function Pagos() {
                     const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
                     if (!factura) { setError('Factura no encontrada: ' + val); return }
                     setError('')
-                    setForm(prev => ({ ...prev, invoice_id: factura.id, monto: '' }))
-                    const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
+              const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                     const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                     const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                     const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                    setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '' }))
                     document.getElementById('pago-ncf-resultado').innerHTML =
                       `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                   }}

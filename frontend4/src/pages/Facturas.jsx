@@ -63,6 +63,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [buscarProductoCot, setBuscarProductoCot] = useState({})
   const [dropdownCot, setDropdownCot] = useState({})
   const [cotClienteIndex, setCotClienteIndex] = useState(-1)
+  const [cotClienteId, setCotClienteId] = useState('')
   const [cotClienteFiltrados, setCotClienteFiltrados] = useState([])
   const [cotProductoIndex, setCotProductoIndex] = useState({})
   const cotClienteInputRef = useRef(null)
@@ -200,9 +201,25 @@ const handleItemChange = (index, e) => {
     })
     return { subtotal, itbis, total: subtotal + itbis }
   }
-
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault()
+    // Validar stock disponible por producto (suma cantidades de líneas repetidas)
+    const cantidadesPorProducto = {}
+    items.forEach(item => {
+      if (item.product_id) {
+        cantidadesPorProducto[item.product_id] = (cantidadesPorProducto[item.product_id] || 0) + parseFloat(item.cantidad || 0)
+      }
+    })
+    for (const [productId, cantidadTotal] of Object.entries(cantidadesPorProducto)) {
+      const prod = productos.find(p => p.id === productId)
+      if (prod) {
+        const stockDisponible = parseFloat(prod.stock_actual || 0)
+        if (cantidadTotal > stockDisponible) {
+          alert(`⚠️ Stock insuficiente para "${prod.nombre}".\n\nDisponible: ${stockDisponible}\nSolicitado: ${cantidadTotal}\n\nSolo puede facturar hasta ${stockDisponible}.`)
+          return
+        }
+      }
+    }
     setMostrarConfirmar(true)
   }
 
@@ -392,10 +409,12 @@ const handleImprimir = (id) => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-gray-800">Facturas</h2>
+      {tab === 'fecha' && (
         <button onClick={() => { setShowForm(true); setTimeout(() => buscarClienteRef.current?.focus(), 100) }}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
       + Nueva Factura
         </button>
+        )}
         {tab === 'fecha' && (
           <input
             type="text"
@@ -1162,9 +1181,17 @@ const handleImprimir = (id) => {
             </div>
     <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar Chofer</label>
-              <select
+           <select
                 value={choferSeleccionado}
-                onChange={e => setChoferSeleccionado(e.target.value)}
+                onChange={e => {
+                  const choferId = e.target.value
+                  setChoferSeleccionado(choferId)
+                  if (choferId) {
+                    setFacturasChofer(facturas.filter(f => f.chofer_id === choferId))
+                  } else {
+                    setFacturasChofer([])
+                  }
+                }}
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
               >
                 <option value="">-- Seleccione un chofer --</option>
@@ -1248,9 +1275,10 @@ const handleImprimir = (id) => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-gray-600">NCF</th>
+            <th className="px-4 py-3 text-left text-gray-600">NCF</th>
                     <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
                     <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                    <th className="px-4 py-3 text-center text-gray-600">PDF</th>
                     <th className="px-4 py-3 text-center text-gray-600">Quitar</th>
                   </tr>
                 </thead>
@@ -1260,6 +1288,10 @@ const handleImprimir = (id) => {
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
                       <td className="px-4 py-3 text-right font-medium">RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button onClick={() => handlePDF(f.id)}
+                          className="text-blue-600 hover:underline text-xs font-medium">PDF</button>
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <button onClick={() => setFacturasChofer(prev => prev.filter(x => x.id !== f.id))}
                           className="text-red-500 hover:text-red-700 font-bold text-lg">×</button>
@@ -1859,6 +1891,7 @@ const handleImprimir = (id) => {
                         div.onmousedown = () => {
                           document.getElementById('cot-cliente-input').value = c.nombre
                           document.getElementById('cot-cliente').value = c.id
+                        setCotClienteId(c.id)
                           list.innerHTML = ''
                           setCotClienteIndex(-1)
                         }
@@ -1886,10 +1919,11 @@ const handleImprimir = (id) => {
                       Array.from(list.children).forEach((el, i) => el.style.background = i === newIdx ? '#BFDBFE' : '')
                     } else if (e.key === 'Enter') {
                       e.preventDefault()
-                      if (cotClienteIndex >= 0 && cotClienteFiltrados[cotClienteIndex]) {
+                if (cotClienteIndex >= 0 && cotClienteFiltrados[cotClienteIndex]) {
                         const c = cotClienteFiltrados[cotClienteIndex]
                         document.getElementById('cot-cliente-input').value = c.nombre
                         document.getElementById('cot-cliente').value = c.id
+                        setCotClienteId(c.id)
                         list.innerHTML = ''
                         setCotClienteIndex(-1)
                       }
@@ -1901,7 +1935,7 @@ const handleImprimir = (id) => {
                   }}
                   onBlur={() => setTimeout(() => { document.getElementById('cot-cliente-list').innerHTML = ''; setCotClienteIndex(-1) }, 200)}
                 />
-                <input type="hidden" id="cot-cliente" value="" />
+                <input type="hidden" id="cot-cliente" defaultValue="" />
                 <div id="cot-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
               </div>
               {itemsCot.map((item, index) => (
@@ -2035,14 +2069,15 @@ const handleImprimir = (id) => {
                   onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); cotGuardarRef.current?.focus() } }}
                   className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
                 <button ref={cotGuardarRef} onClick={async () => {
-                  const customer_id = document.getElementById('cot-cliente').value
+                const customer_id = cotClienteId || document.getElementById('cot-cliente').value
                   const itemsValidos = itemsCot.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   try {
                     await API.post('/invoices/cotizacion', { customer_id: customer_id || null, items: itemsValidos })
                     setShowCotizacion(false)
                     setItemsCot([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
-                    setBuscarProductoCot({})
+              setBuscarProductoCot({})
+                    setCotClienteId('')
                     document.getElementById('cot-cliente-input').value = ''
                     document.getElementById('cot-cliente').value = ''
                     const res = await API.get('/invoices/cotizaciones/lista')
@@ -3013,9 +3048,13 @@ const handleImprimir = (id) => {
                               setProductoIndex(prev => ({...prev, [index]: Math.max((prev[index] ?? 0) - 1, -1)}))
                             } else if (e.key === 'Enter') {
                               e.preventDefault()
-                              const idx = productoIndex[index] ?? -1
+                           const idx = productoIndex[index] ?? -1
                               if (idx >= 0 && filtrados[idx]) {
                                 const p = filtrados[idx]
+                                if (parseFloat(p.stock_actual || 0) <= 0) {
+                                  alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
+                                  return
+                                }
                             const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
                                 if (yaExisteIdx !== -1) {
                                   setItems(prev => prev
@@ -3044,7 +3083,11 @@ const handleImprimir = (id) => {
                                 <div key={p.id}
                                   className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                                   onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
-                             onMouseDown={() => {
+                        onMouseDown={() => {
+                                    if (parseFloat(p.stock_actual || 0) <= 0) {
+                                      alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
+                                      return
+                                    }
                                     const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
                                     if (yaExisteIdx !== -1) {
                                       setItems(prev => prev
