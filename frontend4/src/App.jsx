@@ -147,11 +147,17 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar desktop */}
         <div className="hidden md:flex w-56 bg-white shadow-md flex-col">
-          <div className="px-6 py-5 border-b">
+     <div className="px-6 py-5 border-b">
             <h1 className="text-lg font-bold text-blue-600">Facturación</h1>
-            {esVendedor && (
-              <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded mt-1 inline-block">Vendedor</span>
-            )}
+            <div className="flex items-center gap-2 mt-3 bg-blue-50 rounded-lg p-2">
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                {(usuario.nombre || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{usuario.nombre}</p>
+                <p className="text-xs text-gray-500 capitalize">{usuario.rol || 'admin'}</p>
+              </div>
+            </div>
           </div>
           <nav className="flex-1 p-4">
             {menuItems.map((item) => (
@@ -163,8 +169,7 @@ function App() {
               </button>
             ))}
           </nav>
-          <div className="p-4 border-t">
-            <p className="text-xs text-gray-500 mb-2">{usuario.nombre}</p>
+ <div className="p-4 border-t">
             <button onClick={handleLogout}
               className="w-full bg-red-500 text-white px-3 py-1.5 rounded hover:bg-red-600 text-sm">
               Cerrar Sesión
