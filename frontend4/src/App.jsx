@@ -159,9 +159,24 @@ function App() {
               </div>
             </div>
           </div>
-          <nav className="flex-1 p-4">
+    <nav className="flex-1 p-4">
             {menuItems.map((item) => (
-              <button key={item.id} onClick={() => setPagina(item.id)}
+              <button key={item.id} onClick={async () => {
+                if (item.id === 'listado_precios') {
+                  const token = sessionStorage.getItem('token')
+                  const res = await fetch('/products', { headers: { Authorization: `Bearer ${token}` } })
+                  const resInv = await fetch('/inventory', { headers: { Authorization: `Bearer ${token}` } })
+                  const data = await res.json()
+                  const invData = await resInv.json()
+                  const prods = data.data.filter(p => p.precio).map(p => {
+                    const inv = invData.data?.find(i => i.product_id === p.id)
+                    return { ...p, stock_real: inv?.stock_actual || 0 }
+                  })
+                  setListadoPrecios(prods)
+                  return
+                }
+                setPagina(item.id)
+              }}
                 className={`w-full text-left px-4 py-2 rounded mb-1 text-sm ${
                   pagina === item.id ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
                 }`}>
