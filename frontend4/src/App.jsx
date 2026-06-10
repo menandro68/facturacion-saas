@@ -162,6 +162,7 @@ function App() {
     <nav className="flex-1 p-4">
             {menuItems.map((item) => (
               <button key={item.id} onClick={async () => {
+                
                 if (item.id === 'listado_precios') {
                   const token = sessionStorage.getItem('token')
                   const res = await fetch('/products', { headers: { Authorization: `Bearer ${token}` } })

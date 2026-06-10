@@ -94,9 +94,14 @@ const handleEnviarMetodo = () => {
     return partes.length > 0 ? partes.join(' | ') : 'Seleccionar método...'
   }
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    const totalMetodos = parseFloat(metodos.efectivo || 0) + parseFloat(metodos.transferencia || 0) + parseFloat(metodos.tarjeta || 0) + parseFloat(metodos.cheque_valor || 0)
+    if (totalMetodos <= 0) {
+      alert('⚠️ Debe seleccionar un método de pago antes de registrar.')
+      return
+    }
     try {
       const res = await API.post('/payments', form)
       setShowForm(false)

@@ -176,7 +176,11 @@ export default function Clientes() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
-              <select name="vendedor_id" value={form.vendedor_id || ''} onChange={handleChange}
+              <select name="vendedor_id" value={form.vendedor_id || ''} onChange={(e) => {
+                  const vendId = e.target.value
+                  const vend = vendedores.find(v => v.id === vendId)
+                  setForm(prev => ({ ...prev, vendedor_id: vendId, zona_id: vend?.zona_id || prev.zona_id }))
+                }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">-- Sin asignar --</option>
                 {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}

@@ -11,6 +11,7 @@ export default function Productos() {
     codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: ''
   })
   const [error, setError] = useState('')
+  const [proveedoresList, setProveedoresList] = useState([])
 
   const fetchProductos = async () => {
     try {
@@ -23,7 +24,10 @@ export default function Productos() {
     }
   }
 
-  useEffect(() => { fetchProductos() }, [])
+  useEffect(() => {
+    fetchProductos()
+    API.get('/suppliers').then(r => setProveedoresList(r.data.data || [])).catch(() => {})
+  }, [])
 
 const handleChange = (e) => {
     const { name, value } = e.target
@@ -209,8 +213,11 @@ const handleChange = (e) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Suplidor *</label>
               <input name="suplidor" value={form.suplidor || ''} onChange={handleChange} required
-                placeholder="Nombre del suplidor"
+                placeholder="Nombre del suplidor" list="proveedores-datalist"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <datalist id="proveedores-datalist">
+                {proveedoresList.map(prov => <option key={prov.id} value={prov.nombre} />)}
+              </datalist>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Stock Mínimo *</label>

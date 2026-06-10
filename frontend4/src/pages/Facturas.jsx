@@ -25,6 +25,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [choferSeleccionado, setChoferSeleccionado] = useState('')
   const [relacionVendedor, setRelacionVendedor] = useState([])
   const [cotizaciones, setCotizaciones] = useState([])
+  const [filtroClienteCot, setFiltroClienteCot] = useState('')
   const [pedidos, setPedidos] = useState([])
   const [showPedido, setShowPedido] = useState(false)
   const [pedidoEditandoId, setPedidoEditandoId] = useState(null)
@@ -795,7 +796,7 @@ const handleImprimir = (id) => {
               onClick={async () => {
                 const vendedorId = document.getElementById('prod-vendedor').value
                 const clienteId = document.getElementById('prod-cliente').value
-                const productoNombre = document.getElementById('prod-producto').value
+                const productoNombre = document.getElementById('prod-producto-input').value.trim()
                 const qs = []
                 if (fechaInicio) qs.push(`fecha_inicio=${fechaInicio}`)
                 if (fechaFin) qs.push(`fecha_fin=${fechaFin}`)
@@ -1861,11 +1862,16 @@ const handleImprimir = (id) => {
       {tab === 'cotizacion' && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Cotización</h3>
-          {!showCotizacion ? (
-            <button onClick={() => setShowCotizacion(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 mb-4">
-              + Nueva Cotización
-            </button>
+     {!showCotizacion ? (
+            <div className="flex items-center gap-3 mb-4 flex-wrap">
+              <button onClick={() => setShowCotizacion(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                + Nueva Cotización
+              </button>
+              <input type="text" value={filtroClienteCot} onChange={e => setFiltroClienteCot(e.target.value)}
+                placeholder="🔍 Buscar por cliente..."
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-56" />
+            </div>
           ) : (
             <div className="mb-6 border rounded-lg p-4">
               <h4 className="font-medium mb-3 text-gray-700">Nueva Cotización</h4>
@@ -2090,7 +2096,14 @@ const handleImprimir = (id) => {
               </div>
             </div>
           )}
-          {cotizaciones.length > 0 && (
+  {cotizaciones.filter(c => {
+              if (filtroClienteCot && !(c.cliente_nombre || '').toLowerCase().includes(filtroClienteCot.toLowerCase())) return false
+              if (!fechaInicio && !fechaFin) return true
+              const fecha = new Date(c.creado_en).toISOString().slice(0, 10)
+              if (fechaInicio && fecha < fechaInicio) return false
+              if (fechaFin && fecha > fechaFin) return false
+              return true
+            }).length > 0 && (
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -2100,9 +2113,16 @@ const handleImprimir = (id) => {
                   <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
                   <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
                 </tr>
-              </thead>
+</thead>
               <tbody>
-                {cotizaciones.map(c => (
+                {cotizaciones.filter(c => {
+                  if (filtroClienteCot && !(c.cliente_nombre || '').toLowerCase().includes(filtroClienteCot.toLowerCase())) return false
+                  if (!fechaInicio && !fechaFin) return true
+                  const fecha = new Date(c.creado_en).toISOString().slice(0, 10)
+                  if (fechaInicio && fecha < fechaInicio) return false
+                  if (fechaFin && fecha > fechaFin) return false
+                  return true
+                }).map(c => (
                   <tr key={c.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-xs">{c.id.slice(0,8)}...</td>
                     <td className="px-4 py-3">{c.cliente_nombre || 'Consumidor Final'}</td>
@@ -2728,12 +2748,69 @@ const handleImprimir = (id) => {
                     ))}
                   </tbody>
                 </table>
-                <div className="flex justify-end">
+  <div className="flex justify-end">
                   <div className="text-sm text-right bg-gray-50 p-3 rounded-lg">
                     <p className="text-gray-600">Subtotal: <span className="font-medium">RD${parseFloat(devDetalle.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                     <p className="text-gray-600">ITBIS: <span className="font-medium">RD${parseFloat(devDetalle.itbis).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                     <p className="text-lg font-bold text-orange-600">Total: RD${parseFloat(devDetalle.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
                   </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-4">
+                  <button onClick={() => {
+                    const d = devDetalle
+                    const filas = (d.items || []).map(it => `
+                      <tr>
+                        <td>${it.descripcion}</td>
+                        <td style="text-align:right">${parseFloat(it.cantidad).toFixed(2)}</td>
+                        <td style="text-align:right">RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td style="text-align:right">RD$${parseFloat(it.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      </tr>`).join('')
+                    const empresa = sessionStorage.getItem('tenant_name') || 'Sistema de Facturación'
+                    const w = window.open('', '_blank')
+                    w.document.write(`
+                      <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Devolución ${d.numero}</title>
+                      <style>
+                        body{font-family:Arial,sans-serif;padding:30px;color:#1e293b;max-width:700px;margin:0 auto}
+                        .header{text-align:center;border-bottom:2px solid #ea580c;padding-bottom:12px;margin-bottom:16px}
+                        .empresa{font-size:20px;font-weight:bold;color:#ea580c}
+                        .titulo{font-size:14px;color:#64748b;margin-top:4px}
+                        .info{background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.7}
+                        .info b{color:#334155}
+                        table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px}
+                        th{background:#ea580c;color:white;padding:8px;text-align:left}
+                        td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                        .totales{text-align:right;font-size:13px;line-height:1.8}
+                        .totales .total{font-size:18px;font-weight:bold;color:#ea580c}
+                        @media print{button{display:none}}
+                      </style></head><body>
+                      <div class="header">
+                        <div class="empresa">${empresa}</div>
+                        <div class="titulo">NOTA DE DEVOLUCIÓN ${d.numero}</div>
+                        <div class="titulo">Estado: ${d.estado.toUpperCase()}</div>
+                      </div>
+                      <div class="info">
+                        <div><b>Cliente:</b> ${d.cliente_nombre || 'Consumidor Final'}</div>
+                        <div><b>NCF Factura:</b> ${d.factura_ncf || '-'}</div>
+                        <div><b>Motivo:</b> ${d.motivo || '-'}</div>
+                        <div><b>Creada:</b> ${new Date(d.creado_en).toLocaleString('es-DO')}</div>
+                        ${d.aprobada_en ? `<div><b>Aprobada:</b> ${new Date(d.aprobada_en).toLocaleString('es-DO')}</div>` : ''}
+                      </div>
+                      <table>
+                        <thead><tr><th>Producto</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr></thead>
+                        <tbody>${filas}</tbody>
+                      </table>
+                      <div class="totales">
+                        <div>Subtotal: RD$${parseFloat(d.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</div>
+                        <div>ITBIS: RD$${parseFloat(d.itbis).toLocaleString('es-DO',{minimumFractionDigits:2})}</div>
+                        <div class="total">Total: RD$${parseFloat(d.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</div>
+                      </div>
+                      <script>window.onload=()=>window.print()</script>
+                      </body></html>`)
+                    w.document.close()
+                  }}
+                    className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
+                    🖨️ Imprimir
+                  </button>
                 </div>
               </div>
             </div>
