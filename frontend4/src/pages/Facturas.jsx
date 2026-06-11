@@ -2194,9 +2194,13 @@ const handleImprimir = (id) => {
                     })))
                   } catch(e) { alert('Error al cargar factura') }
                 }}
-                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+         className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
                   Buscar
                 </button>
+                {ncFacturaEncontrada && (
+                  <button onClick={() => setNcItemsSeleccionados(prev => [...prev, { product_id: '', descripcion: '', cantidad: 0, cantidad_nc: 0, precio_unitario: '', itbis_rate: 18, seleccionado: true, manual: true }])}
+                    className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
+                )}
               </div>
 
               {ncFacturaEncontrada && (
@@ -2226,19 +2230,32 @@ const handleImprimir = (id) => {
                             <input type="checkbox" checked={item.seleccionado}
                               onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, seleccionado: e.target.checked} : it))} />
                           </td>
-                          <td className="px-3 py-2">{item.descripcion}</td>
-                          <td className="px-3 py-2 text-right">{parseFloat(item.cantidad).toFixed(0)}</td>
+                   <td className="px-3 py-2">
+                            {item.manual ? (
+                              <input type="text" placeholder="Descripción..."
+                                value={item.descripcion}
+                                onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, descripcion: e.target.value} : it))}
+                                className="border rounded px-2 py-1 text-sm w-full" />
+                            ) : item.descripcion}
+                          </td>
+                          <td className="px-3 py-2 text-right">{item.manual ? '-' : parseFloat(item.cantidad).toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">
-                            <input type="number" value={item.cantidad_nc} min="0.01"
-                              max={parseFloat(item.cantidad)}
+                         <input type="number" value={item.cantidad_nc} min="0.01"
+                              max={item.manual ? undefined : parseFloat(item.cantidad)}
                               step="0.01"
                               disabled={!item.seleccionado}
                               onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_nc: e.target.value} : it))}
                               className="border rounded px-2 py-1 text-sm w-20 text-right disabled:bg-gray-100" />
                           </td>
-                          <td className="px-3 py-2 text-right">RD${parseFloat(item.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td className="px-3 py-2 text-right">
+                            {item.manual ? (
+                              <input type="number" placeholder="Precio" value={item.precio_unitario} min="0" step="0.01"
+                                onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, precio_unitario: e.target.value} : it))}
+                                className="border rounded px-2 py-1 text-sm w-24 text-right" />
+                            ) : 'RD$' + parseFloat(item.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}
+                          </td>
                           <td className="px-3 py-2 text-right font-medium">
-                            {item.seleccionado ? 'RD$' + (parseFloat(item.cantidad_nc||0) * parseFloat(item.precio_unitario)).toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}
+                          {item.seleccionado ? 'RD$' + (parseFloat(item.cantidad_nc||0) * (parseFloat(item.precio_unitario)||0)).toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}
                           </td>
                         </tr>
                       ))}
@@ -2250,7 +2267,7 @@ const handleImprimir = (id) => {
                       {(() => {
                         let sub = 0, itb = 0
                         ncItemsSeleccionados.filter(i => i.seleccionado).forEach(it => {
-                          const s = parseFloat(it.cantidad_nc||0) * parseFloat(it.precio_unitario)
+                       const s = parseFloat(it.cantidad_nc||0) * (parseFloat(it.precio_unitario)||0)
                           sub += s
                           itb += s * (parseFloat(it.itbis_rate||0) / 100)
                         })
@@ -2272,8 +2289,10 @@ const handleImprimir = (id) => {
 
                   <div className="flex gap-3">
                     <button onClick={async () => {
-                      const itemsNC = ncItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_nc) > 0)
+             const itemsNC = ncItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_nc) > 0)
                       if (!itemsNC.length) { alert('Selecciona al menos un producto'); return }
+                      const manualIncompleta = itemsNC.find(i => i.manual && (!i.descripcion.trim() || !(parseFloat(i.precio_unitario) > 0)))
+                      if (manualIncompleta) { alert('Las líneas agregadas deben tener descripción y precio'); return }
                       if (!confirm('¿Emitir esta Nota de Crédito?')) return
                       try {
                         const resPost = await API.post('/invoices/nota-credito', {
@@ -2377,9 +2396,13 @@ const handleImprimir = (id) => {
                     })))
                   } catch(e) { alert('Error al cargar factura') }
                 }}
-                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
                   Buscar
                 </button>
+                {devFacturaEncontrada && (
+                  <button onClick={() => setDevItemsSeleccionados(prev => [...prev, { product_id: '', descripcion: '', cantidad: 0, cantidad_dev: 0, precio_unitario: '', itbis_rate: 18, seleccionado: true, manual: true }])}
+                    className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
+                )}
               </div>
 
               {devFacturaEncontrada && (
@@ -2409,19 +2432,32 @@ const handleImprimir = (id) => {
                             <input type="checkbox" checked={item.seleccionado}
                               onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, seleccionado: e.target.checked} : it))} />
                           </td>
-                          <td className="px-3 py-2">{item.descripcion}</td>
-                          <td className="px-3 py-2 text-right">{parseFloat(item.cantidad).toFixed(0)}</td>
+                       <td className="px-3 py-2">
+                            {item.manual ? (
+                              <input type="text" placeholder="Descripción..."
+                                value={item.descripcion}
+                                onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, descripcion: e.target.value} : it))}
+                                className="border rounded px-2 py-1 text-sm w-full" />
+                            ) : item.descripcion}
+                          </td>
+                          <td className="px-3 py-2 text-right">{item.manual ? '-' : parseFloat(item.cantidad).toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">
-                            <input type="number" value={item.cantidad_dev} min="0"
-                              max={parseFloat(item.cantidad)}
+                          <input type="number" value={item.cantidad_dev} min="0"
+                              max={item.manual ? undefined : parseFloat(item.cantidad)}
                               step="0.01"
                               disabled={!item.seleccionado}
                               onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_dev: e.target.value} : it))}
                               className="border rounded px-2 py-1 text-sm w-20 text-right disabled:bg-gray-100" />
                           </td>
-                          <td className="px-3 py-2 text-right">RD${parseFloat(item.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+             <td className="px-3 py-2 text-right">
+                            {item.manual ? (
+                              <input type="number" placeholder="Precio" value={item.precio_unitario} min="0" step="0.01"
+                                onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, precio_unitario: e.target.value} : it))}
+                                className="border rounded px-2 py-1 text-sm w-24 text-right" />
+                            ) : 'RD$' + parseFloat(item.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}
+                          </td>
                           <td className="px-3 py-2 text-right font-medium">
-                            {item.seleccionado ? 'RD$' + (parseFloat(item.cantidad_dev||0) * parseFloat(item.precio_unitario)).toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}
+                            {item.seleccionado ? 'RD$' + (parseFloat(item.cantidad_dev||0) * (parseFloat(item.precio_unitario)||0)).toLocaleString('es-DO',{minimumFractionDigits:2}) : '-'}
                           </td>
                         </tr>
                       ))}
@@ -2432,8 +2468,8 @@ const handleImprimir = (id) => {
                     <div className="text-sm text-right bg-gray-50 p-3 rounded-lg">
                       {(() => {
                         let sub = 0, itb = 0
-                        devItemsSeleccionados.filter(i => i.seleccionado).forEach(it => {
-                          const s = parseFloat(it.cantidad_dev||0) * parseFloat(it.precio_unitario)
+                      devItemsSeleccionados.filter(i => i.seleccionado).forEach(it => {
+                          const s = parseFloat(it.cantidad_dev||0) * (parseFloat(it.precio_unitario)||0)
                           sub += s
                           itb += s * (parseFloat(it.itbis_rate||0) / 100)
                         })
@@ -2455,8 +2491,10 @@ const handleImprimir = (id) => {
 
                   <div className="flex gap-3">
                     <button onClick={async () => {
-                      const itemsDev = devItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_dev) > 0)
+                   const itemsDev = devItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_dev) > 0)
                       if (!itemsDev.length) { alert('Selecciona al menos un producto con cantidad mayor a 0'); return }
+                      const manualIncompletaDev = itemsDev.find(i => i.manual && (!i.descripcion.trim() || !(parseFloat(i.precio_unitario) > 0)))
+                      if (manualIncompletaDev) { alert('Las líneas agregadas deben tener descripción y precio'); return }
                       if (!devMotivo.trim()) { alert('Ingresa el motivo de la devolución'); return }
                       if (!confirm('¿Registrar esta devolución? Quedará en estado PENDIENTE esperando aprobación.')) return
                       let devolucionRegistrada = false

@@ -76,6 +76,17 @@ export default function Conduces() {
     }
   }
 
+  const convertirFactura = async (id) => {
+    if (!confirm('¿Convertir este conduce en factura? Se generará un comprobante fiscal (NCF) con ITBIS. El inventario NO se rebajará de nuevo.')) return
+    try {
+      const res = await API.put(`/conduces/${id}/convertir`)
+      alert('✅ Factura generada correctamente. NCF: ' + (res.data.data?.ncf || ''))
+      cargar()
+    } catch (e) {
+      alert(e.response?.data?.mensaje || 'Error al convertir en factura')
+    }
+  }
+
   const verPDF = (id) => {
     const token = sessionStorage.getItem('token')
     window.open(`/conduces/${id}/pdf?token=${token}`, '_blank')
@@ -234,8 +245,14 @@ export default function Conduces() {
                     {co.estado.toUpperCase()}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+             <td className="px-4 py-3">
                   <button onClick={() => verPDF(co.id)} className="text-blue-600 hover:underline text-sm mr-3">PDF</button>
+                  {co.estado !== 'anulado' && !co.facturado && (
+                    <button onClick={() => convertirFactura(co.id)} className="text-green-600 hover:underline text-sm mr-3">Convertir en Factura</button>
+                  )}
+                  {co.facturado && (
+                    <span className="text-gray-400 text-sm mr-3">Facturado</span>
+                  )}
                   {co.estado !== 'anulado' && (
                     <button onClick={() => anular(co.id)} className="text-red-600 hover:underline text-sm">Anular</button>
                   )}
