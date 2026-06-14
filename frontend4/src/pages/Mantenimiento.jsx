@@ -53,7 +53,7 @@ const MODULOS_DISPONIBLES = [
           { id: 'inventario:mov_producto', label: 'Movimiento de Producto' }
         ]
       },
-      { id: 'orden_compra', label: 'Orden de Compra' }
+  
     ]
   },
   {

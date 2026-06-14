@@ -476,9 +476,29 @@ const handleImprimir = (id) => {
                 const urlCh = `/invoices/chofer/${choferSeleccionado}/entregas${qsCh.length ? '?' + qsCh.join('&') : ''}`
                 const resCh = await API.get(urlCh)
                 setFacturasChofer(resCh.data.data || [])
-              } catch (err) {
+     } catch (err) {
                 alert('Error al cargar las entregas del chofer')
                 setFacturasChofer([])
+              }
+            }
+            // Si estamos en el tab producto, cargar el reporte por producto
+            if (tab === 'producto') {
+              try {
+                const vendedorId = document.getElementById('prod-vendedor')?.value
+                const clienteId = document.getElementById('prod-cliente')?.value
+                const productoNombre = document.getElementById('prod-producto-input')?.value.trim()
+                const qsP = []
+                if (fechaInicio) qsP.push(`fecha_inicio=${fechaInicio}`)
+                if (fechaFin) qsP.push(`fecha_fin=${fechaFin}`)
+                if (vendedorId) qsP.push(`vendedor_id=${vendedorId}`)
+                if (clienteId) qsP.push(`customer_id=${clienteId}`)
+                if (productoNombre) qsP.push(`producto=${encodeURIComponent(productoNombre)}`)
+                let urlP = '/invoices/reporte/productos'
+                if (qsP.length) urlP += '?' + qsP.join('&')
+                const resP = await API.get(urlP)
+                setProductosReporte(resP.data.data)
+              } catch (err) {
+                console.error(err)
               }
             }
           }}>
@@ -813,26 +833,7 @@ const handleImprimir = (id) => {
               <input type="hidden" id="prod-producto" value="" />
               <div id="prod-producto-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-              onClick={async () => {
-                const vendedorId = document.getElementById('prod-vendedor').value
-                const clienteId = document.getElementById('prod-cliente').value
-                const productoNombre = document.getElementById('prod-producto-input').value.trim()
-                const qs = []
-                if (fechaInicio) qs.push(`fecha_inicio=${fechaInicio}`)
-                if (fechaFin) qs.push(`fecha_fin=${fechaFin}`)
-                if (vendedorId) qs.push(`vendedor_id=${vendedorId}`)
-                if (clienteId) qs.push(`customer_id=${clienteId}`)
-                if (productoNombre) qs.push(`producto=${encodeURIComponent(productoNombre)}`)
-                let url = '/invoices/reporte/productos'
-                if (qs.length) url += '?' + qs.join('&')
-                try {
-                  const res = await API.get(url)
-                  setProductosReporte(res.data.data)
-                } catch (e) { console.error(e) }
-              }}>
-              Buscar
-            </button>
+  
             {productosReporte.length > 0 && (
               <button onClick={() => {
                 const vendedorNombre = vendedores.find(v => v.id === document.getElementById('prod-vendedor').value)?.nombre || 'Todos'
