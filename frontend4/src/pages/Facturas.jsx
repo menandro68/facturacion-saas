@@ -135,6 +135,12 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   useEffect(() => { fetchData() }, [])
 
   useEffect(() => {
+    if (tab === 'nota_credito') {
+      API.get('/invoices/nota-credito/lista').then(r => setNotasCredito(r.data.data)).catch(() => {})
+    }
+  }, [tab])
+
+  useEffect(() => {
     API.get('/mantenimiento/choferes')
       .then(r => setChoferesLista(r.data.data || []))
       .catch(() => {})
@@ -457,9 +463,24 @@ const handleImprimir = (id) => {
               if (fechaInicio) qs.push(`fecha_inicio=${fechaInicio}`)
               if (fechaFin) qs.push(`fecha_fin=${fechaFin}`)
               if (qs.length) url += '?' + qs.join('&')
-              const res = await API.get(url)
+      const res = await API.get(url)
               setResumen(res.data.data)
             } catch (e) { console.error(e) }
+            // Si estamos en el tab chofer, cargar las entregas del chofer seleccionado
+            if (tab === 'chofer') {
+              if (!choferSeleccionado) { alert('Seleccione un chofer'); return }
+              try {
+                const qsCh = []
+                if (fechaInicio) qsCh.push(`fecha_inicio=${fechaInicio}`)
+                if (fechaFin) qsCh.push(`fecha_fin=${fechaFin}`)
+                const urlCh = `/invoices/chofer/${choferSeleccionado}/entregas${qsCh.length ? '?' + qsCh.join('&') : ''}`
+                const resCh = await API.get(urlCh)
+                setFacturasChofer(resCh.data.data || [])
+              } catch (err) {
+                alert('Error al cargar las entregas del chofer')
+                setFacturasChofer([])
+              }
+            }
           }}>
           Buscar
         </button>
@@ -467,7 +488,7 @@ const handleImprimir = (id) => {
           <button
             onClick={() => {
               const printW = window.open('', '_blank')
-              const filas = facturasFiltradas.map(f => `
+              const filas = facturasFiltradas.filter(f => f.estado !== 'nota_credito').map(f => `
                 <tr>
                   <td>${f.ncf || 'BORRADOR'}</td>
                   <td>${f.cliente_nombre || 'Consumidor Final'}</td>
@@ -531,7 +552,7 @@ const handleImprimir = (id) => {
 {/* Tabs fila 2 */}
       <div className="flex gap-2 border-b mb-6 items-center">
         {tabsFila2.map(t => (
-          <button key={t.id} onClick={() => { if (vendedor_id && t.id !== 'pedidos') { alert('Usted no tiene permiso para este módulo'); return }; setTab(t.id) }}
+          <button key={t.id} onClick={() => { if (vendedor_id && t.id !== 'pedidos') { alert('Usted no tiene permiso para este módulo'); return }; setTab(t.id); if (t.id === 'nota_credito') { API.get('/invoices/nota-credito/lista').then(r => setNotasCredito(r.data.data)).catch(() => {}) } }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.id
                 ? 'border-blue-600 text-blue-600'
@@ -1184,14 +1205,9 @@ const handleImprimir = (id) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar Chofer</label>
            <select
                 value={choferSeleccionado}
-                onChange={e => {
-                  const choferId = e.target.value
-                  setChoferSeleccionado(choferId)
-                  if (choferId) {
-                    setFacturasChofer(facturas.filter(f => f.chofer_id === choferId))
-                  } else {
-                    setFacturasChofer([])
-                  }
+onChange={e => {
+                  setChoferSeleccionado(e.target.value)
+                  setFacturasChofer([])
                 }}
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
               >
@@ -3314,13 +3330,14 @@ const handleImprimir = (id) => {
                 </tr>
               </thead>
               <tbody>
-             {facturasFiltradas.filter(f =>
-                  !busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase())
+        
+                {facturasFiltradas.filter(f =>
+                  f.estado !== 'nota_credito' && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
                 ).length === 0 ? (
                   <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">{busquedaNcf ? 'No se encontraron facturas con ese NCF' : 'No hay facturas'}</td></tr>
                 ) : (
                   facturasFiltradas.filter(f =>
-                    !busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase())
+                    f.estado !== 'nota_credito' && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
                   ).map((f) => (
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
