@@ -588,10 +588,15 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 if (!vendedorId) return
                 const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
                 const idsClientes = clientesVendedor.map(c => c.id)
-                const filtradas = todasFacturas.filter(f =>
+             const filtradas = todasFacturas.filter(f =>
                   idsClientes.includes(f.customer_id) && f.estado === 'emitida'
                 )
-                const totalPendiente = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+                const ncTodas = todasFacturas.filter(x => x.estado === 'nota_credito')
+                const pendienteDe = f => {
+                  const montoNc = ncTodas.filter(n => n.referencia_id === f.id).reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                  return Math.max(0, parseFloat(f.total || 0) - montoNc)
+                }
+                const totalPendiente = filtradas.reduce((s, f) => s + pendienteDe(f), 0)
                 const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
                 const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
                 document.getElementById('cxc-resultado').innerHTML = `
@@ -607,7 +612,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     <tr class="border-t hover:bg-gray-50">
                       <td class="px-4 py-3 font-mono text-sm">${f.ncf || 'N/A'}</td>
                       <td class="px-4 py-3 text-sm">${f.cliente_nombre || 'Consumidor Final'}</td>
-                      <td class="px-4 py-3 text-right text-sm font-medium text-red-600">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td class="px-4 py-3 text-right text-sm font-medium text-red-600">RD$${pendienteDe(f).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                       <td class="px-4 py-3 text-sm">${f.fecha_vencimiento ? new Date(f.fecha_vencimiento).toLocaleDateString('es-DO') : '-'}</td>
                       <td class="px-4 py-3 text-sm">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                     </tr>`).join('')
