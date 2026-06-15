@@ -28,6 +28,7 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
   const [loadingPago, setLoadingPago] = useState(false)
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null)
   const [busquedaEstadoProv, setBusquedaEstadoProv] = useState('')
+  const [provIndexResaltado, setProvIndexResaltado] = useState(-1)
 
   const fetchData = async () => {
     try {
@@ -972,16 +973,34 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
           {/* Buscador con autocompletado */}
           <div className="relative mb-6 max-w-md">
             <label className="block text-sm font-medium text-gray-700 mb-1">🔍 Buscar Proveedor</label>
-            <input type="text" value={busquedaEstadoProv}
-              onChange={e => setBusquedaEstadoProv(e.target.value)}
+       <input type="text" value={busquedaEstadoProv}
+              onChange={e => { setBusquedaEstadoProv(e.target.value); setProvIndexResaltado(-1) }}
+              onKeyDown={e => {
+                if (sugerenciasProv.length === 0) return
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  setProvIndexResaltado(prev => (prev + 1) % sugerenciasProv.length)
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  setProvIndexResaltado(prev => prev <= 0 ? sugerenciasProv.length - 1 : prev - 1)
+                } else if (e.key === 'Enter') {
+                  e.preventDefault()
+                  if (provIndexResaltado >= 0 && sugerenciasProv[provIndexResaltado]) {
+                    const p = sugerenciasProv[provIndexResaltado]
+                    setProveedorSeleccionado(p)
+                    setBusquedaEstadoProv(p.nombre)
+                    setProvIndexResaltado(-1)
+                  }
+                }
+              }}
               placeholder="Escriba el nombre del proveedor..." autoComplete="off"
               className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
             {sugerenciasProv.length > 0 && (!proveedorSeleccionado || proveedorSeleccionado.nombre !== busquedaEstadoProv) && (
               <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto mt-1">
-                {sugerenciasProv.map(p => (
+             {sugerenciasProv.map((p, i) => (
                   <div key={p.id}
                     onMouseDown={() => { setProveedorSeleccionado(p); setBusquedaEstadoProv(p.nombre) }}
-                    className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 border-b">
+                    className={`px-3 py-2 text-sm cursor-pointer border-b ${i === provIndexResaltado ? 'bg-blue-100' : 'hover:bg-blue-50'}`}>
                     {p.nombre}
                   </div>
                 ))}

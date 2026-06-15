@@ -169,11 +169,59 @@ export default function Inventario({ modulos_permitidos = null }) {
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Movimiento de Producto</h3>
           <div className="flex flex-wrap gap-4 items-end mb-6">
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Producto</label>
-              <select id="mov-producto-select" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-64">
-                <option value="">-- Seleccionar producto --</option>
-                {inventario.map(i => <option key={i.id} value={i.id}>{i.producto_nombre}</option>)}
-              </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+              <input
+                id="mov-producto-input"
+                type="text"
+                placeholder="🔍 Buscar producto..."
+                autoComplete="off"
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-64 w-full"
+                onChange={e => {
+                  document.getElementById('mov-producto').value = ''
+                  const val = e.target.value.toLowerCase()
+                  const list = document.getElementById('mov-producto-list')
+                  list.innerHTML = ''
+                  if (val) {
+                    const filtrados = inventario.filter(i => (i.producto_nombre || '').toLowerCase().includes(val)).slice(0, 10)
+                    filtrados.forEach(i => {
+                      const div = document.createElement('div')
+                      div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                      div.textContent = i.producto_nombre
+                      div.onmousedown = () => {
+                        document.getElementById('mov-producto-input').value = i.producto_nombre
+                        document.getElementById('mov-producto').value = i.id
+                        list.innerHTML = ''
+                      }
+                      list.appendChild(div)
+                    })
+                  }
+                }}
+                onKeyDown={e => {
+                  const list = document.getElementById('mov-producto-list')
+                  const opciones = list.querySelectorAll('div')
+                  if (opciones.length === 0) return
+                  let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = (idx + 1) % opciones.length
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                  }
+                }}
+                onBlur={() => setTimeout(() => { document.getElementById('mov-producto-list').innerHTML = '' }, 200)}
+              />
+              <input type="hidden" id="mov-producto" value="" />
+              <div id="mov-producto-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
@@ -184,7 +232,7 @@ export default function Inventario({ modulos_permitidos = null }) {
               <input type="date" id="mov-fecha-fin" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <button onClick={async () => {
-              const invId = document.getElementById('mov-producto-select').value
+             const invId = document.getElementById('mov-producto').value
               if (!invId) return alert('Selecciona un producto')
               const fi = document.getElementById('mov-fecha-inicio').value
               const ff = document.getElementById('mov-fecha-fin').value
@@ -196,7 +244,7 @@ export default function Inventario({ modulos_permitidos = null }) {
               try {
                 const res = await API.get(url)
                 const movs = res.data.data
-                const nombreProd = document.getElementById('mov-producto-select').selectedOptions[0].text
+                const nombreProd = document.getElementById('mov-producto-input').value
                 // Filtrar por fecha en frontend si backend no soporta filtro
                 const filtrados = movs.filter(m => {
                   const d = m.creado_en?.slice(0,10)

@@ -335,12 +335,61 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
             </div>
             <div className="w-full sm:w-auto">
               {!vendedor_id && <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>}
-              {!vendedor_id ? (
-                <select id="cob-vendedor"
-                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                  <option value="">-- Seleccionar vendedor --</option>
-                  {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-                </select>
+        {!vendedor_id ? (
+                <div className="relative">
+                  <input
+                    id="cob-vendedor-input"
+                    type="text"
+                    placeholder="🔍 Buscar vendedor..."
+                    autoComplete="off"
+                    className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
+                    onChange={e => {
+                      document.getElementById('cob-vendedor').value = ''
+                      const val = e.target.value.toLowerCase()
+                      const list = document.getElementById('cob-vendedor-list')
+                      list.innerHTML = ''
+                      if (val) {
+                        const filtrados = vendedores.filter(v => v.nombre.toLowerCase().includes(val)).slice(0, 10)
+                        filtrados.forEach(v => {
+                          const div = document.createElement('div')
+                          div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                          div.textContent = v.nombre
+                          div.onmousedown = () => {
+                            document.getElementById('cob-vendedor-input').value = v.nombre
+                            document.getElementById('cob-vendedor').value = v.id
+                            list.innerHTML = ''
+                          }
+                          list.appendChild(div)
+                        })
+                      }
+                    }}
+                    onKeyDown={e => {
+                      const list = document.getElementById('cob-vendedor-list')
+                      const opciones = list.querySelectorAll('div')
+                      if (opciones.length === 0) return
+                      let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                        idx = (idx + 1) % opciones.length
+                        opciones[idx].classList.add('bg-blue-100')
+                        opciones[idx].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                        idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                        opciones[idx].classList.add('bg-blue-100')
+                        opciones[idx].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => { document.getElementById('cob-vendedor-list').innerHTML = '' }, 200)}
+                  />
+                  <input type="hidden" id="cob-vendedor" value="" />
+                  <div id="cob-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+                </div>
               ) : (
                 <input type="hidden" id="cob-vendedor" value={vendedor_id} />
               )}
@@ -572,12 +621,61 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           <div className="flex gap-4 items-end mb-6 flex-wrap">
             <div>
               {!vendedor_id && <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>}
-              {!vendedor_id ? (
-                <select id="cxc-vendedor"
-                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                  <option value="">-- Seleccionar vendedor --</option>
-                  {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-                </select>
+        {!vendedor_id ? (
+                <div className="relative">
+                  <input
+                    id="cxc-vendedor-input"
+                    type="text"
+                    placeholder="🔍 Buscar vendedor..."
+                    autoComplete="off"
+                    className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
+                    onChange={e => {
+                      document.getElementById('cxc-vendedor').value = ''
+                      const val = e.target.value.toLowerCase()
+                      const list = document.getElementById('cxc-vendedor-list')
+                      list.innerHTML = ''
+                      if (val) {
+                        const filtrados = vendedores.filter(v => v.nombre.toLowerCase().includes(val)).slice(0, 10)
+                        filtrados.forEach(v => {
+                          const div = document.createElement('div')
+                          div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                          div.textContent = v.nombre
+                          div.onmousedown = () => {
+                            document.getElementById('cxc-vendedor-input').value = v.nombre
+                            document.getElementById('cxc-vendedor').value = v.id
+                            list.innerHTML = ''
+                          }
+                          list.appendChild(div)
+                        })
+                      }
+                    }}
+                    onKeyDown={e => {
+                      const list = document.getElementById('cxc-vendedor-list')
+                      const opciones = list.querySelectorAll('div')
+                      if (opciones.length === 0) return
+                      let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                        idx = (idx + 1) % opciones.length
+                        opciones[idx].classList.add('bg-blue-100')
+                        opciones[idx].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                        idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                        opciones[idx].classList.add('bg-blue-100')
+                        opciones[idx].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => { document.getElementById('cxc-vendedor-list').innerHTML = '' }, 200)}
+                  />
+                  <input type="hidden" id="cxc-vendedor" value="" />
+                  <div id="cxc-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+                </div>
               ) : (
                 <input type="hidden" id="cxc-vendedor" value={vendedor_id} />
               )}
@@ -778,6 +876,28 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   list.appendChild(div)
                 })
               }}
+         onKeyDown={e => {
+                const list = document.getElementById('ec-cliente-list')
+                const opciones = list.querySelectorAll('div')
+                if (opciones.length === 0) return
+                let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                  idx = (idx + 1) % opciones.length
+                  opciones[idx].classList.add('bg-blue-100')
+                  opciones[idx].scrollIntoView({ block: 'nearest' })
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                  idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                  opciones[idx].classList.add('bg-blue-100')
+                  opciones[idx].scrollIntoView({ block: 'nearest' })
+                } else if (e.key === 'Enter') {
+                  e.preventDefault()
+                  if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                }
+              }}
               onBlur={() => setTimeout(() => { document.getElementById('ec-cliente-list').innerHTML = '' }, 200)}
             />
             <div id="ec-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -860,6 +980,28 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   }
                   list.appendChild(div)
                 })
+              }}
+          onKeyDown={e => {
+                const list = document.getElementById('hist-cliente-list')
+                const opciones = list.querySelectorAll('div')
+                if (opciones.length === 0) return
+                let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                  idx = (idx + 1) % opciones.length
+                  opciones[idx].classList.add('bg-blue-100')
+                  opciones[idx].scrollIntoView({ block: 'nearest' })
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                  idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                  opciones[idx].classList.add('bg-blue-100')
+                  opciones[idx].scrollIntoView({ block: 'nearest' })
+                } else if (e.key === 'Enter') {
+                  e.preventDefault()
+                  if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                }
               }}
               onBlur={() => setTimeout(() => { document.getElementById('hist-cliente-list').innerHTML = '' }, 200)}
             />

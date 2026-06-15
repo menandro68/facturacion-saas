@@ -645,12 +645,60 @@ const handleImprimir = (id) => {
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Venta por Zona</h3>
           <div className="flex gap-4 items-end mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zona</label>
-              <select value={zonaSeleccionada} onChange={e => setZonaSeleccionada(e.target.value)}
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                <option value="">-- Seleccionar zona --</option>
-                {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
-              </select>
+           <label className="block text-sm font-medium text-gray-700 mb-1">Zona</label>
+              <div className="relative">
+                <input
+                  id="zona-buscar-input"
+                  type="text"
+                  placeholder="🔍 Buscar zona..."
+                  autoComplete="off"
+                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
+                  onChange={e => {
+                    setZonaSeleccionada('')
+                    const val = e.target.value.toLowerCase()
+                    const list = document.getElementById('zona-buscar-list')
+                    list.innerHTML = ''
+                    if (val) {
+                      const filtrados = zonas.filter(z => z.nombre.toLowerCase().includes(val)).slice(0, 10)
+                      filtrados.forEach(z => {
+                        const div = document.createElement('div')
+                        div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                        div.textContent = z.nombre
+                        div.onmousedown = () => {
+                          document.getElementById('zona-buscar-input').value = z.nombre
+                          setZonaSeleccionada(z.id)
+                          list.innerHTML = ''
+                        }
+                        list.appendChild(div)
+                      })
+                    }
+                  }}
+                  onKeyDown={e => {
+                    const list = document.getElementById('zona-buscar-list')
+                    const opciones = list.querySelectorAll('div')
+                    if (opciones.length === 0) return
+                    let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = (idx + 1) % opciones.length
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => { document.getElementById('zona-buscar-list').innerHTML = '' }, 200)}
+                />
+                <div id="zona-buscar-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+              </div>
             </div>
             <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
               onClick={async () => {
@@ -761,11 +809,61 @@ const handleImprimir = (id) => {
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Venta por Producto</h3>
           <div className="flex gap-4 items-end mb-6 flex-wrap">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
-              <select id="prod-vendedor" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                <option value="">-- Todos --</option>
-                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-              </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+              <div className="relative">
+                <input
+                  id="prod-vendedor-input"
+                  type="text"
+                  placeholder="🔍 Buscar vendedor..."
+                  autoComplete="off"
+                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
+                  onChange={e => {
+                    document.getElementById('prod-vendedor').value = ''
+                    const val = e.target.value.toLowerCase()
+                    const list = document.getElementById('prod-vendedor-list')
+                    list.innerHTML = ''
+                    if (val) {
+                      const filtrados = vendedores.filter(v => v.nombre.toLowerCase().includes(val)).slice(0, 10)
+                      filtrados.forEach(v => {
+                        const div = document.createElement('div')
+                        div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                        div.textContent = v.nombre
+                        div.onmousedown = () => {
+                          document.getElementById('prod-vendedor-input').value = v.nombre
+                          document.getElementById('prod-vendedor').value = v.id
+                          list.innerHTML = ''
+                        }
+                        list.appendChild(div)
+                      })
+                    }
+                  }}
+                  onKeyDown={e => {
+                    const list = document.getElementById('prod-vendedor-list')
+                    const opciones = list.querySelectorAll('div')
+                    if (opciones.length === 0) return
+                    let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = (idx + 1) % opciones.length
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => { document.getElementById('prod-vendedor-list').innerHTML = '' }, 200)}
+                />
+                <input type="hidden" id="prod-vendedor" value="" />
+                <div id="prod-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+              </div>
             </div>
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
@@ -793,6 +891,28 @@ const handleImprimir = (id) => {
                       }
                       list.appendChild(div)
                     })
+                  }
+                }}
+onKeyDown={e => {
+                  const list = document.getElementById('prod-cliente-list')
+                  const opciones = list.querySelectorAll('div')
+                  if (opciones.length === 0) return
+                  let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = (idx + 1) % opciones.length
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                   }
                 }}
                 onBlur={() => setTimeout(() => { document.getElementById('prod-cliente-list').innerHTML = '' }, 200)}
@@ -826,6 +946,28 @@ const handleImprimir = (id) => {
                       }
                       list.appendChild(div)
                     })
+                  }
+                }}
+onKeyDown={e => {
+                  const list = document.getElementById('prod-producto-list')
+                  const opciones = list.querySelectorAll('div')
+                  if (opciones.length === 0) return
+                  let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = (idx + 1) % opciones.length
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                   }
                 }}
                 onBlur={() => setTimeout(() => { document.getElementById('prod-producto-list').innerHTML = '' }, 200)}
@@ -1071,6 +1213,28 @@ const handleImprimir = (id) => {
                     })
                   }
                 }}
+onKeyDown={e => {
+                  const list = document.getElementById('cli-cliente-list')
+                  const opciones = list.querySelectorAll('div')
+                  if (opciones.length === 0) return
+                  let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = (idx + 1) % opciones.length
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                  }
+                }}
                 onBlur={() => setTimeout(() => { document.getElementById('cli-cliente-list').innerHTML = '' }, 200)}
               />
               <input type="hidden" id="cli-cliente" value="" />
@@ -1203,20 +1367,61 @@ const handleImprimir = (id) => {
               />
             </div>
     <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar Chofer</label>
-           <select
-                value={choferSeleccionado}
-onChange={e => {
-                  setChoferSeleccionado(e.target.value)
-                  setFacturasChofer([])
-                }}
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
-              >
-                <option value="">-- Seleccione un chofer --</option>
-                {choferesLista.map(c => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-              </select>
+  <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar Chofer</label>
+              <div className="relative">
+                <input
+                  id="chofer-buscar-input"
+                  type="text"
+                  placeholder="🔍 Buscar chofer..."
+                  autoComplete="off"
+                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+                  onChange={e => {
+                    setChoferSeleccionado('')
+                    setFacturasChofer([])
+                    const val = e.target.value.toLowerCase()
+                    const list = document.getElementById('chofer-buscar-list')
+                    list.innerHTML = ''
+                    if (val) {
+                      const filtrados = choferesLista.filter(c => c.nombre.toLowerCase().includes(val)).slice(0, 10)
+                      filtrados.forEach(c => {
+                        const div = document.createElement('div')
+                        div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                        div.textContent = c.nombre
+                        div.onmousedown = () => {
+                          document.getElementById('chofer-buscar-input').value = c.nombre
+                          setChoferSeleccionado(c.id)
+                          list.innerHTML = ''
+                        }
+                        list.appendChild(div)
+                      })
+                    }
+                  }}
+                  onKeyDown={e => {
+                    const list = document.getElementById('chofer-buscar-list')
+                    const opciones = list.querySelectorAll('div')
+                    if (opciones.length === 0) return
+                    let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = (idx + 1) % opciones.length
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => { document.getElementById('chofer-buscar-list').innerHTML = '' }, 200)}
+                />
+                <div id="chofer-buscar-list" className="absolute z-50 w-56 bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+              </div>
             </div>
             <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
               onClick={async () => {
@@ -1336,11 +1541,61 @@ onChange={e => {
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Relación Vendedor</h3>
           <div className="flex gap-4 items-end mb-6 flex-wrap">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
-              <select id="rel-vendedor" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                <option value="">-- Seleccionar vendedor --</option>
-                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-              </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+              <div className="relative">
+                <input
+                  id="rel-vendedor-input"
+                  type="text"
+                  placeholder="🔍 Buscar vendedor..."
+                  autoComplete="off"
+                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
+                  onChange={e => {
+                    document.getElementById('rel-vendedor').value = ''
+                    const val = e.target.value.toLowerCase()
+                    const list = document.getElementById('rel-vendedor-list')
+                    list.innerHTML = ''
+                    if (val) {
+                      const filtrados = vendedores.filter(v => v.nombre.toLowerCase().includes(val)).slice(0, 10)
+                      filtrados.forEach(v => {
+                        const div = document.createElement('div')
+                        div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                        div.textContent = v.nombre
+                        div.onmousedown = () => {
+                          document.getElementById('rel-vendedor-input').value = v.nombre
+                          document.getElementById('rel-vendedor').value = v.id
+                          list.innerHTML = ''
+                        }
+                        list.appendChild(div)
+                      })
+                    }
+                  }}
+                  onKeyDown={e => {
+                    const list = document.getElementById('rel-vendedor-list')
+                    const opciones = list.querySelectorAll('div')
+                    if (opciones.length === 0) return
+                    let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = (idx + 1) % opciones.length
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => { document.getElementById('rel-vendedor-list').innerHTML = '' }, 200)}
+                />
+                <input type="hidden" id="rel-vendedor" value="" />
+                <div id="rel-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+              </div>
             </div>
             <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
               onClick={() => {

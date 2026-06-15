@@ -82,14 +82,60 @@ export default function Reportes() {
           <div className="bg-white rounded-lg shadow p-4 mb-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Operador *</label>
-                <select value={reporteOpId} onChange={e => setReporteOpId(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">-- Seleccionar operador --</option>
-                  {operadores.map(op => (
-                    <option key={op.id} value={op.id}>{op.nombre} ({op.username})</option>
-                  ))}
-                </select>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Operador *</label>
+                <div className="relative">
+                  <input
+                    id="rep-operador-input"
+                    type="text"
+                    placeholder="🔍 Buscar operador..."
+                    autoComplete="off"
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={e => {
+                      setReporteOpId('')
+                      const val = e.target.value.toLowerCase()
+                      const list = document.getElementById('rep-operador-list')
+                      list.innerHTML = ''
+                      if (val) {
+                        const filtrados = operadores.filter(op => op.nombre.toLowerCase().includes(val) || (op.username || '').toLowerCase().includes(val)).slice(0, 10)
+                        filtrados.forEach(op => {
+                          const div = document.createElement('div')
+                          div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                          div.textContent = `${op.nombre} (${op.username})`
+                          div.onmousedown = () => {
+                            document.getElementById('rep-operador-input').value = `${op.nombre} (${op.username})`
+                            setReporteOpId(op.id)
+                            list.innerHTML = ''
+                          }
+                          list.appendChild(div)
+                        })
+                      }
+                    }}
+                    onKeyDown={e => {
+                      const list = document.getElementById('rep-operador-list')
+                      const opciones = list.querySelectorAll('div')
+                      if (opciones.length === 0) return
+                      let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                        idx = (idx + 1) % opciones.length
+                        opciones[idx].classList.add('bg-blue-100')
+                        opciones[idx].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                        idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                        opciones[idx].classList.add('bg-blue-100')
+                        opciones[idx].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => { document.getElementById('rep-operador-list').innerHTML = '' }, 200)}
+                  />
+                  <div id="rep-operador-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>

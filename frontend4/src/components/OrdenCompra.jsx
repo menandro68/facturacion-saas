@@ -180,12 +180,60 @@ const handleItemChange = async (idx, field, value) => {
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-              <select value={form.supplier_id} onChange={e => setForm({...form, supplier_id: e.target.value})}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">-- Sin proveedor --</option>
-                {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
+       <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+              <div className="relative">
+                <input
+                  id="oc-proveedor-input"
+                  type="text"
+                  placeholder="🔍 Buscar proveedor..."
+                  autoComplete="off"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={e => {
+                    setForm({...form, supplier_id: ''})
+                    const val = e.target.value.toLowerCase()
+                    const list = document.getElementById('oc-proveedor-list')
+                    list.innerHTML = ''
+                    if (val) {
+                      const filtrados = proveedores.filter(p => p.nombre.toLowerCase().includes(val)).slice(0, 10)
+                      filtrados.forEach(p => {
+                        const div = document.createElement('div')
+                        div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                        div.textContent = p.nombre
+                        div.onmousedown = () => {
+                          document.getElementById('oc-proveedor-input').value = p.nombre
+                          setForm(f => ({...f, supplier_id: p.id}))
+                          list.innerHTML = ''
+                        }
+                        list.appendChild(div)
+                      })
+                    }
+                  }}
+                  onKeyDown={e => {
+                    const list = document.getElementById('oc-proveedor-list')
+                    const opciones = list.querySelectorAll('div')
+                    if (opciones.length === 0) return
+                    let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = (idx + 1) % opciones.length
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => { document.getElementById('oc-proveedor-list').innerHTML = '' }, 200)}
+                />
+                <div id="oc-proveedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Entrega</label>
@@ -208,12 +256,58 @@ const handleItemChange = async (idx, field, value) => {
           <div className="space-y-2 mb-4">
             {items.map((item, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                <div className="col-span-3">
-                  <select value={item.product_id} onChange={e => handleItemChange(idx, 'product_id', e.target.value)}
-                    className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">Seleccionar</option>
-                    {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                  </select>
+        <div className="col-span-3 relative">
+                  <input
+                    id={`oc-prod-input-${idx}`}
+                    type="text"
+                    placeholder="🔍 Buscar..."
+                    autoComplete="off"
+                    defaultValue={item.descripcion || ''}
+                    className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={e => {
+                      const val = e.target.value.toLowerCase()
+                      const list = document.getElementById(`oc-prod-list-${idx}`)
+                      list.innerHTML = ''
+                      if (val) {
+                        const filtrados = productos.filter(p => p.nombre.toLowerCase().includes(val)).slice(0, 10)
+                        filtrados.forEach(p => {
+                          const div = document.createElement('div')
+                          div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                          div.textContent = p.nombre
+                          div.onmousedown = () => {
+                            document.getElementById(`oc-prod-input-${idx}`).value = p.nombre
+                            handleItemChange(idx, 'product_id', p.id)
+                            list.innerHTML = ''
+                          }
+                          list.appendChild(div)
+                        })
+                      }
+                    }}
+                    onKeyDown={e => {
+                      const list = document.getElementById(`oc-prod-list-${idx}`)
+                      const opciones = list.querySelectorAll('div')
+                      if (opciones.length === 0) return
+                      let i = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        if (i >= 0) opciones[i].classList.remove('bg-blue-100')
+                        i = (i + 1) % opciones.length
+                        opciones[i].classList.add('bg-blue-100')
+                        opciones[i].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        if (i >= 0) opciones[i].classList.remove('bg-blue-100')
+                        i = i <= 0 ? opciones.length - 1 : i - 1
+                        opciones[i].classList.add('bg-blue-100')
+                        opciones[i].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (i >= 0) opciones[i].dispatchEvent(new MouseEvent('mousedown'))
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => { document.getElementById(`oc-prod-list-${idx}`).innerHTML = '' }, 200)}
+                  />
+                  <div id={`oc-prod-list-${idx}`} className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
                 </div>
                 <div className="col-span-4">
                   <input value={item.descripcion} onChange={e => handleItemChange(idx, 'descripcion', e.target.value)}
@@ -306,12 +400,61 @@ const handleItemChange = async (idx, field, value) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-                <select value={formEditar.supplier_id} onChange={e => setFormEditar({...formEditar, supplier_id: e.target.value})}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">-- Sin proveedor --</option>
-                  {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+                <div className="relative">
+                  <input
+                    id="oc-edit-proveedor-input"
+                    type="text"
+                    placeholder="🔍 Buscar proveedor..."
+                    autoComplete="off"
+                    defaultValue={(proveedores.find(p => p.id === formEditar.supplier_id) || {}).nombre || ''}
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={e => {
+                      setFormEditar({...formEditar, supplier_id: ''})
+                      const val = e.target.value.toLowerCase()
+                      const list = document.getElementById('oc-edit-proveedor-list')
+                      list.innerHTML = ''
+                      if (val) {
+                        const filtrados = proveedores.filter(p => p.nombre.toLowerCase().includes(val)).slice(0, 10)
+                        filtrados.forEach(p => {
+                          const div = document.createElement('div')
+                          div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                          div.textContent = p.nombre
+                          div.onmousedown = () => {
+                            document.getElementById('oc-edit-proveedor-input').value = p.nombre
+                            setFormEditar(f => ({...f, supplier_id: p.id}))
+                            list.innerHTML = ''
+                          }
+                          list.appendChild(div)
+                        })
+                      }
+                    }}
+                    onKeyDown={e => {
+                      const list = document.getElementById('oc-edit-proveedor-list')
+                      const opciones = list.querySelectorAll('div')
+                      if (opciones.length === 0) return
+                      let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                        idx = (idx + 1) % opciones.length
+                        opciones[idx].classList.add('bg-blue-100')
+                        opciones[idx].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                        idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                        opciones[idx].classList.add('bg-blue-100')
+                        opciones[idx].scrollIntoView({ block: 'nearest' })
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => { document.getElementById('oc-edit-proveedor-list').innerHTML = '' }, 200)}
+                  />
+                  <div id="oc-edit-proveedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Entrega</label>
