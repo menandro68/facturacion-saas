@@ -495,18 +495,208 @@ const handleImprimir = (id) => {
                 if (productoNombre) qsP.push(`producto=${encodeURIComponent(productoNombre)}`)
                 let urlP = '/invoices/reporte/productos'
                 if (qsP.length) urlP += '?' + qsP.join('&')
-                const resP = await API.get(urlP)
+     const resP = await API.get(urlP)
                 setProductosReporte(resP.data.data)
               } catch (err) {
                 console.error(err)
               }
             }
+     // Si estamos en el tab cliente, buscar las facturas del cliente
+            if (tab === 'cliente') {
+              let clienteId = document.getElementById('cli-cliente')?.value
+              // Si no hay ID guardado, intentar resolverlo por el nombre escrito
+              if (!clienteId) {
+                const nombreEscrito = (document.getElementById('cli-cliente-input')?.value || '').trim().toLowerCase()
+                const encontrado = clientes.find(c => c.nombre.toLowerCase() === nombreEscrito)
+                if (encontrado) clienteId = encontrado.id
+              }
+              if (!clienteId) { alert('Seleccione un cliente de la lista'); return }
+              const filtradas = facturas.filter(f => {
+                if (f.customer_id !== clienteId) return false
+                const d = new Date(f.creado_en)
+                const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fecha < fechaInicio) return false
+                if (fechaFin && fecha > fechaFin) return false
+                return true
+              })
+              setFacturasCliente(filtradas)
+              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+              const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
+              const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
+      setResumenCliente({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+            }
+            // Si estamos en el tab zona, buscar las facturas de la zona
+            if (tab === 'zona') {
+              if (!zonaSeleccionada) { alert('Seleccione una zona'); return }
+              const clientesZona = clientes.filter(c => c.zona_id === zonaSeleccionada)
+              const idsClientes = clientesZona.map(c => c.id)
+              const filtradas = facturas.filter(f => {
+                if (!idsClientes.includes(f.customer_id)) return false
+                const d = new Date(f.creado_en)
+                const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fecha < fechaInicio) return false
+                if (fechaFin && fecha > fechaFin) return false
+                return true
+              })
+              setFacturasZona(filtradas)
+              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+              const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
+              const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
+       setResumenZona({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+            }
+            // Si estamos en el tab vendedor, buscar las facturas del vendedor
+            if (tab === 'vendedor') {
+              if (!vendedorSeleccionado) { alert('Seleccione un vendedor'); return }
+              const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorSeleccionado)
+              const idsClientes = clientesVendedor.map(c => c.id)
+              const filtradas = facturas.filter(f => {
+                if (!idsClientes.includes(f.customer_id)) return false
+                const d = new Date(f.creado_en)
+                const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fecha < fechaInicio) return false
+                if (fechaFin && fecha > fechaFin) return false
+                return true
+              })
+              setFacturasVendedor(filtradas)
+              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+              const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
+              const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
+              setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+            }
           }}>
           Buscar
         </button>
-        {resumen && (
+{(resumen || (tab === 'cliente' && resumenCliente) || (tab === 'zona' && resumenZona) || (tab === 'vendedor' && resumenVendedor)) && (
           <button
             onClick={() => {
+              // Si estamos en el tab vendedor, imprimir el reporte del vendedor
+              if (tab === 'vendedor' && resumenVendedor) {
+                const vendedor = vendedores.find(v => v.id === vendedorSeleccionado)
+                const pwv = window.open('', '_blank')
+                const filasVend = facturasVendedor.map(f => `
+                  <tr>
+                    <td>${f.ncf || 'BORRADOR'}</td>
+                    <td>${f.cliente_nombre || 'Consumidor Final'}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
+                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('')
+                pwv.document.write(`
+                  <!DOCTYPE html><html><head><title>Reporte por Vendedor</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.periodo{color:#64748b;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
+                    .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
+                    .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Reporte de Ventas por Vendedor: ${vendedor ? vendedor.nombre : ''}</h2>
+                  <p class="periodo">Periodo: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} - Total facturas: ${facturasVendedor.length}</p>
+                  <table>
+                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
+                    <tbody>${filasVend}</tbody>
+                  </table>
+                  <div class="resumen">
+                    <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenVendedor.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenVendedor.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenVendedor.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  </div>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                pwv.document.close()
+                return
+              }
+              // Si estamos en el tab zona, imprimir el reporte de la zona
+              if (tab === 'zona' && resumenZona) {
+                const zona = zonas.find(z => z.id === zonaSeleccionada)
+                const pw = window.open('', '_blank')
+                const filasZona = facturasZona.map(f => `
+                  <tr>
+                    <td>${f.ncf || 'BORRADOR'}</td>
+                    <td>${f.cliente_nombre || 'Consumidor Final'}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
+                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('')
+                pw.document.write(`
+                  <!DOCTYPE html><html><head><title>Reporte por Zona</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.periodo{color:#64748b;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
+                    .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
+                    .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Reporte de Ventas por Zona: ${zona ? zona.nombre : ''}</h2>
+                  <p class="periodo">Periodo: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} - Total facturas: ${facturasZona.length}</p>
+                  <table>
+                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
+                    <tbody>${filasZona}</tbody>
+                  </table>
+                  <div class="resumen">
+                    <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenZona.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenZona.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenZona.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  </div>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                pw.document.close()
+                return
+              }
+              // Si estamos en el tab cliente, imprimir el reporte especifico del cliente
+              if (tab === 'cliente' && resumenCliente) {
+                const clienteNombre = document.getElementById('cli-cliente-input').value
+                const printW = window.open('', '_blank')
+                const filas = facturasCliente.map(f => `
+                  <tr>
+                    <td>${f.ncf || 'BORRADOR'}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
+                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('')
+                printW.document.write(`
+                  <!DOCTYPE html><html><head><title>Reporte por Cliente</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.periodo{color:#64748b;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
+                    .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
+                    .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Reporte de Ventas: ${clienteNombre}</h2>
+                  <p class="periodo">Periodo: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} - Total facturas: ${facturasCliente.length}</p>
+                  <table>
+                    <thead><tr><th>NCF</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
+                    <tbody>${filas}</tbody>
+                  </table>
+                  <div class="resumen">
+                    <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenCliente.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenCliente.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenCliente.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  </div>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                printW.document.close()
+                return
+              }
               const printW = window.open('', '_blank')
               const filas = facturasFiltradas.filter(f => f.estado !== 'nota_credito').map(f => `
                 <tr>
@@ -700,74 +890,8 @@ const handleImprimir = (id) => {
                 <div id="zona-buscar-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
               </div>
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-              onClick={async () => {
-                if (!zonaSeleccionada) return
-                const clientesZona = clientes.filter(c => c.zona_id === zonaSeleccionada)
-                const idsClientes = clientesZona.map(c => c.id)
-                const filtradas = facturas.filter(f => {
-                  if (!idsClientes.includes(f.customer_id)) return false
-                  const d = new Date(f.creado_en)
-                  const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-                  if (fechaInicio && fecha < fechaInicio) return false
-                  if (fechaFin && fecha > fechaFin) return false
-                  return true
-                })
-                setFacturasZona(filtradas)
-                const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
-                const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
-                const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
-                setResumenZona({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
-              }}>
-              Buscar
-            </button>
-            {resumenZona && (
-              <button onClick={() => {
-                const zona = zonas.find(z => z.id === zonaSeleccionada)
-                const printW = window.open('', '_blank')
-                const filas = facturasZona.map(f => `
-                  <tr>
-                    <td>${f.ncf || 'BORRADOR'}</td>
-                    <td>${f.cliente_nombre || 'Consumidor Final'}</td>
-                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
-                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
-                  </tr>`).join('')
-                printW.document.write(`
-                  <!DOCTYPE html><html><head><title>Reporte por Zona</title>
-                  <style>
-                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
-                    h2{color:#1e40af;margin-bottom:4px}
-                    p.periodo{color:#64748b;font-size:13px;margin-bottom:16px}
-                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
-                    th{background:#1e40af;color:white;padding:8px;text-align:left}
-                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
-                    tr:nth-child(even){background:#f8fafc}
-                    .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
-                    .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
-                    .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
-                    @media print{button{display:none}}
-                  </style></head><body>
-                  <h2>Reporte de Ventas por Zona: ${zona?.nombre || ''}</h2>
-                  <p class="periodo">Total de facturas: ${facturasZona.length}</p>
-                  <table>
-                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
-                    <tbody>${filas}</tbody>
-                  </table>
-                  <div class="resumen">
-                    <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenZona.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenZona.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenZona.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                  </div>
-                  <script>window.onload=()=>window.print()</script>
-                  </body></html>`)
-                printW.document.close()
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
-              🖨️ Imprimir Reporte
-            </button>
-            )}
-          </div>
+ 
+  </div>
           {facturasZona.length > 0 && (
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
@@ -1077,74 +1201,8 @@ onKeyDown={e => {
                 {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-              onClick={() => {
-                if (!vendedorSeleccionado) return
-                const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorSeleccionado)
-                const idsClientes = clientesVendedor.map(c => c.id)
-                const filtradas = facturas.filter(f => {
-                  if (!idsClientes.includes(f.customer_id)) return false
-                  const d = new Date(f.creado_en)
-                  const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-                  if (fechaInicio && fecha < fechaInicio) return false
-                  if (fechaFin && fecha > fechaFin) return false
-                  return true
-                })
-                setFacturasVendedor(filtradas)
-                const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
-                const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
-                const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
-                setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
-              }}>
-              Buscar
-            </button>
-            {resumenVendedor && (
-              <button onClick={() => {
-                const vendedor = vendedores.find(v => v.id === vendedorSeleccionado)
-                const printW = window.open('', '_blank')
-                const filas = facturasVendedor.map(f => `
-                  <tr>
-                    <td>${f.ncf || 'BORRADOR'}</td>
-                    <td>${f.cliente_nombre || 'Consumidor Final'}</td>
-                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
-                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
-                  </tr>`).join('')
-                printW.document.write(`
-                  <!DOCTYPE html><html><head><title>Reporte por Vendedor</title>
-                  <style>
-                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
-                    h2{color:#1e40af;margin-bottom:4px}
-                    p.periodo{color:#64748b;font-size:13px;margin-bottom:16px}
-                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
-                    th{background:#1e40af;color:white;padding:8px;text-align:left}
-                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
-                    tr:nth-child(even){background:#f8fafc}
-                    .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
-                    .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
-                    .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
-                    @media print{button{display:none}}
-                  </style></head><body>
-                  <h2>Reporte de Ventas por Vendedor: ${vendedor?.nombre || ''}</h2>
-                  <p class="periodo">Período: ${fechaInicio || 'Inicio'} al ${fechaFin || 'Hoy'} — Total facturas: ${facturasVendedor.length}</p>
-                  <table>
-                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
-                    <tbody>${filas}</tbody>
-                  </table>
-                  <div class="resumen">
-                    <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenVendedor.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenVendedor.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenVendedor.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                  </div>
-                  <script>window.onload=()=>window.print()</script>
-                  </body></html>`)
-                printW.document.close()
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
-              🖨️ Imprimir Reporte
-            </button>
-            )}
-          </div>
+      
+    </div>
           {facturasVendedor.length > 0 && (
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
@@ -1238,73 +1296,8 @@ onKeyDown={e => {
                 onBlur={() => setTimeout(() => { document.getElementById('cli-cliente-list').innerHTML = '' }, 200)}
               />
               <input type="hidden" id="cli-cliente" value="" />
-              <div id="cli-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+   <div id="cli-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-              onClick={() => {
-                const clienteId = document.getElementById('cli-cliente').value
-                if (!clienteId) return
-                const filtradas = facturas.filter(f => {
-                  if (f.customer_id !== clienteId) return false
-                  const d = new Date(f.creado_en)
-                  const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-                  if (fechaInicio && fecha < fechaInicio) return false
-                  if (fechaFin && fecha > fechaFin) return false
-                  return true
-                })
-                setFacturasCliente(filtradas)
-                const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
-                const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
-                const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
-                setResumenCliente({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
-              }}>
-              Buscar
-            </button>
-            {resumenCliente && (
-              <button onClick={() => {
-                const clienteNombre = document.getElementById('cli-cliente-input').value
-                const printW = window.open('', '_blank')
-                const filas = facturasCliente.map(f => `
-                  <tr>
-                    <td>${f.ncf || 'BORRADOR'}</td>
-                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
-                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
-                  </tr>`).join('')
-                printW.document.write(`
-                  <!DOCTYPE html><html><head><title>Reporte por Cliente</title>
-                  <style>
-                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
-                    h2{color:#1e40af;margin-bottom:4px}
-                    p.periodo{color:#64748b;font-size:13px;margin-bottom:16px}
-                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
-                    th{background:#1e40af;color:white;padding:8px;text-align:left}
-                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
-                    tr:nth-child(even){background:#f8fafc}
-                    .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
-                    .resumen-fila{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #e2e8f0}
-                    .resumen-fila.total{font-weight:bold;font-size:15px;color:#1e40af;border-bottom:none;padding-top:10px}
-                    @media print{button{display:none}}
-                  </style></head><body>
-                  <h2>Reporte de Ventas: ${clienteNombre}</h2>
-                  <p class="periodo">Período: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} — Total facturas: ${facturasCliente.length}</p>
-                  <table>
-                    <thead><tr><th>NCF</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
-                    <tbody>${filas}</tbody>
-                  </table>
-                  <div class="resumen">
-                    <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenCliente.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenCliente.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenCliente.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                  </div>
-                  <script>window.onload=()=>window.print()</script>
-                  </body></html>`)
-                printW.document.close()
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
-              🖨️ Imprimir Reporte
-            </button>
-            )}
           </div>
           {facturasCliente.length > 0 && (
             <table className="w-full text-sm">
