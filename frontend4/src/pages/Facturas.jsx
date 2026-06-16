@@ -26,6 +26,8 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [relacionVendedor, setRelacionVendedor] = useState([])
   const [cotizaciones, setCotizaciones] = useState([])
   const [filtroClienteCot, setFiltroClienteCot] = useState('')
+  const [cotFechaInicio, setCotFechaInicio] = useState('')
+  const [cotFechaFin, setCotFechaFin] = useState('')
   const [pedidos, setPedidos] = useState([])
   const [showPedido, setShowPedido] = useState(false)
   const [pedidoEditandoId, setPedidoEditandoId] = useState(null)
@@ -561,7 +563,12 @@ const handleImprimir = (id) => {
               const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
               const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
               const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
-              setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+        setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+            }
+            // Si estamos en el tab cotizacion, aplicar el filtro de fechas
+            if (tab === 'cotizacion') {
+              setCotFechaInicio(fechaInicio)
+              setCotFechaFin(fechaFin)
             }
           }}>
           Buscar
@@ -2361,12 +2368,12 @@ onKeyDown={e => {
               </div>
             </div>
           )}
-  {cotizaciones.filter(c => {
+{cotizaciones.filter(c => {
               if (filtroClienteCot && !(c.cliente_nombre || '').toLowerCase().includes(filtroClienteCot.toLowerCase())) return false
-              if (!fechaInicio && !fechaFin) return true
-              const fecha = new Date(c.creado_en).toISOString().slice(0, 10)
-              if (fechaInicio && fecha < fechaInicio) return false
-              if (fechaFin && fecha > fechaFin) return false
+              if (!cotFechaInicio && !cotFechaFin) return true
+              const dc = new Date(c.creado_en); const fecha = `${dc.getFullYear()}-${String(dc.getMonth()+1).padStart(2,'0')}-${String(dc.getDate()).padStart(2,'0')}`
+              if (cotFechaInicio && fecha < cotFechaInicio) return false
+              if (cotFechaFin && fecha > cotFechaFin) return false
               return true
             }).length > 0 && (
             <table className="w-full text-sm">
@@ -2381,11 +2388,11 @@ onKeyDown={e => {
 </thead>
               <tbody>
                 {cotizaciones.filter(c => {
-                  if (filtroClienteCot && !(c.cliente_nombre || '').toLowerCase().includes(filtroClienteCot.toLowerCase())) return false
-                  if (!fechaInicio && !fechaFin) return true
-                  const fecha = new Date(c.creado_en).toISOString().slice(0, 10)
-                  if (fechaInicio && fecha < fechaInicio) return false
-                  if (fechaFin && fecha > fechaFin) return false
+          if (filtroClienteCot && !(c.cliente_nombre || '').toLowerCase().includes(filtroClienteCot.toLowerCase())) return false
+                  if (!cotFechaInicio && !cotFechaFin) return true
+                 const dc = new Date(c.creado_en); const fecha = `${dc.getFullYear()}-${String(dc.getMonth()+1).padStart(2,'0')}-${String(dc.getDate()).padStart(2,'0')}`
+                  if (cotFechaInicio && fecha < cotFechaInicio) return false
+                  if (cotFechaFin && fecha > cotFechaFin) return false
                   return true
                 }).map(c => (
                   <tr key={c.id} className="border-t hover:bg-gray-50">
@@ -3581,12 +3588,12 @@ onKeyDown={e => {
               <tbody>
         
                 {facturasFiltradas.filter(f =>
-                  f.estado !== 'nota_credito' && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
+                (f.estado === 'emitida' || f.estado === 'pagada') && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
                 ).length === 0 ? (
                   <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">{busquedaNcf ? 'No se encontraron facturas con ese NCF' : 'No hay facturas'}</td></tr>
                 ) : (
                   facturasFiltradas.filter(f =>
-                    f.estado !== 'nota_credito' && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
+                    (f.estado === 'emitida' || f.estado === 'pagada') && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
                   ).map((f) => (
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
