@@ -109,6 +109,8 @@ export default function Mantenimiento() {
   const [formEmpresa, setFormEmpresa] = useState({ nombre: '', rnc: '', email: '', telefono: '', direccion: '', admin_username: '', admin_password: '', admin_nombre: '' })
   const [showFormEmpresa, setShowFormEmpresa] = useState(false)
   const [mensajeEmpresa, setMensajeEmpresa] = useState('')
+  const [editandoEmpresa, setEditandoEmpresa] = useState(null)
+  const [formEditEmpresa, setFormEditEmpresa] = useState({ nombre: '', rnc: '', email: '', telefono: '', direccion: '', admin_username: '', admin_password: '', admin_nombre: '' })
   const [vendedores, setVendedores] = useState([])
   const [zonas, setZonas] = useState([])
   const [choferes, setChoferes] = useState([])
@@ -181,7 +183,7 @@ useEffect(() => { fetchData() }, [])
   }
   useEffect(() => { if (tab === 'empresas') cargarMisEmpresas() }, [tab])
 
-  const crearEmpresa = async () => {
+const crearEmpresa = async () => {
     setMensajeEmpresa('')
     if (!formEmpresa.nombre || !formEmpresa.email || !formEmpresa.admin_username || !formEmpresa.admin_password) {
       setMensajeEmpresa('Complete los campos obligatorios (*)')
@@ -195,6 +197,37 @@ useEffect(() => { fetchData() }, [])
       cargarMisEmpresas()
     } catch (e) {
       setMensajeEmpresa(e.response?.data?.mensaje || 'Error al crear la empresa')
+    }
+  }
+
+  const abrirEditarEmpresa = (emp) => {
+    setEditandoEmpresa(emp.id)
+    setFormEditEmpresa({ nombre: emp.nombre || '', rnc: emp.rnc || '', email: emp.email || '', telefono: emp.telefono || '', direccion: emp.direccion || '' })
+    setMensajeEmpresa('')
+  }
+
+  const guardarEditEmpresa = async () => {
+    if (!formEditEmpresa.nombre || !formEditEmpresa.email) {
+      setMensajeEmpresa('Nombre y email son obligatorios')
+      return
+    }
+    try {
+      await API.put(`/tenant/sub-empresa/${editandoEmpresa}`, formEditEmpresa)
+      setEditandoEmpresa(null)
+      setMensajeEmpresa('')
+      cargarMisEmpresas()
+    } catch (e) {
+      setMensajeEmpresa(e.response?.data?.mensaje || 'Error al editar la empresa')
+    }
+  }
+
+  const eliminarEmpresa = async (emp) => {
+    if (!window.confirm(`¿Eliminar la empresa "${emp.nombre}"? Solo se puede si está vacía.`)) return
+    try {
+      await API.delete(`/tenant/sub-empresa/${emp.id}`)
+      cargarMisEmpresas()
+    } catch (e) {
+      alert(e.response?.data?.mensaje || 'Error al eliminar la empresa')
     }
   }
 
@@ -1183,12 +1216,13 @@ useEffect(() => { fetchData() }, [])
                   <th className="px-4 py-3 text-center text-gray-600">Usuarios</th>
                   <th className="px-4 py-3 text-center text-gray-600">Facturas</th>
                   <th className="px-4 py-3 text-center text-gray-600">Estado</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+             <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+                  <th className="px-4 py-3 text-center text-gray-600">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {misEmpresas.length === 0 ? (
-                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No has creado empresas todavía</td></tr>
+                  <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No has creado empresas todavía</td></tr>
                 ) : (
                   misEmpresas.map(emp => (
                     <tr key={emp.id} className="border-t hover:bg-gray-50">
@@ -1202,13 +1236,89 @@ useEffect(() => { fetchData() }, [])
                           {emp.estado.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-4 py-3">{new Date(emp.creado_en).toLocaleDateString('es-DO')}</td>
+            <td className="px-4 py-3">{new Date(emp.creado_en).toLocaleDateString('es-DO')}</td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex gap-2 justify-center">
+                          <button onClick={() => abrirEditarEmpresa(emp)}
+                            className="px-3 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200">
+                            Editar
+                          </button>
+                          <button onClick={() => eliminarEmpresa(emp)}
+                            className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200">
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
-              </tbody>
+</tbody>
             </table>
           </div>
+
+   {editandoEmpresa && (
+            <div className="bg-white rounded-lg shadow p-6 mb-6 mt-6">
+              <h4 className="font-medium mb-4 text-gray-700">Editar Empresa</h4>
+              {mensajeEmpresa && <p className="text-red-600 text-sm mb-3">{mensajeEmpresa}</p>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa *</label>
+                  <input type="text" value={formEditEmpresa.nombre} onChange={e => setFormEditEmpresa({...formEditEmpresa, nombre: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">RNC</label>
+                  <input type="text" value={formEditEmpresa.rnc} onChange={e => setFormEditEmpresa({...formEditEmpresa, rnc: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input type="email" value={formEditEmpresa.email} onChange={e => setFormEditEmpresa({...formEditEmpresa, email: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                  <input type="text" value={formEditEmpresa.telefono} onChange={e => setFormEditEmpresa({...formEditEmpresa, telefono: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                  <input type="text" value={formEditEmpresa.direccion} onChange={e => setFormEditEmpresa({...formEditEmpresa, direccion: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">Credenciales del Administrador</p>
+                  <p className="text-xs text-gray-400 mb-3">Deja en blanco lo que no quieras cambiar.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Admin</label>
+                  <input type="text" value={formEditEmpresa.admin_nombre} onChange={e => setFormEditEmpresa({...formEditEmpresa, admin_nombre: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div></div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nuevo Usuario</label>
+                  <input type="text" value={formEditEmpresa.admin_username} onChange={e => setFormEditEmpresa({...formEditEmpresa, admin_username: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña</label>
+                  <input type="text" value={formEditEmpresa.admin_password} onChange={e => setFormEditEmpresa({...formEditEmpresa, admin_password: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button onClick={() => { setEditandoEmpresa(null); setMensajeEmpresa('') }}
+                  className="bg-gray-200 text-gray-700 px-6 py-2 rounded font-medium hover:bg-gray-300">
+                  Cancelar
+                </button>
+                <button onClick={guardarEditEmpresa}
+                  className="bg-blue-600 text-white px-6 py-2 rounded font-medium hover:bg-blue-700">
+                  Guardar Cambios
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
