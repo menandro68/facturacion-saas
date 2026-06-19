@@ -14,6 +14,7 @@ import CuentasCobrar from './pages/CuentasCobrar'
 import CuentasPagar from './pages/CuentasPagar'
 import Mantenimiento from './pages/Mantenimiento'
 import SuperAdmin from './pages/SuperAdmin'
+import SelectorEmpresas from './pages/SelectorEmpresas'
 
 function App() {
   // Detectar si la URL es /super-admin para mostrar el panel super-admin
@@ -28,6 +29,40 @@ function App() {
   const [pagina, setPagina] = useState('facturas')
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [listadoPrecios, setListadoPrecios] = useState(null)
+  const [mostrarSelector, setMostrarSelector] = useState(() => {
+    return sessionStorage.getItem('empresaSeleccionada') !== 'true' && !!sessionStorage.getItem('usuario')
+  })
+
+  const entrarAlSistema = (user) => {
+    if (user.rol === 'vendedor') {
+      setPagina('facturas')
+    } else if (user.rol === 'operador') {
+      const permitidos = user.modulos_permitidos || []
+      const mapa = { panel: 'dashboard', clientes: 'clientes', productos: 'productos', facturas: 'facturas', pagos: 'pagos', reportes: 'reportes', proveedores: 'proveedores', inventario: 'inventario', cuentas_cobrar: 'cuentascobrar', cuentas_pagar: 'cuentaspagar', mantenimiento: 'mantenimiento', configuracion: 'configuracion' }
+      const primerPermitido = permitidos.find(p => mapa[p])
+      setPagina(primerPermitido ? mapa[primerPermitido] : 'dashboard')
+    } else {
+      setPagina('dashboard')
+    }
+  }
+
+  const handleLoginInicial = (user) => {
+    setUsuario(user)
+    setMostrarSelector(true)
+  }
+
+  const handleEntrarEmpresa = (user) => {
+    sessionStorage.setItem('empresaSeleccionada', 'true')
+    setUsuario(user)
+    setMostrarSelector(false)
+    entrarAlSistema(user)
+  }
+
+  const handleSalirSelector = () => {
+    sessionStorage.clear()
+    setUsuario(null)
+    setMostrarSelector(false)
+  }
 
   const handleLogin = (user) => {
     setUsuario(user)
@@ -49,7 +84,9 @@ function App() {
     setUsuario(null)
   }
 
-  if (!usuario) return <Login onLogin={handleLogin} />
+  if (!usuario) return <Login onLogin={handleLoginInicial} />
+
+  if (mostrarSelector) return <SelectorEmpresas onEntrar={handleEntrarEmpresa} onSalir={handleSalirSelector} />
 
   const esVendedor = usuario.rol === 'vendedor'
   const esOperador = usuario.rol === 'operador'

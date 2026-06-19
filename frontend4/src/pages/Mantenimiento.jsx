@@ -104,7 +104,11 @@ const MODULOS_DISPONIBLES = [
 ]
 
 export default function Mantenimiento() {
-  const [tab, setTab] = useState('vendedores')
+ const [tab, setTab] = useState('vendedores')
+  const [misEmpresas, setMisEmpresas] = useState([])
+  const [formEmpresa, setFormEmpresa] = useState({ nombre: '', rnc: '', email: '', telefono: '', direccion: '', admin_username: '', admin_password: '', admin_nombre: '' })
+  const [showFormEmpresa, setShowFormEmpresa] = useState(false)
+  const [mensajeEmpresa, setMensajeEmpresa] = useState('')
   const [vendedores, setVendedores] = useState([])
   const [zonas, setZonas] = useState([])
   const [choferes, setChoferes] = useState([])
@@ -167,7 +171,32 @@ export default function Mantenimiento() {
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+useEffect(() => { fetchData() }, [])
+
+  const cargarMisEmpresas = async () => {
+    try {
+      const res = await API.get('/tenant/mis-empresas')
+      setMisEmpresas(res.data.data)
+    } catch (e) { console.error(e) }
+  }
+  useEffect(() => { if (tab === 'empresas') cargarMisEmpresas() }, [tab])
+
+  const crearEmpresa = async () => {
+    setMensajeEmpresa('')
+    if (!formEmpresa.nombre || !formEmpresa.email || !formEmpresa.admin_username || !formEmpresa.admin_password) {
+      setMensajeEmpresa('Complete los campos obligatorios (*)')
+      return
+    }
+    try {
+      await API.post('/tenant/sub-empresa', formEmpresa)
+      setFormEmpresa({ nombre: '', rnc: '', email: '', telefono: '', direccion: '', admin_username: '', admin_password: '', admin_nombre: '' })
+      setShowFormEmpresa(false)
+      setMensajeEmpresa('')
+      cargarMisEmpresas()
+    } catch (e) {
+      setMensajeEmpresa(e.response?.data?.mensaje || 'Error al crear la empresa')
+    }
+  }
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -277,6 +306,7 @@ export default function Mantenimiento() {
     { id: 'usuarios', label: '👥 Usuarios' },
 { id: 'clave', label: '🔐 Clave Descuento' },
   { id: 'ncf_electronicas', label: '🧾 Secuencias NCF' },
+    { id: 'empresas', label: '🏢 Mis Empresas' },
   ]
 
   if (loading) return <p className="text-gray-500 p-6">Cargando...</p>
@@ -1063,11 +1093,122 @@ export default function Mantenimiento() {
             </>
           )}
 
-          {!reporteData && !reporteLoading && (
+{!reporteData && !reporteLoading && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center text-blue-700 text-sm">
-              📊 Selecciona un operador y haz clic en <strong>"Generar Reporte"</strong> para ver su actividad
+              ðŸ“Š Selecciona un operador y haz clic en <strong>"Generar Reporte"</strong> para ver su actividad
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'empresas' && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">🏢 Mis Empresas</h3>
+              <p className="text-sm text-gray-500">Empresas creadas bajo tu cuenta. Cada una tiene sus datos independientes.</p>
+            </div>
+            <button onClick={() => { setShowFormEmpresa(!showFormEmpresa); setMensajeEmpresa('') }}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+              {showFormEmpresa ? 'Cancelar' : '+ Nueva Empresa'}
+            </button>
+          </div>
+
+          {showFormEmpresa && (
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h4 className="font-medium mb-4 text-gray-700">Crear Nueva Empresa</h4>
+              {mensajeEmpresa && <p className="text-red-600 text-sm mb-3">{mensajeEmpresa}</p>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa *</label>
+                  <input type="text" value={formEmpresa.nombre} onChange={e => setFormEmpresa({...formEmpresa, nombre: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">RNC</label>
+                  <input type="text" value={formEmpresa.rnc} onChange={e => setFormEmpresa({...formEmpresa, rnc: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input type="email" value={formEmpresa.email} onChange={e => setFormEmpresa({...formEmpresa, email: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                  <input type="text" value={formEmpresa.telefono} onChange={e => setFormEmpresa({...formEmpresa, telefono: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                  <input type="text" value={formEmpresa.direccion} onChange={e => setFormEmpresa({...formEmpresa, direccion: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Credenciales del Administrador de la nueva empresa</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Admin</label>
+                  <input type="text" value={formEmpresa.admin_nombre} onChange={e => setFormEmpresa({...formEmpresa, admin_nombre: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div></div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
+                  <input type="text" value={formEmpresa.admin_username} onChange={e => setFormEmpresa({...formEmpresa, admin_username: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña *</label>
+                  <input type="text" value={formEmpresa.admin_password} onChange={e => setFormEmpresa({...formEmpresa, admin_password: e.target.value})}
+                    className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <button onClick={crearEmpresa}
+                  className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
+                  Crear Empresa
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600">Empresa</th>
+                  <th className="px-4 py-3 text-left text-gray-600">RNC</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Email</th>
+                  <th className="px-4 py-3 text-center text-gray-600">Usuarios</th>
+                  <th className="px-4 py-3 text-center text-gray-600">Facturas</th>
+                  <th className="px-4 py-3 text-center text-gray-600">Estado</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {misEmpresas.length === 0 ? (
+                  <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No has creado empresas todavía</td></tr>
+                ) : (
+                  misEmpresas.map(emp => (
+                    <tr key={emp.id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{emp.nombre}</td>
+                      <td className="px-4 py-3">{emp.rnc || '-'}</td>
+                      <td className="px-4 py-3">{emp.email}</td>
+                      <td className="px-4 py-3 text-center">{emp.total_usuarios}</td>
+                      <td className="px-4 py-3 text-center">{emp.total_facturas}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${emp.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {emp.estado.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{new Date(emp.creado_en).toLocaleDateString('es-DO')}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
