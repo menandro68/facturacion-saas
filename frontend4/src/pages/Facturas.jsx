@@ -513,8 +513,9 @@ const handleImprimir = (id) => {
                 if (encontrado) clienteId = encontrado.id
               }
               if (!clienteId) { alert('Seleccione un cliente de la lista'); return }
-              const filtradas = facturas.filter(f => {
+ const filtradas = facturas.filter(f => {
                 if (f.customer_id !== clienteId) return false
+                if (f.estado !== 'emitida' && f.estado !== 'pagada') return false
                 const d = new Date(f.creado_en)
                 const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
                 if (fechaInicio && fecha < fechaInicio) return false
@@ -532,8 +533,9 @@ const handleImprimir = (id) => {
               if (!zonaSeleccionada) { alert('Seleccione una zona'); return }
               const clientesZona = clientes.filter(c => c.zona_id === zonaSeleccionada)
               const idsClientes = clientesZona.map(c => c.id)
-              const filtradas = facturas.filter(f => {
+   const filtradas = facturas.filter(f => {
                 if (!idsClientes.includes(f.customer_id)) return false
+                if (f.estado !== 'emitida' && f.estado !== 'pagada') return false
                 const d = new Date(f.creado_en)
                 const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
                 if (fechaInicio && fecha < fechaInicio) return false
@@ -549,10 +551,11 @@ const handleImprimir = (id) => {
             // Si estamos en el tab vendedor, buscar las facturas del vendedor
             if (tab === 'vendedor') {
               if (!vendedorSeleccionado) { alert('Seleccione un vendedor'); return }
-              const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorSeleccionado)
+        const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorSeleccionado)
               const idsClientes = clientesVendedor.map(c => c.id)
               const filtradas = facturas.filter(f => {
                 if (!idsClientes.includes(f.customer_id)) return false
+                if (f.estado !== 'emitida' && f.estado !== 'pagada') return false
                 const d = new Date(f.creado_en)
                 const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
                 if (fechaInicio && fecha < fechaInicio) return false
@@ -705,7 +708,7 @@ const handleImprimir = (id) => {
                 return
               }
               const printW = window.open('', '_blank')
-              const filas = facturasFiltradas.filter(f => f.estado !== 'nota_credito').map(f => `
+             const filas = facturasFiltradas.filter(f => f.estado === 'emitida' || f.estado === 'pagada').map(f => `
                 <tr>
                   <td>${f.ncf || 'BORRADOR'}</td>
                   <td>${f.cliente_nombre || 'Consumidor Final'}</td>
@@ -1711,7 +1714,8 @@ onKeyDown={e => {
             </button>
           ) : (
             <div className="mb-6 border rounded-lg p-4">
-              <h4 className="font-medium mb-3 text-gray-700">Nuevo Pedido</h4>
+             <h4 className="font-medium mb-3 text-gray-700">Nuevo Pedido</h4>
+    
               <div className="relative mb-4 max-w-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
                 <input type="text" placeholder="Buscar cliente..." id="ped-cliente-input" autoComplete="off"
@@ -1720,8 +1724,8 @@ onKeyDown={e => {
                   onChange={e => {
                     document.getElementById('ped-cliente').value = ''
                     setPedClienteSeleccionadoId('')
-                    const val = e.target.value.toLowerCase()
-                    const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val)).slice(0,10)
+             const val = e.target.value.toLowerCase()
+                    const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val) && (!vendedor_id || c.vendedor_id === vendedor_id)).slice(0,10)
                     setPedClienteFiltrados(filtrados)
                     setPedClienteIndex(-1)
                     const list = document.getElementById('ped-cliente-list')
