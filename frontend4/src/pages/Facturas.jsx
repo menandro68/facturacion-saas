@@ -486,9 +486,25 @@ const handleImprimir = (id) => {
             // Si estamos en el tab producto, cargar el reporte por producto
             if (tab === 'producto') {
               try {
-                const vendedorId = document.getElementById('prod-vendedor')?.value
-                const clienteId = document.getElementById('prod-cliente')?.value
+        let vendedorId = document.getElementById('prod-vendedor')?.value
+                let clienteId = document.getElementById('prod-cliente')?.value
                 const productoNombre = document.getElementById('prod-producto-input')?.value.trim()
+                // Si no hay ID, resolver por el nombre escrito (robusto)
+                if (!vendedorId) {
+                  const vNombre = (document.getElementById('prod-vendedor-input')?.value || '').trim().toLowerCase()
+                  if (vNombre) {
+                    const vEnc = vendedores.find(v => v.nombre.toLowerCase() === vNombre)
+                    if (vEnc) vendedorId = vEnc.id
+                  }
+                }
+                if (!clienteId) {
+                  const cNombre = (document.getElementById('prod-cliente-input')?.value || '').trim().toLowerCase()
+                  if (cNombre) {
+                    const cEnc = clientes.find(c => c.nombre.toLowerCase() === cNombre)
+                    if (cEnc) clienteId = cEnc.id
+                  }
+                }
+               
                 const qsP = []
                 if (fechaInicio) qsP.push(`fecha_inicio=${fechaInicio}`)
                 if (fechaFin) qsP.push(`fecha_fin=${fechaFin}`)
@@ -1007,8 +1023,8 @@ const handleImprimir = (id) => {
                 placeholder="🔍 Buscar cliente..."
                 autoComplete="off"
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
-                onChange={e => {
-                  document.getElementById('prod-cliente').value = e.target.value
+          onChange={e => {
+                  document.getElementById('prod-cliente').value = ''
                   const val = e.target.value.toLowerCase()
                   const list = document.getElementById('prod-cliente-list')
                   list.innerHTML = ''
