@@ -437,18 +437,23 @@ const handleImprimir = (id) => {
 
       {/* Filtro de fechas */}
       <div className="flex gap-4 items-end mb-4 bg-white p-4 rounded-lg shadow">
-        <div>
+    <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
-          <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
+          <input type="date" id="filtro-fecha-inicio" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
-          <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
+          <input type="date" id="filtro-fecha-fin" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+    <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
           onClick={async () => {
+            // Leer fechas directamente del DOM para evitar valores obsoletos (stale) por timing
+            const fechaInicio = document.getElementById('filtro-fecha-inicio')?.value || ''
+            const fechaFin = document.getElementById('filtro-fecha-fin')?.value || ''
+            setFechaInicio(fechaInicio)
+            setFechaFin(fechaFin)
             const filtradas = facturas.filter(f => {
               const d = new Date(f.creado_en)
               const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
@@ -515,6 +520,22 @@ const handleImprimir = (id) => {
                 if (qsP.length) urlP += '?' + qsP.join('&')
      const resP = await API.get(urlP)
                 setProductosReporte(resP.data.data)
+ } catch (err) {
+                console.error(err)
+              }
+            }
+            // Si estamos en el tab pedidos, filtrar pedidos por fecha + vendedor
+            if (tab === 'pedidos') {
+              try {
+                const vendedorId = document.getElementById('ped-vendedor-filtro')?.value
+                const qsPed = []
+                if (vendedorId) qsPed.push(`vendedor_id=${vendedorId}`)
+                if (fechaInicio) qsPed.push(`fecha_inicio=${fechaInicio}`)
+                if (fechaFin) qsPed.push(`fecha_fin=${fechaFin}`)
+                let urlPed = '/invoices/pedidos/lista'
+                if (qsPed.length) urlPed += '?' + qsPed.join('&')
+                const resPed = await API.get(urlPed)
+                setPedidos(resPed.data.data)
               } catch (err) {
                 console.error(err)
               }
@@ -757,9 +778,7 @@ const handleImprimir = (id) => {
                 <div class="resumen">
                   <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumen.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                   <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumen.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                  <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumen.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                  <div class="resumen-fila"><span>Costo Total:</span><span>RD$${resumen.total_costo.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                  <div class="resumen-fila beneficio"><span>Beneficio Neto:</span><span>RD$${resumen.beneficio_neto.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+<div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumen.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                 </div>
                 <script>window.onload=()=>window.print()</script>
                 </body></html>`)
@@ -1965,18 +1984,8 @@ onKeyDown={e => {
               </div>
             </div>
           )}
-          {/* CAMBIO 1: div de filtros responsivo */}
+  {/* Filtro de Pedidos: solo Vendedor. El rango de fecha y Buscar son los de arriba */}
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end mb-4 flex-wrap">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
-              <input type="date" id="ped-fecha-inicio"
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
-              <input type="date" id="ped-fecha-fin"
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
             {!vendedor_id && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Buscar por Vendedor</label>
@@ -1990,23 +1999,6 @@ onKeyDown={e => {
             {vendedor_id && (
               <input type="hidden" id="ped-vendedor-filtro" value={vendedor_id} />
             )}
-            <button
-              onClick={async () => {
-                const vendedorId = document.getElementById('ped-vendedor-filtro').value
-                const fechaInicio = document.getElementById('ped-fecha-inicio').value
-                const fechaFin = document.getElementById('ped-fecha-fin').value
-                const qs = []
-                if (vendedorId) qs.push(`vendedor_id=${vendedorId}`)
-                if (fechaInicio) qs.push(`fecha_inicio=${fechaInicio}`)
-                if (fechaFin) qs.push(`fecha_fin=${fechaFin}`)
-                let url = '/invoices/pedidos/lista'
-                if (qs.length) url += '?' + qs.join('&')
-                const res = await API.get(url)
-                setPedidos(res.data.data)
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-              Buscar
-            </button>
           </div>
 
           {/* CAMBIO 2: tabla de pedidos con vista móvil (cards) y desktop */}
@@ -3618,7 +3610,7 @@ onKeyDown={e => {
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                      <td className="px-4 py-3">RD${parseFloat(f.total).toLocaleString()}</td>
+                     <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>
                           {f.estado.toUpperCase()}

@@ -5,6 +5,7 @@ import autoTable from 'jspdf-autotable'
 
 export default function OrdenCompra({ onInventarioUpdate }) {
   const [ordenes, setOrdenes] = useState([])
+  const [busquedaOC, setBusquedaOC] = useState('')
   const [proveedores, setProveedores] = useState([])
   const [productos, setProductos] = useState([])
   const [showForm, setShowForm] = useState(false)
@@ -166,12 +167,21 @@ const handleItemChange = async (idx, field, value) => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Órdenes de Compra</h3>
-        <button onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-          + Nueva Orden
-        </button>
+  <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-800">Ã“rdenes de Compra</h3>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="🔍 Buscar No. de orden..."
+            value={busquedaOC}
+            onChange={e => setBusquedaOC(e.target.value)}
+            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+          />
+          <button onClick={() => setShowForm(!showForm)}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+            + Nueva Orden
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -357,9 +367,9 @@ const handleItemChange = async (idx, field, value) => {
             </tr>
           </thead>
           <tbody>
-            {ordenes.length === 0 ? (
+            {ordenes.filter(o => !busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())).length === 0 ? (
               <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No hay órdenes de compra</td></tr>
-            ) : ordenes.map(o => (
+            ) : ordenes.filter(o => !busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())).map(o => (
               <tr key={o.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{o.numero}</td>
                 <td className="px-4 py-3">{o.proveedor_nombre || '-'}</td>
