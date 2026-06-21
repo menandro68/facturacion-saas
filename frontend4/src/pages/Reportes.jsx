@@ -11,8 +11,6 @@ export default function Reportes() {
   const [showReporteOperador, setShowReporteOperador] = useState(false)
   const [operadores, setOperadores] = useState([])
   const [reporteOpId, setReporteOpId] = useState('')
-  const [reporteDesde, setReporteDesde] = useState('')
-  const [reporteHasta, setReporteHasta] = useState('')
   const [reporteData, setReporteData] = useState(null)
   const [reporteLoading, setReporteLoading] = useState(false)
 
@@ -80,7 +78,7 @@ export default function Reportes() {
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-700 mb-3">Reporte de Operador</h3>
           <div className="bg-white rounded-lg shadow p-4 mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
               <div>
              <label className="block text-sm font-medium text-gray-700 mb-1">Operador *</label>
                 <div className="relative">
@@ -138,16 +136,6 @@ export default function Reportes() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-                <input type="date" value={reporteDesde} onChange={e => setReporteDesde(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                <input type="date" value={reporteHasta} onChange={e => setReporteHasta(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
                 <button onClick={async () => {
                   if (!reporteOpId) {
                     alert('Selecciona un operador primero')
@@ -156,8 +144,8 @@ export default function Reportes() {
                   setReporteLoading(true)
                   try {
                     const params = new URLSearchParams({ operador_id: reporteOpId })
-                    if (reporteDesde) params.append('desde', reporteDesde)
-                    if (reporteHasta) params.append('hasta', reporteHasta)
+                    if (desde) params.append('desde', desde)
+                    if (hasta) params.append('hasta', hasta)
                     const res = await API.get(`/operadores/reporte/actividad?${params.toString()}`)
                     setReporteData(res.data.data)
                   } catch (err) {
