@@ -23,6 +23,7 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
   const [ordenes, setOrdenes] = useState([])
   const [pagos, setPagos] = useState([])
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null)
+  const [ordenVer, setOrdenVer] = useState(null)
   const [montoPagoOrden, setMontoPagoOrden] = useState('')
   const [metodoPagoOrden, setMetodoPagoOrden] = useState('efectivo')
   const [loadingPago, setLoadingPago] = useState(false)
@@ -30,7 +31,19 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
   const [busquedaEstadoProv, setBusquedaEstadoProv] = useState('')
   const [provIndexResaltado, setProvIndexResaltado] = useState(-1)
 
+  const verOrden = async (id) => {
+    try {
+      const res = await API.get(`/purchase-orders/${id}`)
+      setOrdenVer(res.data.data)
+    } catch (err) {
+      console.error(err)
+      alert('No se pudo cargar la orden')
+    }
+  }
+
   const fetchData = async () => {
+
+  
     try {
       const [c, res, prov, ord, pag] = await Promise.all([
         API.get('/accounts-payable'),
@@ -775,13 +788,19 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
                           {estadoPago.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        {estadoPago !== 'pagada' && (
-                          <button onClick={() => { setOrdenSeleccionada(o); setMontoPagoOrden(pendiente.toFixed(2)); setMetodoPagoOrden('efectivo') }}
-                            className="text-blue-600 hover:underline text-xs font-medium">
-                            💳 Pagar
+                    <td className="px-4 py-3">
+                        <div className="flex gap-3 items-center">
+                          <button onClick={() => verOrden(o.id)}
+                            className="text-gray-600 hover:underline text-xs font-medium">
+                            👁️ Ver
                           </button>
-                        )}
+                          {estadoPago !== 'pagada' && (
+                            <button onClick={() => { setOrdenSeleccionada(o); setMontoPagoOrden(pendiente.toFixed(2)); setMetodoPagoOrden('efectivo') }}
+                              className="text-blue-600 hover:underline text-xs font-medium">
+                              💳 Pagar
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -792,6 +811,49 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
         </div>
       )}
 
+     {/* Modal ver orden */}
+      {ordenVer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-screen overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Orden — {ordenVer.numero}</h3>
+              <button onClick={() => setOrdenVer(null)} className="text-gray-500 hover:text-gray-700 text-xl">×</button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+              <div><span className="font-medium text-gray-600">Proveedor:</span> {ordenVer.proveedor_nombre || '-'}</div>
+              <div><span className="font-medium text-gray-600">Estado:</span> {(ordenVer.estado_pago || 'pendiente').toUpperCase()}</div>
+              <div><span className="font-medium text-gray-600">Fecha:</span> {new Date(ordenVer.creado_en).toLocaleDateString('es-DO')}</div>
+              <div><span className="font-medium text-gray-600">Entrega:</span> {ordenVer.fecha_entrega ? new Date(ordenVer.fecha_entrega).toLocaleDateString('es-DO') : '-'}</div>
+              <div><span className="font-medium text-gray-600">Notas:</span> {ordenVer.notas || '-'}</div>
+              <div><span className="font-medium text-gray-600">Total:</span> RD${parseFloat(ordenVer.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</div>
+            </div>
+            <h4 className="font-medium text-gray-700 mb-2">Productos</h4>
+            <table className="w-full text-sm border rounded">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-gray-600">Descripción</th>
+                  <th className="px-3 py-2 text-right text-gray-600">Cantidad</th>
+                  <th className="px-3 py-2 text-right text-gray-600">Precio Unit.</th>
+                  <th className="px-3 py-2 text-right text-gray-600">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ordenVer.items?.map((item, idx) => (
+                  <tr key={idx} className="border-t">
+                    <td className="px-3 py-2">{item.descripcion}</td>
+                    <td className="px-3 py-2 text-right">{item.cantidad}</td>
+                    <td className="px-3 py-2 text-right">RD${parseFloat(item.precio_unitario || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td className="px-3 py-2 text-right">RD${parseFloat(item.subtotal || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setOrdenVer(null)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modal pago orden */}
       {ordenSeleccionada && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

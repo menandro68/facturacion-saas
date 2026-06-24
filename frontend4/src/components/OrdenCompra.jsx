@@ -168,7 +168,7 @@ const handleItemChange = async (idx, field, value) => {
   return (
     <div>
   <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Ã“rdenes de Compra</h3>
+        <h3 className="text-lg font-semibold text-gray-800">Órdenes de Compra</h3>
         <div className="flex items-center gap-3">
           <input
             type="text"
@@ -374,7 +374,7 @@ const handleItemChange = async (idx, field, value) => {
                 <td className="px-4 py-3 font-medium">{o.numero}</td>
                 <td className="px-4 py-3">{o.proveedor_nombre || '-'}</td>
                 <td className="px-4 py-3">{new Date(o.creado_en).toLocaleDateString()}</td>
-                <td className="px-4 py-3">{o.fecha_entrega ? new Date(o.fecha_entrega).toLocaleDateString() : '-'}</td>
+               <td className="px-4 py-3">{o.fecha_entrega ? new Date(o.fecha_entrega.substring(0, 10) + 'T00:00:00').toLocaleDateString() : '-'}</td>
                 <td className="px-4 py-3">RD${parseFloat(o.total).toLocaleString()}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(o.estado)}`}>
@@ -540,7 +540,7 @@ const handleItemChange = async (idx, field, value) => {
               <div><span className="font-medium text-gray-600">Proveedor:</span> {verOrden.proveedor_nombre || '-'}</div>
               <div><span className="font-medium text-gray-600">Estado:</span> {verOrden.estado?.toUpperCase()}</div>
               <div><span className="font-medium text-gray-600">Fecha:</span> {new Date(verOrden.creado_en).toLocaleDateString()}</div>
-              <div><span className="font-medium text-gray-600">Entrega:</span> {verOrden.fecha_entrega ? new Date(verOrden.fecha_entrega).toLocaleDateString() : '-'}</div>
+              <div><span className="font-medium text-gray-600">Entrega:</span> {verOrden.fecha_entrega ? new Date(verOrden.fecha_entrega.substring(0, 10) + 'T00:00:00').toLocaleDateString() : '-'}</div>
               <div><span className="font-medium text-gray-600">Vence Pago:</span> {verOrden.fecha_vencimiento_pago ? new Date(verOrden.fecha_vencimiento_pago).toLocaleDateString() : '-'}</div>
               <div><span className="font-medium text-gray-600">Notas:</span> {verOrden.notas || '-'}</div>
               <div><span className="font-medium text-gray-600">Total:</span> RD${parseFloat(verOrden.total).toLocaleString()}</div>
@@ -582,7 +582,7 @@ const handleItemChange = async (idx, field, value) => {
                 doc.text(`Estado: ${verOrden.estado?.toUpperCase()}`, 130, y)
                 y += 7
                 doc.text(`Fecha: ${new Date(verOrden.creado_en).toLocaleDateString('es-DO')}`, 14, y)
-                doc.text(`Entrega: ${verOrden.fecha_entrega ? new Date(verOrden.fecha_entrega).toLocaleDateString('es-DO') : '-'}`, 130, y)
+               doc.text(`Entrega: ${verOrden.fecha_entrega ? new Date(verOrden.fecha_entrega.substring(0, 10) + 'T00:00:00').toLocaleDateString('es-DO') : '-'}`, 130, y)
                 y += 7
                 doc.text(`Vence Pago: ${verOrden.fecha_vencimiento_pago ? new Date(verOrden.fecha_vencimiento_pago).toLocaleDateString('es-DO') : '-'}`, 14, y)
                 doc.text(`Notas: ${verOrden.notas || '-'}`, 130, y)

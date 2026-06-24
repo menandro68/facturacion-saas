@@ -416,11 +416,7 @@ const crearEmpresa = async () => {
                 {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
               </select>
             </div>
-            <div className="hidden">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Comisión %</label>
-              <input type="number" step="0.01" value={formVendedor.comision_pct} onChange={e => setFormVendedor({...formVendedor, comision_pct: e.target.value})}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
+         
             <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
               <input value={formVendedor.usuario} onChange={e => setFormVendedor({...formVendedor, usuario: e.target.value})} required
@@ -702,20 +698,18 @@ const crearEmpresa = async () => {
                 <th className="px-4 py-3 text-left text-gray-600">Cédula</th>
                 <th className="px-4 py-3 text-left text-gray-600">Teléfono</th>
                 <th className="px-4 py-3 text-left text-gray-600">Zona</th>
-                <th className="px-4 py-3 text-left text-gray-600">Comisión</th>
                 <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {vendedores.length === 0 ? (
-                <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay vendedores registrados</td></tr>
+                <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-400">No hay vendedores registrados</td></tr>
               ) : vendedores.map(v => (
                 <tr key={v.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{v.nombre}</td>
                   <td className="px-4 py-3">{v.cedula || '-'}</td>
                   <td className="px-4 py-3">{v.telefono || '-'}</td>
                   <td className="px-4 py-3">{v.zona_nombre || '-'}</td>
-                  <td className="px-4 py-3">{v.comision_pct}%</td>
                   <td className="px-4 py-3 flex gap-2">
                     <button onClick={() => handleEditar(v)} className="text-blue-600 hover:underline text-xs">Editar</button>
                     <button onClick={() => handleEliminar(v.id)} className="text-red-500 hover:underline text-xs">Eliminar</button>

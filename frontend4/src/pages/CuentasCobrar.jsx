@@ -686,14 +686,15 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 if (!vendedorId) return
                 const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
                 const idsClientes = clientesVendedor.map(c => c.id)
-             const filtradas = todasFacturas.filter(f =>
-                  idsClientes.includes(f.customer_id) && f.estado === 'emitida'
-                )
-                const ncTodas = todasFacturas.filter(x => x.estado === 'nota_credito')
+           const ncTodas = todasFacturas.filter(x => x.estado === 'nota_credito')
                 const pendienteDe = f => {
                   const montoNc = ncTodas.filter(n => n.referencia_id === f.id).reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                  return Math.max(0, parseFloat(f.total || 0) - montoNc)
+                  const montoPagado = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  return Math.max(0, parseFloat(f.total || 0) - montoNc - montoPagado)
                 }
+             const filtradas = todasFacturas.filter(f =>
+                  idsClientes.includes(f.customer_id) && f.estado === 'emitida' && pendienteDe(f) >= 0.01
+                )
                 const totalPendiente = filtradas.reduce((s, f) => s + pendienteDe(f), 0)
                 const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
                 const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
@@ -732,8 +733,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     : 0
                   const nc = notasCredito.filter(n => n.referencia_id === f.id)
                   const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                  const abono = parseFloat(f.monto_pagado || 0)
-                  const balance = parseFloat(f.total) - montoNc - abono
+                  const abono = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  const balance = Math.max(0, parseFloat(f.total) - montoNc - abono)
                   return `<tr>
                     <td>${f.ncf || 'N/A'}</td>
                     <td>${f.cliente_nombre || 'Consumidor Final'}</td>
@@ -745,7 +746,11 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     <td style="text-align:right;font-weight:bold">${balance.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                   </tr>`
                 }).join('')
-                const totalBalance = cxcFiltradas.reduce((s,f) => s + parseFloat(f.total||0), 0)
+                  const totalBalance = cxcFiltradas.reduce((s,f) => {
+                  const montoNc = notasCredito.filter(n => n.referencia_id === f.id).reduce((a, n) => a + parseFloat(n.total || 0), 0)
+                  const abono = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((a, p) => a + parseFloat(p.monto || 0), 0)
+                  return s + Math.max(0, parseFloat(f.total||0) - montoNc - abono)
+                }, 0)
                 printW.document.write(`
                   <!DOCTYPE html><html><head><title>CXC Vendedor</title>
                   <style>
@@ -828,14 +833,20 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   div.onmousedown = () => {
                     e.target.value = c.nombre
                     list.innerHTML = ''
-                    const facturasCliente = todasFacturas.filter(f => f.customer_id === c.id && f.estado === 'emitida')
-                    const notasCliente = todasFacturas.filter(f => f.customer_id === c.id && f.estado === 'nota_credito')
+                  const notasCliente = todasFacturas.filter(f => f.customer_id === c.id && f.estado === 'nota_credito')
+               const facturasCliente = todasFacturas.filter(f => {
+                      if (f.customer_id !== c.id || f.estado !== 'emitida') return false
+                      const montoNc = notasCliente.filter(n => n.referencia_id === f.id).reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                      const abono = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      const balance = parseFloat(f.total) - montoNc - abono
+                      return balance >= 0.01
+                    })
                     const hoy = new Date()
                     let totalFacturas = 0, totalNc = 0, totalAbono = 0, totalBalance = 0
-                    const filas = facturasCliente.map(f => {
+               const filas = facturasCliente.map(f => {
                       const nc = notasCliente.filter(n => n.referencia_id === f.id)
                       const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                      const abono = parseFloat(f.monto_pagado || 0)
+                      const abono = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                       const balance = parseFloat(f.total) - montoNc - abono
                       const diasVencido = f.fecha_vencimiento ? Math.max(0, Math.floor((hoy - new Date(f.fecha_vencimiento)) / (1000*60*60*24))) : 0
                       totalFacturas += parseFloat(f.total)
@@ -1064,10 +1075,14 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
       )}
       {modalResumen && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto p-4">
-          <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 no-print">
             <h2 className="text-xl font-bold text-blue-700">Resumen — CxC</h2>
-            <button onClick={() => setModalResumen(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">← Volver</button>
+            <div className="flex gap-2">
+              <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">🖨️ Imprimir</button>
+              <button onClick={() => setModalResumen(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">← Volver</button>
+            </div>
           </div>
+          <h2 className="text-xl font-bold text-blue-700 mb-2 hidden print:block">Resumen — Cuentas por Cobrar</h2>
           <p className="text-gray-400 text-sm mb-6">Fecha: {modalResumen.fecha}</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 border rounded-lg p-4">

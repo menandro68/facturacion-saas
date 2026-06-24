@@ -14,6 +14,7 @@ export default function Pagos() {
     invoice_id: '', monto: '', metodo: 'efectivo', referencia: '', notas: ''
   })
   const [mostrarImprimirPago, setMostrarImprimirPago] = useState(false)
+  const [mostrarConfirmGrabar, setMostrarConfirmGrabar] = useState(false)
   const [pagoGuardadoId, setPagoGuardadoId] = useState(null)
   const [metodos, setMetodos] = useState({
     efectivo: '', transferencia: '', tarjeta: '',
@@ -69,14 +70,28 @@ const handleEnviarMetodo = () => {
       alert('⚠️ Debe llenar al menos un método de pago con un monto mayor a 0.')
       return
     }
+// Contar cuántos métodos se usaron
+    const cantidadMetodos = [efectivo, transferencia, tarjeta, cheque].filter(m => m > 0).length
     let metodoLabel = 'efectivo'
-    let maxVal = efectivo
-    if (transferencia > maxVal) { metodoLabel = 'transferencia'; maxVal = transferencia }
-    if (tarjeta > maxVal) { metodoLabel = 'tarjeta'; maxVal = tarjeta }
-    if (cheque > maxVal) { metodoLabel = 'cheque'; maxVal = cheque }
-    let ref = ''
-    if (metodos.cheque_banco) ref += metodos.cheque_banco
-    if (metodos.cheque_numero) ref += (ref ? ' #' : '#') + metodos.cheque_numero
+    if (cantidadMetodos > 1) {
+      metodoLabel = 'varios'
+    } else {
+      let maxVal = efectivo
+      if (transferencia > maxVal) { metodoLabel = 'transferencia'; maxVal = transferencia }
+      if (tarjeta > maxVal) { metodoLabel = 'tarjeta'; maxVal = tarjeta }
+      if (cheque > maxVal) { metodoLabel = 'cheque'; maxVal = cheque }
+    }
+// Desglose de métodos de pago
+    const partes = []
+    if (efectivo > 0) partes.push(`Efectivo: RD$${efectivo.toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    if (transferencia > 0) partes.push(`Transferencia: RD$${transferencia.toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    if (tarjeta > 0) partes.push(`Tarjeta: RD$${tarjeta.toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    if (cheque > 0) partes.push(`Cheque: RD$${cheque.toLocaleString('es-DO', {minimumFractionDigits:2})}`)
+    let ref = partes.join(' | ')
+    // Datos del cheque si aplica
+    if (metodos.cheque_banco) ref += ` (Banco: ${metodos.cheque_banco}`
+    if (metodos.cheque_numero) ref += `${metodos.cheque_banco ? ' #' : ' (Cheque #'}${metodos.cheque_numero}`
+    if (metodos.cheque_banco || metodos.cheque_numero) ref += ')'
     setForm(prev => ({
       ...prev, metodo: metodoLabel,
       monto: total > 0 ? total : prev.monto,
@@ -102,6 +117,13 @@ const handleEnviarMetodo = () => {
       alert('⚠️ Debe seleccionar un método de pago antes de registrar.')
       return
     }
+    // Mostrar confirmacion antes de grabar
+    setMostrarConfirmGrabar(true)
+  }
+
+  const grabarPago = async () => {
+    setMostrarConfirmGrabar(false)
+    setError('')
     try {
       const res = await API.post('/payments', form)
       setShowForm(false)
@@ -136,6 +158,19 @@ const handleEnviarMetodo = () => {
 
   return (
     <div className="p-6">
+      {mostrarConfirmGrabar && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea grabar este pago?</p>
+            <div className="flex justify-center gap-6">
+              <button autoFocus onClick={grabarPago}
+                className="bg-blue-600 text-white px-6 py-2 rounded text-sm hover:bg-blue-700">Sí</button>
+              <button onClick={() => setMostrarConfirmGrabar(false)}
+                className="bg-gray-200 text-gray-700 px-6 py-2 rounded text-sm hover:bg-gray-300">No</button>
+            </div>
+          </div>
+        </div>
+      )}
       {mostrarImprimirPago && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">

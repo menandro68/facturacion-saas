@@ -1641,8 +1641,9 @@ onKeyDown={e => {
                 if (!vendedorId) return
                 const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
                 const idsClientes = clientesVendedor.map(c => c.id)
-                const filtradas = facturas.filter(f => {
+            const filtradas = facturas.filter(f => {
                   if (!idsClientes.includes(f.customer_id)) return false
+                  if (f.estado !== 'emitida') return false
                   const d = new Date(f.creado_en)
                   const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
                   if (fechaInicio && fecha < fechaInicio) return false
@@ -3450,9 +3451,12 @@ onKeyDown={e => {
                            const idx = productoIndex[index] ?? -1
                               if (idx >= 0 && filtrados[idx]) {
                                 const p = filtrados[idx]
-                                if (parseFloat(p.stock_actual || 0) <= 0) {
-                                  alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
+                         if (parseFloat(p.stock_actual || 0) <= 0) {
+                                  alert(`âš ï¸ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
                                   return
+                                }
+                                if (parseFloat(p.stock_minimo || 0) > 0 && parseFloat(p.stock_actual || 0) <= parseFloat(p.stock_minimo || 0)) {
+                                  alert(`⚠️ STOCK BAJO: "${p.nombre}"\n\nQuedan ${parseFloat(p.stock_actual || 0)} (mínimo ${parseFloat(p.stock_minimo || 0)}).\n\nSe agregará a la factura, pero considere reabastecer.`)
                                 }
                             const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
                                 if (yaExisteIdx !== -1) {
@@ -3482,10 +3486,13 @@ onKeyDown={e => {
                                 <div key={p.id}
                                   className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                                   onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
-                        onMouseDown={() => {
+                    onMouseDown={() => {
                                     if (parseFloat(p.stock_actual || 0) <= 0) {
-                                      alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
+                                      alert(`âš ï¸ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
                                       return
+                                    }
+                                    if (parseFloat(p.stock_minimo || 0) > 0 && parseFloat(p.stock_actual || 0) <= parseFloat(p.stock_minimo || 0)) {
+                                      alert(`⚠️ STOCK BAJO: "${p.nombre}"\n\nQuedan ${parseFloat(p.stock_actual || 0)} (mínimo ${parseFloat(p.stock_minimo || 0)}).\n\nSe agregará a la factura, pero considere reabastecer.`)
                                     }
                                     const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
                                     if (yaExisteIdx !== -1) {

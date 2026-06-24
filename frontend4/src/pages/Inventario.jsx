@@ -89,8 +89,8 @@ export default function Inventario({ modulos_permitidos = null }) {
   }
 
   const stockColor = (item) => {
-    if (item.stock_actual <= item.stock_minimo) return 'text-red-600 font-bold'
-    if (item.stock_actual <= item.stock_minimo * 1.5) return 'text-orange-500 font-medium'
+    if (parseFloat(item.stock_actual) <= parseFloat(item.prod_stock_minimo || item.stock_minimo || 0)) return 'text-red-600 font-bold'
+    if (parseFloat(item.stock_actual) <= parseFloat(item.prod_stock_minimo || item.stock_minimo || 0) * 1.5) return 'text-orange-500 font-medium'
     return 'text-green-600'
   }
 
@@ -469,27 +469,23 @@ export default function Inventario({ modulos_permitidos = null }) {
                   <th className="px-4 py-3 text-left text-gray-600">Producto</th>
                   <th className="px-4 py-3 text-left text-gray-600">Stock Actual</th>
                   <th className="px-4 py-3 text-left text-gray-600">Stock Mínimo</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Stock Máximo</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Unidad</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Ubicación</th>
+               <th className="px-4 py-3 text-left text-gray-600">Stock Máximo</th>
                   <th className="px-4 py-3 text-left text-gray-600">Estado</th>
                   <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {inventario.length === 0 ? (
-                  <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay productos en inventario</td></tr>
+                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay productos en inventario</td></tr>
                 ) : (
                   inventario.map((item) => (
                     <tr key={item.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{item.producto_nombre}</td>
                       <td className={`px-4 py-3 ${stockColor(item)}`}>{item.stock_actual}</td>
-                      <td className="px-4 py-3">{item.stock_minimo}</td>
-                      <td className="px-4 py-3">{item.stock_maximo}</td>
-                      <td className="px-4 py-3">{item.unidad}</td>
-                      <td className="px-4 py-3">{item.ubicacion || '-'}</td>
+                      <td className="px-4 py-3">{item.prod_stock_minimo || item.stock_minimo}</td>
+                 <td className="px-4 py-3">{item.prod_stock_maximo || item.stock_maximo}</td>
                       <td className="px-4 py-3">
-                        {item.stock_actual <= item.stock_minimo ? (
+                        {parseFloat(item.stock_actual) <= parseFloat(item.prod_stock_minimo || item.stock_minimo || 0) ? (
                           <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">⚠️ Stock Bajo</span>
                         ) : (
                           <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">✅ Normal</span>

@@ -18,8 +18,8 @@ export default function StockMinimo() {
       const resultado = inventario.map(item => {
         const producto = productosList.find(p => p.id === item.product_id)
         const stock_actual = parseFloat(item.stock_actual || 0)
-        const stock_minimo = parseFloat(producto?.stock_minimo || item.stock_minimo || 0)
-        const stock_maximo = parseFloat(producto?.stock_maximo || item.stock_maximo || 0)
+        const stock_minimo = parseFloat(item.prod_stock_minimo || producto?.stock_minimo || item.stock_minimo || 0)
+        const stock_maximo = parseFloat(item.prod_stock_maximo || producto?.stock_maximo || item.stock_maximo || 0)
         const estado = stock_actual <= stock_minimo ? 'critico' :
                        stock_actual <= stock_minimo * 1.5 ? 'bajo' : 'normal'
         return {
