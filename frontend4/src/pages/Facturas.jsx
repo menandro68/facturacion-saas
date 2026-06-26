@@ -559,8 +559,8 @@ const handleImprimir = (id) => {
                 if (fechaFin && fecha > fechaFin) return false
                 return true
               })
-              setFacturasCliente(filtradas)
-              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+            setFacturasCliente(filtradas)
+              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
               const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
               const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
       setResumenCliente({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
@@ -579,8 +579,8 @@ const handleImprimir = (id) => {
                 if (fechaFin && fecha > fechaFin) return false
                 return true
               })
-              setFacturasZona(filtradas)
-              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+          setFacturasZona(filtradas)
+              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
               const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
               const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
        setResumenZona({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
@@ -599,8 +599,8 @@ const handleImprimir = (id) => {
                 if (fechaFin && fecha > fechaFin) return false
                 return true
               })
-              setFacturasVendedor(filtradas)
-              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+      setFacturasVendedor(filtradas)
+              const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
               const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
               const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
         setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
@@ -952,8 +952,8 @@ const handleImprimir = (id) => {
                 {facturasZona.map(f => (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
-                    <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                    <td className="px-4 py-3">RD${parseFloat(f.total).toLocaleString()}</td>
+<td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
+                    <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
@@ -1260,11 +1260,11 @@ onKeyDown={e => {
                 </tr>
               </thead>
               <tbody>
-                {facturasVendedor.map(f => (
+             {facturasVendedor.map(f => (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                     <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                    <td className="px-4 py-3">RD${parseFloat(f.total).toLocaleString()}</td>
+                    <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
@@ -1355,10 +1355,10 @@ onKeyDown={e => {
                 </tr>
               </thead>
               <tbody>
-                {facturasCliente.map(f => (
+           {facturasCliente.map(f => (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
-                    <td className="px-4 py-3">RD${parseFloat(f.total).toLocaleString()}</td>
+                    <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
@@ -1659,15 +1659,15 @@ onKeyDown={e => {
                 const vendedorId = document.getElementById('rel-vendedor').value
                 const vendedor = vendedores.find(v => v.id === vendedorId)
                 const printW = window.open('', '_blank')
-                const filas = relacionVendedor.map(f => `
+         const filas = relacionVendedor.map(f => `
                   <tr>
                     <td>${f.ncf || 'BORRADOR'}</td>
                     <td>${f.cliente_nombre || 'Consumidor Final'}</td>
-                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                     <td style="text-align:center">${f.estado.toUpperCase()}</td>
                     <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>`).join('')
-                const totalGeneral = relacionVendedor.reduce((s, f) => s + parseFloat(f.total || 0), 0)
+             const totalGeneral = relacionVendedor.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
                 printW.document.write(`
                   <!DOCTYPE html><html><head><title>Relación Vendedor</title>
                   <style>
@@ -1716,11 +1716,11 @@ onKeyDown={e => {
                   </tr>
                 </thead>
                 <tbody>
-                  {relacionVendedor.map(f => (
+{relacionVendedor.map(f => (
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                      <td className="px-4 py-3 text-right font-medium">RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3 text-right font-medium">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                       <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                       <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                     </tr>
@@ -1730,7 +1730,7 @@ onKeyDown={e => {
               <div className="flex justify-end mt-4">
                 <div className="text-sm text-right bg-gray-50 p-4 rounded-lg">
                   <p className="text-lg font-bold text-gray-800">
-                    Total General: RD${relacionVendedor.filter(f => f.estado === 'emitida').reduce((s, f) => s + parseFloat(f.total || 0), 0).toLocaleString('es-DO',{minimumFractionDigits:2})}
+                  Total General: RD${relacionVendedor.filter(f => f.estado === 'emitida').reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0).toLocaleString('es-DO',{minimumFractionDigits:2})}
                   </p>
                   <p className="text-gray-500 text-xs mt-1">{relacionVendedor.length} factura(s) — {relacionVendedor.filter(f => f.estado === 'emitida').length} emitida(s)</p>
                 </div>
@@ -2625,7 +2625,13 @@ onKeyDown={e => {
                 </tr>
               </thead>
               <tbody>
-                {notasCredito.map(n => (
+              {notasCredito.filter(n => {
+                  const d = new Date(n.creado_en)
+                  const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                  if (fechaInicio && fecha < fechaInicio) return false
+                  if (fechaFin && fecha > fechaFin) return false
+                  return true
+                }).map(n => (
                   <tr key={n.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-red-600 font-medium">{n.ncf}</td>
                     <td className="px-4 py-3">{n.cliente_nombre || 'Consumidor Final'}</td>

@@ -284,34 +284,38 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
-                {cuentas.length === 0 ? (
-                  <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay cuentas por cobrar</td></tr>
-                ) : (
-                  cuentas.map((c) => (
-                    <tr key={c.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{c.cliente_nombre || 'Sin cliente'}</td>
-                      <td className="px-4 py-3">{c.descripcion}</td>
-                      <td className="px-4 py-3">RD${parseFloat(c.monto_total).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-green-600">RD${parseFloat(c.monto_pagado).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-orange-500 font-medium">RD${parseFloat(c.monto_pendiente).toLocaleString()}</td>
-                      <td className="px-4 py-3">{c.fecha_vencimiento ? new Date(c.fecha_vencimiento).toLocaleDateString() : '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(c.estado)}`}>
-                          {c.estado.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 flex gap-2">
-                        {c.estado !== 'pagada' && (
-                          <button onClick={() => { setShowAbono(c.id); setError('') }}
-                            className="text-blue-600 hover:underline text-xs">Abono</button>
-                        )}
-                        <button onClick={() => handleEliminar(c.id)}
-                          className="text-red-500 hover:underline text-xs">Eliminar</button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+ <tbody>
+                {(() => {
+                  const cuentasCredito = todasFacturas.filter(f => f.estado === 'emitida' || f.estado === 'pagada')
+                  if (cuentasCredito.length === 0) {
+                    return <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay cuentas por cobrar</td></tr>
+                  }
+                  const hoy = new Date()
+                  return cuentasCredito.map((f) => {
+                    const total = parseFloat(f.total || 0)
+                    const pagada = f.estado === 'pagada'
+                    const pagado = pagada ? total : 0
+                    const pendiente = pagada ? 0 : total
+                    const vencida = !pagada && f.fecha_vencimiento && new Date(f.fecha_vencimiento) < hoy
+                    const estadoTxt = pagada ? 'pagada' : (vencida ? 'vencida' : 'pendiente')
+                    return (
+                      <tr key={f.id} className="border-t hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{f.cliente_nombre || 'Sin cliente'}</td>
+                        <td className="px-4 py-3 font-mono text-xs">{f.ncf || 'BORRADOR'}</td>
+                        <td className="px-4 py-3">RD${total.toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                        <td className="px-4 py-3 text-green-600">RD${pagado.toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                        <td className="px-4 py-3 text-orange-500 font-medium">RD${pendiente.toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+                        <td className="px-4 py-3">{f.fecha_vencimiento ? new Date(f.fecha_vencimiento).toLocaleDateString('es-DO') : '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(estadoTxt)}`}>
+                            {estadoTxt.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-400">—</td>
+                      </tr>
+                    )
+                  })
+                })()}
               </tbody>
             </table>
           </div>

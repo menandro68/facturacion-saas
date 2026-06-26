@@ -5,6 +5,7 @@ export default function Login({ onLogin }) {
   const [tipo, setTipo] = useState('admin')
   const [form, setForm] = useState({ email: '', password: '', usuario: '' })
   const [error, setError] = useState('')
+  const [modalError, setModalError] = useState('')
   const [loading, setLoading] = useState(false)
 
   // Modal de cambio de credenciales en primer login
@@ -27,9 +28,9 @@ export default function Login({ onLogin }) {
     setLoading(true)
     setError('')
     try {
-      const payload = tipo === 'admin'
-        ? { email: form.email, password: form.password }
-        : { usuario: form.usuario, password: form.password }
+   const payload = tipo === 'admin'
+        ? { email: form.email, password: form.password, rol_esperado: 'admin' }
+        : { usuario: form.usuario, password: form.password, rol_esperado: tipo }
 
       const res = await API.post('/auth/login', payload)
       
@@ -46,7 +47,7 @@ export default function Login({ onLogin }) {
       sessionStorage.setItem('usuario', JSON.stringify(res.data.usuario))
       onLogin(res.data.usuario)
     } catch (err) {
-      setError(err.response?.data?.mensaje || 'Error al iniciar sesión')
+      setModalError(err.response?.data?.mensaje || 'Error al iniciar sesión')
     } finally {
       setLoading(false)
     }
@@ -114,10 +115,23 @@ export default function Login({ onLogin }) {
             Vendedor
           </button>
         </div>
-
-        {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">
-            {error}
+{modalError && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="bg-red-50 px-6 pt-6 pb-4 text-center">
+                <div className="mx-auto flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mb-3">
+                  <span className="text-3xl">⚠️</span>
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">Acceso denegado</h3>
+                <p className="text-sm text-gray-600">{modalError}</p>
+              </div>
+              <div className="px-6 py-4">
+                <button type="button" onClick={() => setModalError('')}
+                  className="w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                  Aceptar
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

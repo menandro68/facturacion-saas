@@ -373,7 +373,7 @@ const crearEmpresa = async () => {
         ))}
       </div>
 
-      {tab !== 'clave' && (
+{tab !== 'clave' && tab !== 'empresas' && (
         <div className="flex justify-end mb-4">
           <button onClick={handleNuevo}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">

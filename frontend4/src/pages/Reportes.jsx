@@ -13,6 +13,7 @@ export default function Reportes() {
   const [reporteOpId, setReporteOpId] = useState('')
   const [reporteData, setReporteData] = useState(null)
   const [reporteLoading, setReporteLoading] = useState(false)
+  const [modalVer, setModalVer] = useState(null)
 
   const fetchReportes = async () => {
     setLoading(true)
@@ -173,35 +174,59 @@ export default function Reportes() {
           {reporteData && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500 relative">
                   <div className="text-xs text-gray-500 mb-1">🧾 Facturas emitidas</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.facturas.cantidad}</div>
                   <div className="text-sm text-blue-600 font-medium">RD$ {reporteData.kpis.facturas.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                  <button onClick={() => setModalVer('facturas')}
+                    className="absolute top-2 right-2 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">
+                    Ver
+                  </button>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500 relative">
                   <div className="text-xs text-gray-500 mb-1">💰 Pagos recibidos</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.pagos.cantidad}</div>
                   <div className="text-sm text-green-600 font-medium">RD$ {reporteData.kpis.pagos.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                  <button onClick={() => setModalVer('pagos')}
+                    className="absolute top-2 right-2 text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">
+                    Ver
+                  </button>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500 relative">
                   <div className="text-xs text-gray-500 mb-1">📋 Pedidos creados</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.pedidos.cantidad}</div>
                   <div className="text-sm text-purple-600 font-medium">RD$ {reporteData.kpis.pedidos.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                  <button onClick={() => setModalVer('pedido')}
+                    className="absolute top-2 right-2 text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700">
+                    Ver
+                  </button>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500 relative">
                   <div className="text-xs text-gray-500 mb-1">📝 Cotizaciones</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.cotizaciones.cantidad}</div>
                   <div className="text-sm text-yellow-600 font-medium">RD$ {reporteData.kpis.cotizaciones.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                  <button onClick={() => setModalVer('cotizacion')}
+                    className="absolute top-2 right-2 text-xs bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700">
+                    Ver
+                  </button>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-red-500 relative">
                   <div className="text-xs text-gray-500 mb-1">❌ Anulaciones</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.anuladas.cantidad}</div>
                   <div className="text-sm text-red-600 font-medium">RD$ {reporteData.kpis.anuladas.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                  <button onClick={() => setModalVer('anulada')}
+                    className="absolute top-2 right-2 text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">
+                    Ver
+                  </button>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500 relative">
                   <div className="text-xs text-gray-500 mb-1">💵 Notas de crédito</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.notas_credito.cantidad}</div>
                   <div className="text-sm text-orange-600 font-medium">RD$ {reporteData.kpis.notas_credito.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                  <button onClick={() => setModalVer('nota_credito')}
+                    className="absolute top-2 right-2 text-xs bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700">
+                    Ver
+                  </button>
                 </div>
               </div>
 
@@ -275,6 +300,65 @@ export default function Reportes() {
             </>
           )}
 
+          {modalVer && reporteData && (() => {
+            const config = {
+              facturas: { titulo: '🧾 Facturas Emitidas', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'emitida'), esPago: false },
+              pedido: { titulo: '📋 Pedidos Creados', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'pedido'), esPago: false },
+              cotizacion: { titulo: '📝 Cotizaciones', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'cotizacion'), esPago: false },
+              anulada: { titulo: '❌ Anulaciones', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'anulada'), esPago: false },
+              nota_credito: { titulo: '💵 Notas de Crédito', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'nota_credito'), esPago: false },
+              pagos: { titulo: '💰 Pagos Recibidos', filtro: reporteData.detalle_pagos, esPago: true }
+            }
+            const c = config[modalVer]
+            if (!c) return null
+            return (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+                  <div className="px-6 py-4 border-b">
+                    <h3 className="text-lg font-bold text-gray-800">{c.titulo} ({c.filtro.length})</h3>
+                  </div>
+                  <div id="modal-print-generico" className="px-6 py-4 overflow-y-auto flex-1">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-gray-600">{c.esPago ? 'NCF Factura' : 'NCF'}</th>
+                          <th className="px-3 py-2 text-left text-gray-600">Cliente</th>
+                          <th className="px-3 py-2 text-right text-gray-600">{c.esPago ? 'Monto' : 'Total'}</th>
+                          <th className="px-3 py-2 text-left text-gray-600">{c.esPago ? 'Método' : 'Estado'}</th>
+                          <th className="px-3 py-2 text-left text-gray-600">Fecha</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {c.filtro.length === 0 ? (
+                          <tr><td colSpan="5" className="px-3 py-6 text-center text-gray-400">Sin registros en el período</td></tr>
+                        ) : c.filtro.map(f => (
+                          <tr key={f.id} className="border-t">
+                            <td className="px-3 py-2 font-mono">{f.ncf || 'N/A'}</td>
+                            <td className="px-3 py-2">{f.cliente_nombre || 'Consumidor Final'}</td>
+                            <td className="px-3 py-2 text-right">RD$ {parseFloat(f.total || f.monto || 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                            <td className="px-3 py-2">{c.esPago ? f.metodo : f.estado}</td>
+                            <td className="px-3 py-2">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="px-6 py-4 border-t flex gap-3 justify-end">
+                    <button onClick={() => {
+                      const contenido = document.getElementById('modal-print-generico').innerHTML
+                      const w = window.open('', '_blank')
+                      w.document.write(`<!DOCTYPE html><html><head><title>${c.titulo}</title>
+                        <style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#1e40af;color:white;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #e2e8f0}</style>
+                        </head><body><h2>${c.titulo}</h2>${contenido}<script>window.onload=()=>window.print()</script></body></html>`)
+                      w.document.close()
+                    }} className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">🖨️ Imprimir</button>
+                    <button onClick={() => setModalVer(null)}
+                      className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Volver</button>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
           {!reporteData && !reporteLoading && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center text-blue-700 text-sm">
               📊 Selecciona un operador y haz clic en <strong>"Generar Reporte"</strong> para ver su actividad

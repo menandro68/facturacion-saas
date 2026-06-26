@@ -36,8 +36,9 @@ API.interceptors.response.use(
       return API(config)
     }
 
-    // Manejo de 401: sesion expirada
-    if (error.response?.status === 401) {
+// Manejo de 401: sesion expirada (NO en el login, ahi es credenciales incorrectas)
+    const esLogin = (config?.url || '').includes('/auth/login')
+    if (error.response?.status === 401 && !esLogin) {
       sessionStorage.clear()
       localStorage.clear()
       window.location.reload()
