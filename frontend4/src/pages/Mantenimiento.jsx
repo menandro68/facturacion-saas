@@ -339,8 +339,8 @@ const crearEmpresa = async () => {
     { id: 'usuarios', label: '👥 Usuarios' },
 { id: 'clave', label: '🔐 Clave Descuento' },
   { id: 'ncf_electronicas', label: '🧾 Secuencias NCF' },
-    { id: 'empresas', label: '🏢 Mis Empresas' },
-  ]
+ { id: 'empresas', label: '🏢 Mis Empresas' },
+  ].filter(t => t.id !== 'empresas' || sessionStorage.getItem('es_matriz') === 'true')
 
   if (loading) return <p className="text-gray-500 p-6">Cargando...</p>
 

@@ -16,9 +16,10 @@ export default function SelectorEmpresas({ onEntrar, onSalir }) {
       try {
         const res = await API.get('/auth/empresas-selector')
         const lista = res.data.data
-        // Si solo tiene su propia empresa (sin sub-empresas), entrar directo
+// Si solo tiene su propia empresa (sin sub-empresas), entrar directo
         if (lista.length <= 1) {
           const u = JSON.parse(sessionStorage.getItem('usuario'))
+          sessionStorage.setItem('es_matriz', lista[0]?.es_principal ? 'true' : 'false')
           onEntrar(u)
           return
         }
@@ -33,9 +34,10 @@ export default function SelectorEmpresas({ onEntrar, onSalir }) {
   }, [])
 
   const abrirLogin = (emp) => {
-    // Si es la empresa principal del usuario, entra directo (ya esta autenticado)
+// Si es la empresa principal del usuario, entra directo (ya esta autenticado)
     if (emp.es_principal) {
       const u = JSON.parse(sessionStorage.getItem('usuario'))
+      sessionStorage.setItem('es_matriz', 'true')
       onEntrar(u)
       return
     }
@@ -56,8 +58,9 @@ export default function SelectorEmpresas({ onEntrar, onSalir }) {
         usuario: cred.usuario,
         password: cred.password
       })
-      sessionStorage.setItem('token', res.data.token)
+ sessionStorage.setItem('token', res.data.token)
       sessionStorage.setItem('usuario', JSON.stringify(res.data.usuario))
+      sessionStorage.setItem('es_matriz', 'false')
       onEntrar(res.data.usuario)
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Credenciales incorrectas')

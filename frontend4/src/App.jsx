@@ -50,9 +50,9 @@ function App() {
     setUsuario(user)
     setMostrarSelector(true)
   }
-
-  const handleEntrarEmpresa = (user) => {
+const handleEntrarEmpresa = (user) => {
     sessionStorage.setItem('empresaSeleccionada', 'true')
+    sessionStorage.setItem('es_matriz', user.es_matriz ? 'true' : 'false')
     setUsuario(user)
     setMostrarSelector(false)
     entrarAlSistema(user)
@@ -78,9 +78,10 @@ function App() {
     }
   }
 
-  const handleLogout = () => {
+ const handleLogout = () => {
     sessionStorage.removeItem('token')
     sessionStorage.removeItem('usuario')
+    sessionStorage.removeItem('es_matriz')
     setUsuario(null)
   }
 

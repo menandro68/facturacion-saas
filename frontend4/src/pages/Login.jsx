@@ -43,8 +43,9 @@ export default function Login({ onLogin }) {
         return
       }
       
-      sessionStorage.setItem('token', res.data.token)
+  sessionStorage.setItem('token', res.data.token)
       sessionStorage.setItem('usuario', JSON.stringify(res.data.usuario))
+      sessionStorage.setItem('es_matriz', res.data.usuario.es_matriz ? 'true' : 'false')
       onLogin(res.data.usuario)
     } catch (err) {
       setModalError(err.response?.data?.mensaje || 'Error al iniciar sesión')
