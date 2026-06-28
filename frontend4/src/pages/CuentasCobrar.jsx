@@ -428,15 +428,15 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   if (facturasYaProcesadas.has(p.invoice_id)) return
                   facturasYaProcesadas.add(p.invoice_id)
 
-                  const factura = todasFacturas.find(f => f.id === p.invoice_id)
+                const factura = todasFacturas.find(f => f.id === p.invoice_id)
                   if (!factura) return
-
-                  const totalFactura = parseFloat(factura.total || 0)
+                  // Restar la NC aplicada: el cliente solo debe el total neto
+                  const ncAplicada = parseFloat(factura.nc_aplicada || 0)
+                  const totalFactura = parseFloat(factura.total || 0) - ncAplicada
                   const totalPagadoFactura = pagos
                     .filter(pg => pg.invoice_id === p.invoice_id)
                     .reduce((s, pg) => s + parseFloat(pg.monto || 0), 0)
-
-                  // Solo dar comision si la factura esta pagada al 100% (o mas)
+                  // Solo dar comision si la factura esta pagada al 100% (o mas) del total neto
                   if (totalPagadoFactura < totalFactura - 0.01) return
 
            const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === p.invoice_id)

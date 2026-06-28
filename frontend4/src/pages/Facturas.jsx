@@ -663,11 +663,11 @@ const handleImprimir = (id) => {
               if (tab === 'zona' && resumenZona) {
                 const zona = zonas.find(z => z.id === zonaSeleccionada)
                 const pw = window.open('', '_blank')
-                const filasZona = facturasZona.map(f => `
+          const filasZona = facturasZona.map(f => `
                   <tr>
                     <td>${f.ncf || 'BORRADOR'}</td>
                     <td>${f.cliente_nombre || 'Consumidor Final'}</td>
-                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' (NC)' : ''}</td>
                     <td style="text-align:center">${f.estado.toUpperCase()}</td>
                     <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>`).join('')
@@ -706,10 +706,10 @@ const handleImprimir = (id) => {
               if (tab === 'cliente' && resumenCliente) {
                 const clienteNombre = document.getElementById('cli-cliente-input').value
                 const printW = window.open('', '_blank')
-                const filas = facturasCliente.map(f => `
+            const filas = facturasCliente.map(f => `
                   <tr>
                     <td>${f.ncf || 'BORRADOR'}</td>
-                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' (NC)' : ''}</td>
                     <td style="text-align:center">${f.estado.toUpperCase()}</td>
                     <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>`).join('')
@@ -745,11 +745,11 @@ const handleImprimir = (id) => {
                 return
               }
               const printW = window.open('', '_blank')
-             const filas = facturasFiltradas.filter(f => f.estado === 'emitida' || f.estado === 'pagada').map(f => `
+         const filas = facturasFiltradas.filter(f => f.estado === 'emitida' || f.estado === 'pagada').map(f => `
                 <tr>
                   <td>${f.ncf || 'BORRADOR'}</td>
                   <td>${f.cliente_nombre || 'Consumidor Final'}</td>
-                  <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                  <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' (NC)' : ''}</td>
                   <td style="text-align:center">${f.estado.toUpperCase()}</td>
                   <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                 </tr>`).join('')
@@ -1538,7 +1538,8 @@ onKeyDown={e => {
                   <tr>
             <th className="px-4 py-3 text-left text-gray-600">NCF</th>
                     <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
-                    <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                  <th className="px-4 py-3 text-right text-gray-600">Total</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
                     <th className="px-4 py-3 text-center text-gray-600">PDF</th>
                     <th className="px-4 py-3 text-center text-gray-600">Quitar</th>
                   </tr>
@@ -1548,7 +1549,8 @@ onKeyDown={e => {
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                      <td className="px-4 py-3 text-right font-medium">RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td className="px-4 py-3 text-right font-medium">RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                       <td className="px-4 py-3 text-center">
                         <button onClick={() => handlePDF(f.id)}
                           className="text-blue-600 hover:underline text-xs font-medium">PDF</button>
@@ -2595,11 +2597,15 @@ onKeyDown={e => {
                         setNcFacturaBuscar('')
                         setNcFacturaEncontrada(null)
                         setNcItemsSeleccionados([])
-                        setNcMotivo('')
+                     setNcMotivo('')
                         const resLista = await API.get('/invoices/nota-credito/lista')
                         setNotasCredito(resLista.data.data)
+                        const resFact = await API.get('/invoices')
+                        setFacturas(resFact.data.data)
+                        setFacturasFiltradas(resFact.data.data)
                         setNcGuardadaId(resPost.data.data?.id)
                         setMostrarImprimirNC(true)
+                    
                       } catch(e) { alert(e.response?.data?.mensaje || 'Error al emitir nota de crédito') }
                     }}
                       className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">
