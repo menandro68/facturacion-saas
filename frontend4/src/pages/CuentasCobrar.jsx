@@ -389,7 +389,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                       }
                     }}
-                    onBlur={() => setTimeout(() => { document.getElementById('cob-vendedor-list').innerHTML = '' }, 200)}
+                   onBlur={() => setTimeout(() => { const el = document.getElementById('cob-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
                   />
                   <input type="hidden" id="cob-vendedor" value="" />
                   <div id="cob-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -446,14 +446,14 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   })
                 })
                 const totalSubtotal = totalCobrado - totalItbis
-                document.getElementById('cob-resultado').innerHTML = `
+                { const cobResEl = document.getElementById('cob-resultado'); if (cobResEl) cobResEl.innerHTML = `
                   <p class="text-sm text-gray-600">Facturas pagadas: <span class="font-bold text-gray-800">${filtradas.length}</span></p>
                   <p class="text-sm text-gray-600">Subtotal: <span class="font-medium">RD$${totalSubtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                   <p class="text-sm text-gray-600">ITBIS: <span class="font-medium">RD$${totalItbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                   <p class="text-lg font-bold text-green-700 mt-1">Total Cobrado: RD$${totalCobrado.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
-                  <p class="text-base font-bold text-purple-700 mt-1">Comision Vendedor: RD$${totalComision.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>`
-                const tbody = document.getElementById('cob-tbody')
-                tbody.innerHTML = filtradas.length === 0
+             <p class="text-base font-bold text-purple-700 mt-1">Comision Vendedor: RD$${totalComision.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>` }
+             const cobTbodyEl = document.getElementById('cob-tbody')
+                if (cobTbodyEl) cobTbodyEl.innerHTML = filtradas.length === 0
                   ? '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No hay facturas pagadas</td></tr>'
                   : filtradas.map(p => {
                     const factura = todasFacturas.find(f => f.id === p.invoice_id)
@@ -674,7 +674,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                       }
                     }}
-                    onBlur={() => setTimeout(() => { document.getElementById('cxc-vendedor-list').innerHTML = '' }, 200)}
+                   onBlur={() => setTimeout(() => { const el = document.getElementById('cxc-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
                   />
                   <input type="hidden" id="cxc-vendedor" value="" />
                   <div id="cxc-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -701,14 +701,14 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 const totalPendiente = filtradas.reduce((s, f) => s + pendienteDe(f), 0)
                 const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
                 const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
-                document.getElementById('cxc-resultado').innerHTML = `
+               { const cxcResEl = document.getElementById('cxc-resultado'); if (cxcResEl) cxcResEl.innerHTML = `
                   <p class="text-sm text-gray-600">Facturas pendientes: <span class="font-bold text-gray-800">${filtradas.length}</span></p>
                   <p class="text-sm text-gray-600">Subtotal: <span class="font-medium">RD$${totalSubtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                   <p class="text-sm text-gray-600">ITBIS: <span class="font-medium">RD$${totalItbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
-                  <p class="text-lg font-bold text-red-600 mt-1">Total Pendiente: RD$${totalPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>`
-                const tbody = document.getElementById('cxc-tbody')
+               <p class="text-lg font-bold text-red-600 mt-1">Total Pendiente: RD$${totalPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>` }
+            const tbody = document.getElementById('cxc-tbody')
                 setCxcFiltradas(filtradas)
-                tbody.innerHTML = filtradas.length === 0
+                if (tbody) tbody.innerHTML = filtradas.length === 0
                   ? '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No hay cuentas por cobrar</td></tr>'
                   : filtradas.map(f => `
                     <tr class="border-t hover:bg-gray-50">
@@ -724,8 +724,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
             <button className={`bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 ${vendedor_id ? 'hidden' : ''}`}
               onClick={() => {
                 const vendedorNombre = vendedores.find(v => v.id === document.getElementById('cxc-vendedor').value)?.nombre || ''
-                const resumenHtml = document.getElementById('cxc-resultado').innerHTML
-                const tbodyHtml = document.getElementById('cxc-tbody').innerHTML
+              const resumenHtml = document.getElementById('cxc-resultado')?.innerHTML || ''
+                const tbodyHtml = document.getElementById('cxc-tbody')?.innerHTML || ''
                 const printW = window.open('', '_blank')
                 const hoy = new Date()
                 const notasCredito = todasFacturas.filter(x => x.estado === 'nota_credito')
@@ -825,8 +825,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 const val = e.target.value.toLowerCase()
                 const list = document.getElementById('ec-cliente-list')
                 list.innerHTML = ''
-                document.getElementById('ec-resultado').innerHTML = ''
-                document.getElementById('ec-tbody').innerHTML = ''
+             { const ecR = document.getElementById('ec-resultado'); if (ecR) ecR.innerHTML = '' }
+                { const ecT = document.getElementById('ec-tbody'); if (ecT) ecT.innerHTML = '' }
                 if (val.length < 2) return
                 const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val) && (!vendedor_id || c.vendedor_id === vendedor_id)).slice(0, 10)
                 filtrados.forEach(c => {
@@ -866,7 +866,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         <td class="px-4 py-3 text-right text-sm font-bold ${balance > 0 ? 'text-red-600' : 'text-green-600'}">RD$${balance.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                       </tr>`
                     }).join('')
-                    document.getElementById('ec-resultado').innerHTML = `
+                   { const ecResEl = document.getElementById('ec-resultado'); if (ecResEl) ecResEl.innerHTML = `
                       <div class="flex gap-4 flex-wrap mb-4">
                         <div class="bg-gray-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Facturas</p><p class="text-lg font-bold text-gray-800">${facturasCliente.length}</p></div>
                         <div class="bg-orange-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Total Facturado</p><p class="text-lg font-bold text-orange-600">RD$${totalFacturas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
@@ -875,7 +875,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         <div class="bg-red-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Balance</p><p class="text-lg font-bold text-red-600">RD$${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
                         <button onclick="
                           const printW = window.open('','_blank');
-                          const filas = document.getElementById('ec-tbody').innerHTML;
+                          const filas = document.getElementById('ec-tbody')?.innerHTML || '';
                           printW.document.write('<!DOCTYPE html><html><head><title>Estado de Cuenta</title><style>body{font-family:Arial;padding:20px;color:#1e293b}h2{color:#1e40af;margin-bottom:4px}p.sub{color:#64748b;font-size:12px;margin-bottom:16px}.resumen{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;text-align:center;min-width:100px}.card p.lbl{font-size:11px;color:#64748b;margin:0 0 4px}.card p.val{font-size:16px;font-weight:bold;margin:0}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#1e40af;color:white;padding:7px;text-align:left}td{padding:6px 8px;border:1px solid #cbd5e1}tr:nth-child(even){background:#f8fafc}.total{font-weight:bold;background:#f1f5f9}@media print{button{display:none}}</style></head><body>');
                           printW.document.write('<h2>Estado de Cuenta: ${c.nombre}</h2>');
                           printW.document.write('<p class=sub>Fecha: ${new Date().toLocaleDateString('es-DO')}</p>');
@@ -884,8 +884,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                           printW.document.write('<script>window.onload=()=>window.print()<\/script></body></html>');
                           printW.document.close();
                         " style="background:#16a34a;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;align-self:center;display:${vendedor_id ? 'none' : 'inline-block'}">🖨️ Imprimir</button>
-                      </div>`
-                    document.getElementById('ec-tbody').innerHTML = filas || '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No hay facturas pendientes</td></tr>'
+                    </div>` }
+                    { const ecTbodyEl = document.getElementById('ec-tbody'); if (ecTbodyEl) ecTbodyEl.innerHTML = filas || '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No hay facturas pendientes</td></tr>' }
                   }
                   list.appendChild(div)
                 })
@@ -912,7 +912,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                 }
               }}
-              onBlur={() => setTimeout(() => { document.getElementById('ec-cliente-list').innerHTML = '' }, 200)}
+             onBlur={() => setTimeout(() => { const el = document.getElementById('ec-cliente-list'); if (el) el.innerHTML = '' }, 200)}
             />
             <div id="ec-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
           </div>
@@ -946,8 +946,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 const val = e.target.value.toLowerCase()
                 const list = document.getElementById('hist-cliente-list')
                 list.innerHTML = ''
-                document.getElementById('hist-tbody').innerHTML = ''
-                document.getElementById('hist-titulo').innerHTML = ''
+               { const ht = document.getElementById('hist-tbody'); if (ht) ht.innerHTML = '' }
+                { const htt = document.getElementById('hist-titulo'); if (htt) htt.innerHTML = '' }
                 if (val.length < 2) return
                 const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(val)).slice(0, 10)
                 filtrados.forEach(c => {
@@ -964,11 +964,11 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
                       .slice(0, 10)
                     const hoy = new Date()
-                    document.getElementById('hist-titulo').innerHTML = `
+                    { const histTitEl = document.getElementById('hist-titulo'); if (histTitEl) histTitEl.innerHTML = `
                       <div class="mb-3 p-3 bg-blue-50 rounded-lg text-sm">
                         <span class="font-medium text-gray-700">Cliente: </span><span class="text-blue-700 font-bold">${c.nombre}</span>
                         <span class="ml-4 font-medium text-gray-700">Condición: </span><span class="text-gray-600">${c.condiciones?.replace(/_/g, ' ') || 'contado'} (${diasCondicion} días)</span>
-                      </div>`
+                  </div>` }
                     const filas = facturasCliente.map(f => {
                       const fechaEmitida = new Date(f.creado_en)
                       const fechaVencimientoCondicion = new Date(fechaEmitida)
@@ -990,7 +990,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         </td>
                       </tr>`
                     }).join('')
-                    document.getElementById('hist-tbody').innerHTML = filas || '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No hay facturas</td></tr>'
+                  { const histTbodyEl = document.getElementById('hist-tbody'); if (histTbodyEl) histTbodyEl.innerHTML = filas || '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No hay facturas</td></tr>' }
                   }
                   list.appendChild(div)
                 })
@@ -1017,7 +1017,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                 }
               }}
-              onBlur={() => setTimeout(() => { document.getElementById('hist-cliente-list').innerHTML = '' }, 200)}
+             onBlur={() => setTimeout(() => { const el = document.getElementById('hist-cliente-list'); if (el) el.innerHTML = '' }, 200)}
             />
             <div id="hist-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
           </div>

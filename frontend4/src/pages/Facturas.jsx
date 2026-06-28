@@ -930,7 +930,7 @@ const handleImprimir = (id) => {
                       if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                     }
                   }}
-                  onBlur={() => setTimeout(() => { document.getElementById('zona-buscar-list').innerHTML = '' }, 200)}
+                  onBlur={() => setTimeout(() => { const el = document.getElementById('zona-buscar-list'); if (el) el.innerHTML = '' }, 200)}
                 />
                 <div id="zona-buscar-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
               </div>
@@ -1028,7 +1028,7 @@ const handleImprimir = (id) => {
                       if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                     }
                   }}
-                  onBlur={() => setTimeout(() => { document.getElementById('prod-vendedor-list').innerHTML = '' }, 200)}
+                 onBlur={() => setTimeout(() => { const el = document.getElementById('prod-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
                 />
                 <input type="hidden" id="prod-vendedor" value="" />
                 <div id="prod-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -1084,7 +1084,7 @@ onKeyDown={e => {
                     if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                   }
                 }}
-                onBlur={() => setTimeout(() => { document.getElementById('prod-cliente-list').innerHTML = '' }, 200)}
+                onBlur={() => setTimeout(() => { const el = document.getElementById('prod-cliente-list'); if (el) el.innerHTML = '' }, 200)}
               />
               <input type="hidden" id="prod-cliente" value="" />
               <div id="prod-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -1139,7 +1139,7 @@ onKeyDown={e => {
                     if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                   }
                 }}
-                onBlur={() => setTimeout(() => { document.getElementById('prod-producto-list').innerHTML = '' }, 200)}
+                onBlur={() => setTimeout(() => { const el = document.getElementById('prod-producto-list'); if (el) el.innerHTML = '' }, 200)}
               />
               <input type="hidden" id="prod-producto" value="" />
               <div id="prod-producto-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -1288,7 +1288,7 @@ onKeyDown={e => {
                     if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                   }
                 }}
-                onBlur={() => setTimeout(() => { document.getElementById('vend-vendedor-list').innerHTML = '' }, 200)}
+               onBlur={() => setTimeout(() => { const el = document.getElementById('vend-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
               />
               <div id="vend-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
             </div>
@@ -1384,7 +1384,7 @@ onKeyDown={e => {
                     if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                   }
                 }}
-                onBlur={() => setTimeout(() => { document.getElementById('cli-cliente-list').innerHTML = '' }, 200)}
+               onBlur={() => setTimeout(() => { const el = document.getElementById('cli-cliente-list'); if (el) el.innerHTML = '' }, 200)}
               />
               <input type="hidden" id="cli-cliente" value="" />
    <div id="cli-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -1502,7 +1502,7 @@ onKeyDown={e => {
                       if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                     }
                   }}
-                  onBlur={() => setTimeout(() => { document.getElementById('chofer-buscar-list').innerHTML = '' }, 200)}
+                  onBlur={() => setTimeout(() => { const el = document.getElementById('chofer-buscar-list'); if (el) el.innerHTML = '' }, 200)}
                 />
                 <div id="chofer-buscar-list" className="absolute z-50 w-56 bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
               </div>
@@ -1677,7 +1677,7 @@ onKeyDown={e => {
                       if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
                     }
                   }}
-                  onBlur={() => setTimeout(() => { document.getElementById('rel-vendedor-list').innerHTML = '' }, 200)}
+                 onBlur={() => setTimeout(() => { const el = document.getElementById('rel-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
                 />
                 <input type="hidden" id="rel-vendedor" value="" />
                 <div id="rel-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -1864,7 +1864,7 @@ onKeyDown={e => {
                       setPedClienteIndex(-1)
                     }
                   }}
-                  onBlur={() => setTimeout(() => { document.getElementById('ped-cliente-list').innerHTML = ''; setPedClienteIndex(-1) }, 200)}
+                 onBlur={() => setTimeout(() => { const el = document.getElementById('ped-cliente-list'); if (el) el.innerHTML = ''; setPedClienteIndex(-1) }, 200)}
                 />
                 <input type="hidden" id="ped-cliente" value="" />
                 <div id="ped-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
@@ -2272,7 +2272,7 @@ onKeyDown={e => {
                       setCotClienteIndex(-1)
                     }
                   }}
-                  onBlur={() => setTimeout(() => { document.getElementById('cot-cliente-list').innerHTML = ''; setCotClienteIndex(-1) }, 200)}
+                 onBlur={() => setTimeout(() => { const el = document.getElementById('cot-cliente-list'); if (el) el.innerHTML = ''; setCotClienteIndex(-1) }, 200)}
                 />
                 <input type="hidden" id="cot-cliente" defaultValue="" />
                 <div id="cot-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
