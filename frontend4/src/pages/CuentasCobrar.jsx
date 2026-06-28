@@ -417,19 +417,18 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   if (fechaFin && fecha > fechaFin) return false
                   return true
                 })
-                const totalCobrado = filtradas.reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                const totalItbis = 0
-                const totalSubtotal = totalCobrado
-
+           const totalCobrado = filtradas.reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                let totalItbis = 0
      // Calcular comision SOLO si la factura esta pagada al 100%
                 let totalComision = 0
                 const facturasYaProcesadas = new Set()
                 filtradas.forEach(p => {
                   if (facturasYaProcesadas.has(p.invoice_id)) return
                   facturasYaProcesadas.add(p.invoice_id)
-
                 const factura = todasFacturas.find(f => f.id === p.invoice_id)
                   if (!factura) return
+                  // ITBIS neto: ITBIS de la factura menos el ITBIS de la NC (articulos devueltos)
+                  totalItbis += parseFloat(factura.itbis || 0) - parseFloat(factura.nc_itbis || 0)
                   // Restar la NC aplicada: el cliente solo debe el total neto
                   const ncAplicada = parseFloat(factura.nc_aplicada || 0)
                   const totalFactura = parseFloat(factura.total || 0) - ncAplicada
@@ -441,12 +440,12 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
 
            const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === p.invoice_id)
                   itemsDeFactura.forEach(item => {
-                    const totalItem = parseFloat(item.total || 0)
+             const totalItem = parseFloat(item.total || 0)
                     const porcentaje = parseFloat(item.comision_vendedor || 0)
                     totalComision += totalItem * (porcentaje / 100)
                   })
                 })
-
+                const totalSubtotal = totalCobrado - totalItbis
                 document.getElementById('cob-resultado').innerHTML = `
                   <p class="text-sm text-gray-600">Facturas pagadas: <span class="font-bold text-gray-800">${filtradas.length}</span></p>
                   <p class="text-sm text-gray-600">Subtotal: <span class="font-medium">RD$${totalSubtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
@@ -980,7 +979,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       const vencidoColor = diasVencido === 0 ? 'color:#16a34a' : diasVencido <= 30 ? 'color:#f97316' : 'color:#dc2626;font-weight:bold'
                       return `<tr class="border-t hover:bg-gray-50">
                         <td class="px-4 py-3 font-mono text-sm">${f.ncf || 'N/A'}</td>
-                        <td class="px-4 py-3 text-right text-sm font-medium">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                      <td class="px-4 py-3 text-right text-sm font-medium">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' <span style="color:#ef4444;font-size:11px">(NC)</span>' : ''}</td>
                         <td class="px-4 py-3 text-sm">${fechaEmitida.toLocaleDateString('es-DO')}</td>
                         <td class="px-4 py-3 text-sm">${fechaPago ? fechaPago.toLocaleDateString('es-DO') : '-'}</td>
                         <td class="px-4 py-3 text-sm text-center" style="${vencidoColor}">${diasVencido > 0 ? diasVencido+' días' : 'Al día'}</td>

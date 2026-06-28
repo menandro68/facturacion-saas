@@ -620,11 +620,11 @@ const handleImprimir = (id) => {
               if (tab === 'vendedor' && resumenVendedor) {
                 const vendedor = vendedores.find(v => v.id === vendedorSeleccionado)
                 const pwv = window.open('', '_blank')
-                const filasVend = facturasVendedor.map(f => `
+        const filasVend = facturasVendedor.map(f => `
                   <tr>
                     <td>${f.ncf || 'BORRADOR'}</td>
                     <td>${f.cliente_nombre || 'Consumidor Final'}</td>
-                    <td style="text-align:right">RD$${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' (NC)' : ''}</td>
                     <td style="text-align:center">${f.estado.toUpperCase()}</td>
                     <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>`).join('')
@@ -1238,13 +1238,59 @@ onKeyDown={e => {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Venta por Vendedor</h3>
           <div className="flex gap-4 items-end mb-6">
-            <div>
+         <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
-              <select value={vendedorSeleccionado} onChange={e => setVendedorSeleccionado(e.target.value)}
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48">
-                <option value="">-- Seleccionar vendedor --</option>
-                {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-              </select>
+              <input
+                id="vend-vendedor-input"
+                type="text"
+                placeholder="🔍 Buscar vendedor..."
+                autoComplete="off"
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-64 w-full"
+                onChange={e => {
+                  setVendedorSeleccionado('')
+                  const val = e.target.value.toLowerCase()
+                  const list = document.getElementById('vend-vendedor-list')
+                  list.innerHTML = ''
+                  if (val) {
+                    const filtrados = vendedores.filter(v => v.nombre.toLowerCase().includes(val)).slice(0, 10)
+                    filtrados.forEach(v => {
+                      const div = document.createElement('div')
+                      div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                      div.textContent = v.nombre
+                      div.onmousedown = () => {
+                        document.getElementById('vend-vendedor-input').value = v.nombre
+                        setVendedorSeleccionado(v.id)
+                        list.innerHTML = ''
+                      }
+                      list.appendChild(div)
+                    })
+                  }
+                }}
+                onKeyDown={e => {
+                  const list = document.getElementById('vend-vendedor-list')
+                  const opciones = list.querySelectorAll('div')
+                  if (opciones.length === 0) return
+                  let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = (idx + 1) % opciones.length
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                    idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                    opciones[idx].classList.add('bg-blue-100')
+                    opciones[idx].scrollIntoView({ block: 'nearest' })
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                  }
+                }}
+                onBlur={() => setTimeout(() => { document.getElementById('vend-vendedor-list').innerHTML = '' }, 200)}
+              />
+              <div id="vend-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
             </div>
       
     </div>
