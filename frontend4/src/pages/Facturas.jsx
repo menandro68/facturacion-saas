@@ -447,7 +447,7 @@ const handleImprimir = (id) => {
           <input type="date" id="filtro-fecha-fin" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-    <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+  <button id="btn-buscar-reporte" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
           onClick={async () => {
             // Leer fechas directamente del DOM para evitar valores obsoletos (stale) por timing
             const fechaInicio = document.getElementById('filtro-fecha-inicio')?.value || ''
@@ -605,17 +605,88 @@ const handleImprimir = (id) => {
               const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
         setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
             }
-            // Si estamos en el tab cotizacion, aplicar el filtro de fechas
+     // Si estamos en el tab cotizacion, aplicar el filtro de fechas
             if (tab === 'cotizacion') {
               setCotFechaInicio(fechaInicio)
               setCotFechaFin(fechaFin)
             }
+        // Si estamos en el tab relacion_vendedor, buscar la relación del vendedor
+            if (tab === 'relacion_vendedor') {
+              let vendedorId = document.getElementById('rel-vendedor')?.value
+              // Si no hay ID guardado, resolverlo por el nombre escrito
+              if (!vendedorId) {
+                const nombreEscrito = (document.getElementById('rel-vendedor-input')?.value || '').trim().toLowerCase()
+                const encontrado = vendedores.find(v => v.nombre.toLowerCase() === nombreEscrito)
+                if (encontrado) {
+                  vendedorId = encontrado.id
+                  document.getElementById('rel-vendedor').value = encontrado.id
+                }
+              }
+              if (!vendedorId) { alert('Seleccione un vendedor'); return }
+              const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
+              const idsClientes = clientesVendedor.map(c => c.id)
+              const filtradas = facturas.filter(f => {
+                if (!idsClientes.includes(f.customer_id)) return false
+                if (f.estado !== 'emitida') return false
+                const d = new Date(f.creado_en)
+                const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fecha < fechaInicio) return false
+                if (fechaFin && fecha > fechaFin) return false
+                return true
+              })
+              setRelacionVendedor(filtradas)
+            }
           }}>
           Buscar
         </button>
-{(resumen || (tab === 'cliente' && resumenCliente) || (tab === 'zona' && resumenZona) || (tab === 'vendedor' && resumenVendedor)) && (
+{(resumen || (tab === 'cliente' && resumenCliente) || (tab === 'zona' && resumenZona) || (tab === 'vendedor' && resumenVendedor) || (tab === 'relacion_vendedor' && relacionVendedor.length > 0)) && (
           <button
             onClick={() => {
+              // Si estamos en el tab relacion_vendedor, imprimir la relación del vendedor
+              if (tab === 'relacion_vendedor' && relacionVendedor.length > 0) {
+                const vendedorId = document.getElementById('rel-vendedor')?.value
+                const vendedor = vendedores.find(v => v.id === vendedorId)
+                const printW = window.open('', '_blank')
+                const filas = relacionVendedor.map(f => `
+                  <tr>
+                    <td>${f.ncf || 'BORRADOR'}</td>
+                    <td>${f.cliente_nombre || 'Consumidor Final'}</td>
+                    <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
+                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('')
+                const totalGeneral = relacionVendedor.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
+                printW.document.write(`
+                  <!DOCTYPE html><html><head><title>Relación Vendedor</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.sub{color:#64748b;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    .total-row{font-weight:bold;background:#f1f5f9}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Relación de Facturas — Vendedor: ${vendedor?.nombre || ''}</h2>
+                  <p class="sub">Período: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} — Total facturas: ${relacionVendedor.length}</p>
+                  <table>
+                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
+                    <tbody>
+                      ${filas}
+                      <tr class="total-row">
+                        <td colspan="2">TOTAL GENERAL</td>
+                        <td style="text-align:right">RD$${totalGeneral.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                        <td colspan="2"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                printW.document.close()
+                return
+              }
               // Si estamos en el tab vendedor, imprimir el reporte del vendedor
               if (tab === 'vendedor' && resumenVendedor) {
                 const vendedor = vendedores.find(v => v.id === vendedorSeleccionado)
@@ -908,10 +979,13 @@ const handleImprimir = (id) => {
                       })
                     }
                   }}
-                  onKeyDown={e => {
+  onKeyDown={e => {
                     const list = document.getElementById('zona-buscar-list')
                     const opciones = list.querySelectorAll('div')
-                    if (opciones.length === 0) return
+                    if (opciones.length === 0) {
+                      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-reporte')?.click() }
+                      return
+                    }
                     let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                     if (e.key === 'ArrowDown') {
                       e.preventDefault()
@@ -927,7 +1001,12 @@ const handleImprimir = (id) => {
                       opciones[idx].scrollIntoView({ block: 'nearest' })
                     } else if (e.key === 'Enter') {
                       e.preventDefault()
-                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      if (idx >= 0) {
+                        opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                        setTimeout(() => document.getElementById('btn-buscar-reporte')?.click(), 100)
+                      } else {
+                        document.getElementById('btn-buscar-reporte')?.click()
+                      }
                     }
                   }}
                   onBlur={() => setTimeout(() => { const el = document.getElementById('zona-buscar-list'); if (el) el.innerHTML = '' }, 200)}
@@ -1006,10 +1085,13 @@ const handleImprimir = (id) => {
                       })
                     }
                   }}
-                  onKeyDown={e => {
+       onKeyDown={e => {
                     const list = document.getElementById('prod-vendedor-list')
                     const opciones = list.querySelectorAll('div')
-                    if (opciones.length === 0) return
+                    if (opciones.length === 0) {
+                      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prod-cliente-input')?.focus() }
+                      return
+                    }
                     let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                     if (e.key === 'ArrowDown') {
                       e.preventDefault()
@@ -1025,7 +1107,12 @@ const handleImprimir = (id) => {
                       opciones[idx].scrollIntoView({ block: 'nearest' })
                     } else if (e.key === 'Enter') {
                       e.preventDefault()
-                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      if (idx >= 0) {
+                        opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                        setTimeout(() => document.getElementById('prod-cliente-input')?.focus(), 100)
+                      } else {
+                        document.getElementById('prod-cliente-input')?.focus()
+                      }
                     }
                   }}
                  onBlur={() => setTimeout(() => { const el = document.getElementById('prod-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
@@ -1065,7 +1152,10 @@ const handleImprimir = (id) => {
 onKeyDown={e => {
                   const list = document.getElementById('prod-cliente-list')
                   const opciones = list.querySelectorAll('div')
-                  if (opciones.length === 0) return
+                  if (opciones.length === 0) {
+                    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prod-producto-input')?.focus() }
+                    return
+                  }
                   let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                   if (e.key === 'ArrowDown') {
                     e.preventDefault()
@@ -1081,7 +1171,12 @@ onKeyDown={e => {
                     opciones[idx].scrollIntoView({ block: 'nearest' })
                   } else if (e.key === 'Enter') {
                     e.preventDefault()
-                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    if (idx >= 0) {
+                      opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      setTimeout(() => document.getElementById('prod-producto-input')?.focus(), 100)
+                    } else {
+                      document.getElementById('prod-producto-input')?.focus()
+                    }
                   }
                 }}
                 onBlur={() => setTimeout(() => { const el = document.getElementById('prod-cliente-list'); if (el) el.innerHTML = '' }, 200)}
@@ -1120,7 +1215,10 @@ onKeyDown={e => {
 onKeyDown={e => {
                   const list = document.getElementById('prod-producto-list')
                   const opciones = list.querySelectorAll('div')
-                  if (opciones.length === 0) return
+                  if (opciones.length === 0) {
+                    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-reporte')?.click() }
+                    return
+                  }
                   let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                   if (e.key === 'ArrowDown') {
                     e.preventDefault()
@@ -1136,7 +1234,12 @@ onKeyDown={e => {
                     opciones[idx].scrollIntoView({ block: 'nearest' })
                   } else if (e.key === 'Enter') {
                     e.preventDefault()
-                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    if (idx >= 0) {
+                      opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      setTimeout(() => document.getElementById('btn-buscar-reporte')?.click(), 100)
+                    } else {
+                      document.getElementById('btn-buscar-reporte')?.click()
+                    }
                   }
                 }}
                 onBlur={() => setTimeout(() => { const el = document.getElementById('prod-producto-list'); if (el) el.innerHTML = '' }, 200)}
@@ -1266,10 +1369,13 @@ onKeyDown={e => {
                     })
                   }
                 }}
-                onKeyDown={e => {
+   onKeyDown={e => {
                   const list = document.getElementById('vend-vendedor-list')
                   const opciones = list.querySelectorAll('div')
-                  if (opciones.length === 0) return
+                  if (opciones.length === 0) {
+                    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-reporte')?.click() }
+                    return
+                  }
                   let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                   if (e.key === 'ArrowDown') {
                     e.preventDefault()
@@ -1285,7 +1391,12 @@ onKeyDown={e => {
                     opciones[idx].scrollIntoView({ block: 'nearest' })
                   } else if (e.key === 'Enter') {
                     e.preventDefault()
-                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    if (idx >= 0) {
+                      opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      setTimeout(() => document.getElementById('btn-buscar-reporte')?.click(), 100)
+                    } else {
+                      document.getElementById('btn-buscar-reporte')?.click()
+                    }
                   }
                 }}
                onBlur={() => setTimeout(() => { const el = document.getElementById('vend-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
@@ -1365,7 +1476,10 @@ onKeyDown={e => {
 onKeyDown={e => {
                   const list = document.getElementById('cli-cliente-list')
                   const opciones = list.querySelectorAll('div')
-                  if (opciones.length === 0) return
+                  if (opciones.length === 0) {
+                    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-reporte')?.click() }
+                    return
+                  }
                   let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                   if (e.key === 'ArrowDown') {
                     e.preventDefault()
@@ -1381,7 +1495,12 @@ onKeyDown={e => {
                     opciones[idx].scrollIntoView({ block: 'nearest' })
                   } else if (e.key === 'Enter') {
                     e.preventDefault()
-                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    if (idx >= 0) {
+                      opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      setTimeout(() => document.getElementById('btn-buscar-reporte')?.click(), 100)
+                    } else {
+                      document.getElementById('btn-buscar-reporte')?.click()
+                    }
                   }
                 }}
                onBlur={() => setTimeout(() => { const el = document.getElementById('cli-cliente-list'); if (el) el.innerHTML = '' }, 200)}
@@ -1655,10 +1774,13 @@ onKeyDown={e => {
                       })
                     }
                   }}
-                  onKeyDown={e => {
+    onKeyDown={e => {
                     const list = document.getElementById('rel-vendedor-list')
                     const opciones = list.querySelectorAll('div')
-                    if (opciones.length === 0) return
+                if (opciones.length === 0) {
+                      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-reporte')?.click() }
+                      return
+                    }
                     let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                     if (e.key === 'ArrowDown') {
                       e.preventDefault()
@@ -1672,9 +1794,14 @@ onKeyDown={e => {
                       idx = idx <= 0 ? opciones.length - 1 : idx - 1
                       opciones[idx].classList.add('bg-blue-100')
                       opciones[idx].scrollIntoView({ block: 'nearest' })
-                    } else if (e.key === 'Enter') {
+     } else if (e.key === 'Enter') {
                       e.preventDefault()
-                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                      if (idx >= 0) {
+                        opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                        setTimeout(() => document.getElementById('btn-buscar-reporte')?.click(), 100)
+                      } else {
+                        document.getElementById('btn-buscar-reporte')?.click()
+                      }
                     }
                   }}
                  onBlur={() => setTimeout(() => { const el = document.getElementById('rel-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
@@ -1683,73 +1810,8 @@ onKeyDown={e => {
                 <div id="rel-vendedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
               </div>
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-              onClick={() => {
-                const vendedorId = document.getElementById('rel-vendedor').value
-                if (!vendedorId) return
-                const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
-                const idsClientes = clientesVendedor.map(c => c.id)
-            const filtradas = facturas.filter(f => {
-                  if (!idsClientes.includes(f.customer_id)) return false
-                  if (f.estado !== 'emitida') return false
-                  const d = new Date(f.creado_en)
-                  const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-                  if (fechaInicio && fecha < fechaInicio) return false
-                  if (fechaFin && fecha > fechaFin) return false
-                  return true
-                })
-                setRelacionVendedor(filtradas)
-              }}>
-              Buscar
-            </button>
-            {relacionVendedor.length > 0 && (
-              <button onClick={() => {
-                const vendedorId = document.getElementById('rel-vendedor').value
-                const vendedor = vendedores.find(v => v.id === vendedorId)
-                const printW = window.open('', '_blank')
-         const filas = relacionVendedor.map(f => `
-                  <tr>
-                    <td>${f.ncf || 'BORRADOR'}</td>
-                    <td>${f.cliente_nombre || 'Consumidor Final'}</td>
-                    <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td style="text-align:center">${f.estado.toUpperCase()}</td>
-                    <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
-                  </tr>`).join('')
-             const totalGeneral = relacionVendedor.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
-                printW.document.write(`
-                  <!DOCTYPE html><html><head><title>Relación Vendedor</title>
-                  <style>
-                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
-                    h2{color:#1e40af;margin-bottom:4px}
-                    p.sub{color:#64748b;font-size:13px;margin-bottom:16px}
-                    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}
-                    th{background:#1e40af;color:white;padding:8px;text-align:left}
-                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
-                    tr:nth-child(even){background:#f8fafc}
-                    .total-row{font-weight:bold;background:#f1f5f9}
-                    @media print{button{display:none}}
-                  </style></head><body>
-                  <h2>Relación de Facturas — Vendedor: ${vendedor?.nombre || ''}</h2>
-                  <p class="sub">Período: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} — Total facturas: ${relacionVendedor.length}</p>
-                  <table>
-                    <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
-                    <tbody>
-                      ${filas}
-                      <tr class="total-row">
-                        <td colspan="2">TOTAL GENERAL</td>
-                        <td style="text-align:right">RD$${totalGeneral.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                        <td colspan="2"></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <script>window.onload=()=>window.print()</script>
-                  </body></html>`)
-                printW.document.close()
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
-                🖨️ Imprimir Relación
-              </button>
-            )}
+
+        
           </div>
           {relacionVendedor.length > 0 && (
             <>
