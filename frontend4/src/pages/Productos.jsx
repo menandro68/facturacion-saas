@@ -179,14 +179,16 @@ const handleChange = (e) => {
                 placeholder="Descripción"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
+      <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta *</label>
               <input name="precio" type="number" step="0.01" value={form.precio} onChange={handleChange} required
+                onBlur={() => { const p = parseFloat(form.precio || 0); const c = parseFloat(form.costo || 0); if (p > 0 && c > 0 && p < c) alert('⚠️ ATENCIÓN: El Precio de Venta (RD$' + p.toLocaleString('es-DO',{minimumFractionDigits:2}) + ') es MENOR que el Costo (RD$' + c.toLocaleString('es-DO',{minimumFractionDigits:2}) + '). Estaría vendiendo con pérdida.') }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Costo *</label>
               <input name="costo" type="number" step="0.01" value={form.costo} onChange={handleChange} required
+                onBlur={() => { const p = parseFloat(form.precio || 0); const c = parseFloat(form.costo || 0); if (p > 0 && c > 0 && p < c) alert('⚠️ ATENCIÓN: El Precio de Venta (RD$' + p.toLocaleString('es-DO',{minimumFractionDigits:2}) + ') es MENOR que el Costo (RD$' + c.toLocaleString('es-DO',{minimumFractionDigits:2}) + '). Estaría vendiendo con pérdida.') }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>

@@ -163,10 +163,12 @@ const handleEnviarMetodo = () => {
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
             <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea grabar este pago?</p>
             <div className="flex justify-center gap-6">
-              <button autoFocus onClick={grabarPago}
-                className="bg-blue-600 text-white px-6 py-2 rounded text-sm hover:bg-blue-700">Sí</button>
-              <button onClick={() => setMostrarConfirmGrabar(false)}
-                className="bg-gray-200 text-gray-700 px-6 py-2 rounded text-sm hover:bg-gray-300">No</button>
+            <button autoFocus id="btn-si-grabar-pago" onClick={grabarPago}
+                onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-grabar-pago')?.focus() } }}
+                className="bg-blue-600 text-white px-6 py-2 rounded text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">Sí</button>
+              <button id="btn-no-grabar-pago" onClick={() => setMostrarConfirmGrabar(false)}
+                onKeyDown={e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-grabar-pago')?.focus() } }}
+                className="bg-gray-200 text-gray-700 px-6 py-2 rounded text-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400">No</button>
             </div>
           </div>
         </div>
@@ -245,11 +247,14 @@ const handleEnviarMetodo = () => {
                 window.open(`/payments/${pagoGuardadoId}/recibo?token=${token}`, '_blank')
                   setMostrarImprimirPago(false)
                 }}
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium">
+id="btn-si-recibo-pago"
+                onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-recibo-pago')?.focus() } }}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
                 Sí
               </button>
-              <button onClick={() => setMostrarImprimirPago(false)}
-                className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm font-medium text-gray-700">
+              <button id="btn-no-recibo-pago" onClick={() => setMostrarImprimirPago(false)}
+                onKeyDown={e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-recibo-pago')?.focus() } }}
+                className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
                 No
               </button>
             </div>

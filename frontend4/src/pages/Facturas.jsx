@@ -3212,8 +3212,9 @@ onKeyDown={e => {
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
             <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la Nota de Crédito?</p>
             <div className="flex justify-center gap-6">
-              <button
+   <button
                 autoFocus
+                id="btn-si-nc"
             onClick={() => {
                   const token = sessionStorage.getItem('token')
                   const formato = localStorage.getItem('formato_impresion') || 'media'
@@ -3224,17 +3225,17 @@ onKeyDown={e => {
                   setMostrarImprimirNC(false)
                 }}
                 onKeyDown={e => {
-                  if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-no-nc')?.focus() }
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-nc')?.focus() }
                   if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); const formato = localStorage.getItem('formato_impresion') || 'media'; let endpoint = '/pdf'; if (formato === 'pos') endpoint = '/pdf-pos'; else if (formato === 'carta') endpoint = '/pdf-carta'; window.open(`/invoices/${ncGuardadaId}${endpoint}?token=${token}`, '_blank'); setMostrarImprimirNC(false) }
                 }}
                 className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 text-sm font-medium">
                 Sí
               </button>
-              <button
+          <button
                 id="btn-no-nc"
                 onClick={() => setMostrarImprimirNC(false)}
                 onKeyDown={e => {
-                  if (e.key === 'ArrowLeft') { e.preventDefault(); document.querySelector('[autoFocus]')?.focus() }
+                  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-nc')?.focus() }
                   if (e.key === 'Enter') setMostrarImprimirNC(false)
                 }}
                 className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
@@ -3251,8 +3252,9 @@ onKeyDown={e => {
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
             <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la factura?</p>
             <div className="flex justify-center gap-6">
-              <button
+         <button
                 autoFocus
+                id="btn-si-imprimir"
             onClick={() => {
                   const token = sessionStorage.getItem('token')
                   const formato = localStorage.getItem('formato_impresion') || 'media'
@@ -3263,17 +3265,17 @@ onKeyDown={e => {
                   setMostrarImprimir(false)
                 }}
                 onKeyDown={e => {
-                  if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-no-imprimir')?.focus() }
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-imprimir')?.focus() }
                  if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); const formato = localStorage.getItem('formato_impresion') || 'media'; let endpoint = '/pdf'; if (formato === 'pos') endpoint = '/pdf-pos'; else if (formato === 'carta') endpoint = '/pdf-carta'; window.open(`/invoices/${facturaGuardadaId}${endpoint}?token=${token}`, '_blank'); setMostrarImprimir(false) }
                 }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
                 Sí
               </button>
-              <button
+         <button
                 id="btn-no-imprimir"
                 onClick={() => setMostrarImprimir(false)}
                 onKeyDown={e => {
-                  if (e.key === 'ArrowLeft') { e.preventDefault(); document.querySelector('[autoFocus]')?.focus() }
+                  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-imprimir')?.focus() }
                   if (e.key === 'Enter') setMostrarImprimir(false)
                 }}
                 className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
@@ -3353,21 +3355,22 @@ onKeyDown={e => {
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
             <p className="text-lg font-semibold text-gray-800 mb-6">¿Desear Grabar Esta Factura?</p>
             <div className="flex justify-center gap-6">
-              <button
+<button
                 autoFocus
+                id="btn-si-grabar-factura"
                 onClick={handleConfirmarSi}
                 onKeyDown={e => {
-                  if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-volver')?.focus() }
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-volver')?.focus() }
                   if (e.key === 'Enter') handleConfirmarSi()
                 }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
                 Sí
               </button>
-              <button
+          <button
                 id="btn-volver"
                 onClick={handleConfirmarVolver}
                 onKeyDown={e => {
-                  if (e.key === 'ArrowLeft') { e.preventDefault(); document.querySelector('[autoFocus]')?.focus() }
+                  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-grabar-factura')?.focus() }
                   if (e.key === 'Enter') handleConfirmarVolver()
                 }}
                 className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
