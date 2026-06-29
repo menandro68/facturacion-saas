@@ -636,10 +636,10 @@ const handleImprimir = (id) => {
               })
               setRelacionVendedor(filtradas)
             }
-          }}>
+}}>
           Buscar
         </button>
-{(resumen || (tab === 'cliente' && resumenCliente) || (tab === 'zona' && resumenZona) || (tab === 'vendedor' && resumenVendedor) || (tab === 'relacion_vendedor' && relacionVendedor.length > 0)) && (
+{((tab === 'fecha' && resumen) || (tab === 'cliente' && resumenCliente) || (tab === 'zona' && resumenZona) || (tab === 'vendedor' && resumenVendedor) || (tab === 'relacion_vendedor' && relacionVendedor.length > 0)) && (
           <button
             onClick={() => {
               // Si estamos en el tab relacion_vendedor, imprimir la relación del vendedor
