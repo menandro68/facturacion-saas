@@ -432,7 +432,8 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
           <div className="flex gap-4 items-end mb-6 flex-wrap">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Próximos a vencer en</label>
-              <select value={filtroDias} onChange={e => setFiltroDias(e.target.value)}
+           <select value={filtroDias} onChange={e => setFiltroDias(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setDiasBusqueda(filtroDias) } }}
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="7">7 días</option>
                 <option value="15">15 días</option>
@@ -584,21 +585,71 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
         return (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex gap-3 items-end mb-6 flex-wrap">
-            <div>
+      <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-              <input type="date" value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)}
+              <input type="date" id="pagos-desde" value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('pagos-hasta')?.focus() } }}
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-              <input type="date" value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)}
+              <input type="date" id="pagos-hasta" value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('pagos-proveedor')?.focus() } }}
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
+        <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
-              <input type="text" value={filtroProveedor} onChange={e => setFiltroProveedor(e.target.value)}
-                placeholder="Buscar proveedor..."
-                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <div className="relative">
+                <input type="text" id="pagos-proveedor" value={filtroProveedor} onChange={e => setFiltroProveedor(e.target.value)}
+                  placeholder="Buscar proveedor..."
+                  autoComplete="off"
+                  onKeyDown={e => {
+                    const list = document.getElementById('pagos-proveedor-list')
+                    const opciones = list.querySelectorAll('div')
+                    if (opciones.length === 0) {
+                      if (e.key === 'Enter') { e.preventDefault(); e.target.blur() }
+                      return
+                    }
+                    let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = (idx + 1) % opciones.length
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].classList.remove('bg-blue-100')
+                      idx = idx <= 0 ? opciones.length - 1 : idx - 1
+                      opciones[idx].classList.add('bg-blue-100')
+                      opciones[idx].scrollIntoView({ block: 'nearest' })
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => { const el = document.getElementById('pagos-proveedor-list'); if (el) el.innerHTML = '' }, 200)}
+                  onInput={e => {
+                    const val = e.target.value.toLowerCase()
+                    const list = document.getElementById('pagos-proveedor-list')
+                    list.innerHTML = ''
+                    if (val) {
+                      const filtrados = proveedores.filter(p => p.nombre.toLowerCase().includes(val)).slice(0, 10)
+                      filtrados.forEach(p => {
+                        const div = document.createElement('div')
+                        div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                        div.textContent = p.nombre
+                        div.onmousedown = () => {
+                          setFiltroProveedor(p.nombre)
+                          list.innerHTML = ''
+                        }
+                        list.appendChild(div)
+                      })
+                    }
+                  }}
+                  className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full" />
+                <div id="pagos-proveedor-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+              </div>
             </div>
             <button onClick={() => { setFiltroDesde(''); setFiltroHasta(''); setFiltroProveedor('') }}
               className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300">

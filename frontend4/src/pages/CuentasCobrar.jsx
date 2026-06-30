@@ -327,14 +327,16 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Cobro por Vendedor</h3>
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end mb-6 flex-wrap">
-            <div className="w-full sm:w-auto">
+      <div className="w-full sm:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
-              <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
+              <input type="date" id="cob-fecha-inicio" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('cob-fecha-fin')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="w-full sm:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
-              <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
+              <input type="date" id="cob-fecha-fin" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('cob-vendedor-input')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="w-full sm:w-auto">
@@ -367,10 +369,13 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         })
                       }
                     }}
-                    onKeyDown={e => {
+               onKeyDown={e => {
                       const list = document.getElementById('cob-vendedor-list')
                       const opciones = list.querySelectorAll('div')
-                      if (opciones.length === 0) return
+                      if (opciones.length === 0) {
+                        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-cob-vendedor')?.click() }
+                        return
+                      }
                       let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                       if (e.key === 'ArrowDown') {
                         e.preventDefault()
@@ -384,9 +389,14 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         idx = idx <= 0 ? opciones.length - 1 : idx - 1
                         opciones[idx].classList.add('bg-blue-100')
                         opciones[idx].scrollIntoView({ block: 'nearest' })
-                      } else if (e.key === 'Enter') {
+} else if (e.key === 'Enter') {
                         e.preventDefault()
-                        if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                        if (idx >= 0) {
+                          opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                          setTimeout(() => document.getElementById('btn-buscar-cob-vendedor')?.click(), 100)
+                        } else {
+                          document.getElementById('btn-buscar-cob-vendedor')?.click()
+                        }
                       }
                     }}
                    onBlur={() => setTimeout(() => { const el = document.getElementById('cob-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
@@ -398,9 +408,17 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 <input type="hidden" id="cob-vendedor" value={vendedor_id} />
               )}
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+        <button id="btn-buscar-cob-vendedor" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
               onClick={() => {
-                const vendedorId = document.getElementById('cob-vendedor').value
+                let vendedorId = document.getElementById('cob-vendedor').value
+                if (!vendedorId) {
+                  const nombreEscrito = (document.getElementById('cob-vendedor-input')?.value || '').trim().toLowerCase()
+                  const encontrado = vendedores.find(v => v.nombre.toLowerCase() === nombreEscrito)
+                  if (encontrado) {
+                    vendedorId = encontrado.id
+                    document.getElementById('cob-vendedor').value = encontrado.id
+                  }
+                }
                 if (!vendedorId) return
                 const vendedorNombreSeleccionado = vendedores.find(v => v.id === vendedorId)?.nombre || ''
          const filtradas = pagos.filter(p => {
@@ -652,10 +670,13 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         })
                       }
                     }}
-                    onKeyDown={e => {
+  onKeyDown={e => {
                       const list = document.getElementById('cxc-vendedor-list')
                       const opciones = list.querySelectorAll('div')
-                      if (opciones.length === 0) return
+                      if (opciones.length === 0) {
+                        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-cxc-vendedor')?.click() }
+                        return
+                      }
                       let idx = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                       if (e.key === 'ArrowDown') {
                         e.preventDefault()
@@ -671,7 +692,12 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         opciones[idx].scrollIntoView({ block: 'nearest' })
                       } else if (e.key === 'Enter') {
                         e.preventDefault()
-                        if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                        if (idx >= 0) {
+                          opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                          setTimeout(() => document.getElementById('btn-buscar-cxc-vendedor')?.click(), 100)
+                        } else {
+                          document.getElementById('btn-buscar-cxc-vendedor')?.click()
+                        }
                       }
                     }}
                    onBlur={() => setTimeout(() => { const el = document.getElementById('cxc-vendedor-list'); if (el) el.innerHTML = '' }, 200)}
@@ -683,9 +709,17 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 <input type="hidden" id="cxc-vendedor" value={vendedor_id} />
               )}
             </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+        <button id="btn-buscar-cxc-vendedor" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
               onClick={() => {
-                const vendedorId = document.getElementById('cxc-vendedor').value
+                let vendedorId = document.getElementById('cxc-vendedor').value
+                if (!vendedorId) {
+                  const nombreEscrito = (document.getElementById('cxc-vendedor-input')?.value || '').trim().toLowerCase()
+                  const encontrado = vendedores.find(v => v.nombre.toLowerCase() === nombreEscrito)
+                  if (encontrado) {
+                    vendedorId = encontrado.id
+                    document.getElementById('cxc-vendedor').value = encontrado.id
+                  }
+                }
                 if (!vendedorId) return
                 const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
                 const idsClientes = clientesVendedor.map(c => c.id)

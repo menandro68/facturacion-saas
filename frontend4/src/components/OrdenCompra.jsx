@@ -219,6 +219,8 @@ const handleItemChange = async (idx, field, value) => {
                     }
                   }}
                   onKeyDown={e => {
+                    const ocList = document.getElementById('oc-proveedor-list')
+                    if (ocList.querySelectorAll('div').length === 0 && e.key === 'Enter') { e.preventDefault(); document.getElementById('oc-fecha-entrega')?.focus(); return }
                     const list = document.getElementById('oc-proveedor-list')
                     const opciones = list.querySelectorAll('div')
                     if (opciones.length === 0) return
@@ -247,17 +249,20 @@ const handleItemChange = async (idx, field, value) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Entrega</label>
-              <input type="date" value={form.fecha_entrega} onChange={e => setForm({...form, fecha_entrega: e.target.value})}
+              <input type="date" id="oc-fecha-entrega" value={form.fecha_entrega} onChange={e => setForm({...form, fecha_entrega: e.target.value})}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('oc-fecha-vencimiento')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Vencimiento Pago</label>
-              <input type="date" value={form.fecha_vencimiento_pago} onChange={e => setForm({...form, fecha_vencimiento_pago: e.target.value})}
+              <input type="date" id="oc-fecha-vencimiento" value={form.fecha_vencimiento_pago} onChange={e => setForm({...form, fecha_vencimiento_pago: e.target.value})}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('oc-notas')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-              <input value={form.notas} onChange={e => setForm({...form, notas: e.target.value})}
+              <input id="oc-notas" value={form.notas} onChange={e => setForm({...form, notas: e.target.value})}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('oc-prod-input-0')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
@@ -296,7 +301,10 @@ const handleItemChange = async (idx, field, value) => {
                     onKeyDown={e => {
                       const list = document.getElementById(`oc-prod-list-${idx}`)
                       const opciones = list.querySelectorAll('div')
-                      if (opciones.length === 0) return
+                      if (opciones.length === 0) {
+                        if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`oc-prod-desc-${idx}`)?.focus() }
+                        return
+                      }
                       let i = Array.from(opciones).findIndex(o => o.classList.contains('bg-blue-100'))
                       if (e.key === 'ArrowDown') {
                         e.preventDefault()
@@ -320,18 +328,21 @@ const handleItemChange = async (idx, field, value) => {
                   <div id={`oc-prod-list-${idx}`} className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
                 </div>
                 <div className="col-span-4">
-                  <input value={item.descripcion} onChange={e => handleItemChange(idx, 'descripcion', e.target.value)}
+                  <input id={`oc-prod-desc-${idx}`} value={item.descripcion} onChange={e => handleItemChange(idx, 'descripcion', e.target.value)}
                     placeholder="Descripción"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`oc-prod-cant-${idx}`)?.focus() } }}
                     className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="col-span-2">
-                  <input type="number" value={item.cantidad} onChange={e => handleItemChange(idx, 'cantidad', e.target.value)}
+                  <input type="number" id={`oc-prod-cant-${idx}`} value={item.cantidad} onChange={e => handleItemChange(idx, 'cantidad', e.target.value)}
                     placeholder="Cant."
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`oc-prod-precio-${idx}`)?.focus() } }}
                     className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="col-span-2">
-                  <input type="number" value={item.precio_unitario} onChange={e => handleItemChange(idx, 'precio_unitario', e.target.value)}
+                  <input type="number" id={`oc-prod-precio-${idx}`} value={item.precio_unitario} onChange={e => handleItemChange(idx, 'precio_unitario', e.target.value)}
                     placeholder="Precio"
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('oc-guardar-orden')?.focus() } }}
                     className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="col-span-1 text-right">
@@ -348,7 +359,7 @@ const handleItemChange = async (idx, field, value) => {
 
           <div className="flex gap-3 justify-end">
             <button onClick={() => setShowForm(false)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
-            <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar Orden</button>
+            <button id="oc-guardar-orden" onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar Orden</button>
           </div>
         </div>
       )}
