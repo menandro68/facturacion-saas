@@ -453,15 +453,20 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   const totalPagadoFactura = pagos
                     .filter(pg => pg.invoice_id === p.invoice_id)
                     .reduce((s, pg) => s + parseFloat(pg.monto || 0), 0)
-                  // Solo dar comision si la factura esta pagada al 100% (o mas) del total neto
+        // Solo dar comision si la factura esta pagada al 100% (o mas) del total neto
                   if (totalPagadoFactura < totalFactura - 0.01) return
-
            const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === p.invoice_id)
+                  // Comision de esta factura (sobre el valor original de los items)
+                  let comisionFactura = 0
                   itemsDeFactura.forEach(item => {
              const totalItem = parseFloat(item.total || 0)
                     const porcentaje = parseFloat(item.comision_vendedor || 0)
-                    totalComision += totalItem * (porcentaje / 100)
+                    comisionFactura += totalItem * (porcentaje / 100)
                   })
+                  // Prorratear la comision segun lo realmente cobrado (descontar NC proporcionalmente)
+                  const totalOriginal = parseFloat(factura.total || 0)
+                  const proporcionCobrada = totalOriginal > 0 ? (totalOriginal - ncAplicada) / totalOriginal : 1
+                  totalComision += comisionFactura * proporcionCobrada
                 })
                 const totalSubtotal = totalCobrado - totalItbis
                 { const cobResEl = document.getElementById('cob-resultado'); if (cobResEl) cobResEl.innerHTML = `

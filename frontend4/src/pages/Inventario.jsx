@@ -215,7 +215,8 @@ export default function Inventario({ modulos_permitidos = null }) {
                     opciones[idx].scrollIntoView({ block: 'nearest' })
                   } else if (e.key === 'Enter') {
                     e.preventDefault()
-                    if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                    if (idx >= 0) { opciones[idx].dispatchEvent(new MouseEvent('mousedown')); setTimeout(() => document.getElementById('mov-fecha-inicio')?.focus(), 100) }
+                    else document.getElementById('mov-fecha-inicio')?.focus()
                   }
                 }}
                 onBlur={() => setTimeout(() => { document.getElementById('mov-producto-list').innerHTML = '' }, 200)}
@@ -225,13 +226,17 @@ export default function Inventario({ modulos_permitidos = null }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
-              <input type="date" id="mov-fecha-inicio" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="date" id="mov-fecha-inicio"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('mov-fecha-fin')?.focus() } }}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
-              <input type="date" id="mov-fecha-fin" className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="date" id="mov-fecha-fin"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-ver-movimiento')?.click() } }}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <button onClick={async () => {
+            <button id="btn-ver-movimiento" onClick={async () => {
              const invId = document.getElementById('mov-producto').value
               if (!invId) return alert('Selecciona un producto')
               const fi = document.getElementById('mov-fecha-inicio').value

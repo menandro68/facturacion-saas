@@ -50,17 +50,19 @@ export default function Reportes() {
 
       {/* Filtros */}
       <div className="bg-white rounded-lg shadow p-4 mb-6 flex gap-4 items-end">
-        <div>
+  <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-          <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
+          <input type="date" id="rep-desde" value={desde} onChange={e => setDesde(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('rep-hasta')?.focus() } }}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-          <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
+          <input type="date" id="rep-hasta" value={hasta} onChange={e => setHasta(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-filtrar-reporte')?.click() } }}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <button onClick={fetchReportes}
+        <button id="btn-filtrar-reporte" onClick={fetchReportes}
           className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
           Filtrar
         </button>

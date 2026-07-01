@@ -51,10 +51,17 @@ export default function Pagos() {
     }
   }
 
-  useEffect(() => {
+useEffect(() => {
     fetchData()
     API.get('/mantenimiento/vendedores').then(r => setVendedoresList(r.data.data || [])).catch(() => {})
   }, [])
+
+  // Al abrir la pantalla de Métodos de Pago, poner el monto pendiente en Efectivo (si está vacío)
+  useEffect(() => {
+    if (showMetodo && form.monto && !metodos.efectivo && !metodos.transferencia && !metodos.tarjeta && !metodos.cheque_valor) {
+      setMetodos(prev => ({ ...prev, efectivo: parseFloat(form.monto).toFixed(2) }))
+    }
+  }, [showMetodo])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -303,8 +310,9 @@ id="btn-si-recibo-pago"
                       const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                       const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
                       setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '' }))
-                      document.getElementById('pago-ncf-resultado').innerHTML =
+               document.getElementById('pago-ncf-resultado').innerHTML =
                         `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
+                      setTimeout(() => document.getElementById('pago-monto-input')?.focus(), 50)
                     }
                   }} />
                 <button type="button"
@@ -329,7 +337,7 @@ id="btn-si-recibo-pago"
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
-              <input name="monto" type="number" step="0.01" value={form.monto} onChange={handleChange} required
+          <input name="monto" id="pago-monto-input" type="number" step="0.01" value={form.monto} onChange={handleChange} required
                 placeholder="DIGITAR MONTO"
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); setShowMetodo(true) } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
