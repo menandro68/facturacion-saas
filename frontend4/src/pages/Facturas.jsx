@@ -3739,8 +3739,8 @@ onKeyDown={e => {
                   ).map((f) => (
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
-                      <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                     <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
+                  <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
+                  <td className="px-4 py-3">{parseFloat(f.nc_aplicada) > 0 ? (<span className="text-xs font-medium text-gray-800">Fact: {parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC: {parseFloat(f.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>
                           {f.estado.toUpperCase()}
