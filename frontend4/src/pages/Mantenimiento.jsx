@@ -390,7 +390,7 @@ const crearEmpresa = async () => {
           <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-              <input value={formVendedor.nombre} onChange={e => setFormVendedor({...formVendedor, nombre: e.target.value})} required
+            <input autoFocus value={formVendedor.nombre} onChange={e => setFormVendedor({...formVendedor, nombre: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
@@ -445,7 +445,7 @@ const crearEmpresa = async () => {
           <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-              <input value={formZona.nombre} onChange={e => setFormZona({...formZona, nombre: e.target.value})} required
+           <input autoFocus value={formZona.nombre} onChange={e => setFormZona({...formZona, nombre: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           <div>
@@ -469,7 +469,7 @@ const crearEmpresa = async () => {
           <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-              <input value={formChofer.nombre} onChange={e => setFormChofer({...formChofer, nombre: e.target.value})} required
+             <input autoFocus value={formChofer.nombre} onChange={e => setFormChofer({...formChofer, nombre: e.target.value})} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
@@ -516,20 +516,23 @@ const crearEmpresa = async () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
-                <input value={formOperador.nombre} onChange={e => setFormOperador({...formOperador, nombre: e.target.value})} required
-                  placeholder="Ej: Juan Pérez"
+         <input id="op-nombre" autoFocus value={formOperador.nombre} onChange={e => setFormOperador({...formOperador, nombre: e.target.value})} required
+                  placeholder="Ej: Juan PÃ©rez"
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('op-username')?.focus() } }}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
-                <input value={formOperador.username} onChange={e => setFormOperador({...formOperador, username: e.target.value})} required
+                <input id="op-username" value={formOperador.username} onChange={e => setFormOperador({...formOperador, username: e.target.value})} required
                   placeholder="Ej: juanp"
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('op-password')?.focus() } }}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña {!editando && '*'}</label>
-                <input type="password" value={formOperador.password} onChange={e => setFormOperador({...formOperador, password: e.target.value})} required={!editando}
-                  placeholder={editando ? 'Dejar vacío para no cambiar' : 'Mínimo 4 caracteres'}
+                <label className="block text-sm font-medium text-gray-700 mb-1">ContraseÃ±a {!editando && '*'}</label>
+                <input id="op-password" type="password" value={formOperador.password} onChange={e => setFormOperador({...formOperador, password: e.target.value})} required={!editando}
+                  placeholder={editando ? 'Dejar vacÃo para no cambiar' : 'MÃnimo 4 caracteres'}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur() } }}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
@@ -1148,7 +1151,7 @@ const crearEmpresa = async () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa *</label>
-                  <input type="text" value={formEmpresa.nombre} onChange={e => setFormEmpresa({...formEmpresa, nombre: e.target.value})}
+               <input type="text" autoFocus value={formEmpresa.nombre} onChange={e => setFormEmpresa({...formEmpresa, nombre: e.target.value})}
                     className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>

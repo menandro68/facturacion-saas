@@ -85,11 +85,12 @@ export default function Reportes() {
               <div>
              <label className="block text-sm font-medium text-gray-700 mb-1">Operador *</label>
                 <div className="relative">
-                  <input
+             <input
                     id="rep-operador-input"
                     type="text"
                     placeholder="🔍 Buscar operador..."
                     autoComplete="off"
+                    autoFocus
                     className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     onChange={e => {
                       setReporteOpId('')
@@ -128,9 +129,12 @@ export default function Reportes() {
                         idx = idx <= 0 ? opciones.length - 1 : idx - 1
                         opciones[idx].classList.add('bg-blue-100')
                         opciones[idx].scrollIntoView({ block: 'nearest' })
-                      } else if (e.key === 'Enter') {
+                 } else if (e.key === 'Enter') {
                         e.preventDefault()
-                        if (idx >= 0) opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                        if (idx >= 0) {
+                          opciones[idx].dispatchEvent(new MouseEvent('mousedown'))
+                          setTimeout(() => document.getElementById('rep-generar-btn')?.click(), 200)
+                        }
                       }
                     }}
                     onBlur={() => setTimeout(() => { document.getElementById('rep-operador-list').innerHTML = '' }, 200)}
@@ -139,7 +143,7 @@ export default function Reportes() {
                 </div>
               </div>
               <div>
-                <button onClick={async () => {
+            <button id="rep-generar-btn" onClick={async () => {
                   if (!reporteOpId) {
                     alert('Selecciona un operador primero')
                     return
@@ -414,7 +418,7 @@ export default function Reportes() {
               ) : (
                 itbis.map((row, i) => (
                   <tr key={i} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3">{new Date(row.mes).toLocaleDateString('es-DO', { month: 'long', year: 'numeric' })}</td>
+                    <td className="px-4 py-3">{new Date(row.mes.slice(0,10) + 'T12:00:00').toLocaleDateString('es-DO', { month: 'long', year: 'numeric' })}</td>
                     <td className="px-4 py-3">{row.total_facturas}</td>
                     <td className="px-4 py-3">RD${parseFloat(row.total_subtotal).toLocaleString()}</td>
                     <td className="px-4 py-3 text-orange-600">RD${parseFloat(row.total_itbis).toLocaleString()}</td>

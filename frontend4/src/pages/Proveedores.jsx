@@ -124,28 +124,32 @@ export default function Proveedores() {
           <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-              <input name="nombre" value={form.nombre} onChange={handleChange} required
+              <input id="prov-nombre" autoFocus name="nombre" value={form.nombre} onChange={handleChange} required
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prov-email')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input name="email" type="email" value={form.email} onChange={handleChange}
+              <input id="prov-email" name="email" type="email" value={form.email} onChange={handleChange}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prov-telefono')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
-              <input name="telefono" value={form.telefono} onChange={handleChange} required
+              <input id="prov-telefono" name="telefono" value={form.telefono} onChange={handleChange} required
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prov-contacto')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Contacto *</label>
-              <input name="contacto" value={form.contacto} onChange={handleChange} required
+              <input id="prov-contacto" name="contacto" value={form.contacto} onChange={handleChange} required
                 placeholder="Nombre del contacto"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prov-direccion')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Dirección *</label>
-              <input name="direccion" value={form.direccion} onChange={handleChange} required
+              <input id="prov-direccion" name="direccion" value={form.direccion} onChange={handleChange} required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2 flex gap-3 justify-end">

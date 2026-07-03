@@ -10,6 +10,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [facturas, setFacturas] = useState([])
   const [facturasFiltradas, setFacturasFiltradas] = useState([])
   const [busquedaNcf, setBusquedaNcf] = useState('')
+  const [busquedaNc, setBusquedaNc] = useState('')
   const [resumen, setResumen] = useState(null)
   const [zonaSeleccionada, setZonaSeleccionada] = useState('')
   const [facturasZona, setFacturasZona] = useState([])
@@ -424,12 +425,21 @@ const handleImprimir = (id) => {
       + Nueva Factura
         </button>
         )}
-        {tab === 'fecha' && (
+ {tab === 'fecha' && (
           <input
             type="text"
             placeholder="Buscar NCF..."
             value={busquedaNcf}
             onChange={e => setBusquedaNcf(e.target.value.toUpperCase())}
+            className="border rounded px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2"
+          />
+        )}
+        {tab === 'nota_credito' && (
+          <input
+            type="text"
+            placeholder="Buscar NC..."
+            value={busquedaNc}
+            onChange={e => setBusquedaNc(e.target.value.toUpperCase())}
             className="border rounded px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2"
           />
         )}
@@ -2272,7 +2282,7 @@ onKeyDown={e => {
               <h4 className="font-medium mb-3 text-gray-700">Nueva Cotización</h4>
               <div className="relative mb-4 max-w-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-                <input type="text" placeholder="Buscar cliente..." id="cot-cliente-input" autoComplete="off"
+          <input type="text" placeholder="Buscar cliente..." id="cot-cliente-input" autoComplete="off" autoFocus
                   ref={cotClienteInputRef}
                   className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                   onChange={e => {
@@ -2569,15 +2579,16 @@ onKeyDown={e => {
               <div className="flex gap-3 items-end mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">NCF de Factura Original</label>
-                  <input type="text" placeholder="Ej: B0100000001"
+               <input type="text" placeholder="Ej: B0100000001"
                     value={ncFacturaBuscar}
                     onChange={e => setNcFacturaBuscar(e.target.value.toUpperCase())}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-nc')?.click() } }}
                     className="border rounded px-3 py-2 text-sm w-56 uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
-                <button onClick={async () => {
+                <button id="btn-buscar-nc" onClick={async () => {
                   const factura = facturas.find(f => (f.ncf||'').toUpperCase() === ncFacturaBuscar.trim())
                   if (!factura) { alert('Factura no encontrada'); return }
-                  if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crédito a facturas emitidas'); return }
+                  if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crÃ©dito a facturas emitidas'); return }
                   try {
                     const res = await API.get(`/invoices/${factura.id}`)
                     const data = res.data.data
@@ -2739,11 +2750,12 @@ onKeyDown={e => {
                 </tr>
               </thead>
               <tbody>
-              {notasCredito.filter(n => {
+          {notasCredito.filter(n => {
                   const d = new Date(n.creado_en)
                   const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
                   if (fechaInicio && fecha < fechaInicio) return false
                   if (fechaFin && fecha > fechaFin) return false
+                  if (busquedaNc && !(n.ncf || '').toUpperCase().includes(busquedaNc.toUpperCase())) return false
                   return true
                 }).map(n => (
                   <tr key={n.id} className="border-t hover:bg-gray-50">
@@ -2781,12 +2793,13 @@ onKeyDown={e => {
               <div className="flex gap-3 items-end mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">NCF de Factura Original</label>
-                  <input type="text" placeholder="Ej: B0100000001"
+                <input type="text" placeholder="Ej: B0100000001"
                     value={devFacturaBuscar}
                     onChange={e => setDevFacturaBuscar(e.target.value.toUpperCase())}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-buscar-dev')?.click() } }}
                     className="border rounded px-3 py-2 text-sm w-56 uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
-                <button onClick={async () => {
+                <button id="btn-buscar-dev" onClick={async () => {
                   const factura = facturas.find(f => (f.ncf||'').toUpperCase() === devFacturaBuscar.trim())
                   if (!factura) { alert('Factura no encontrada'); return }
                   if (factura.estado !== 'emitida') { alert('Solo se pueden hacer devoluciones a facturas emitidas'); return }
@@ -3715,16 +3728,16 @@ onKeyDown={e => {
           )}
 
           {/* Tabla */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full text-sm">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="w-full text-sm table-fixed">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-gray-600">NCF</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Total</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Estado</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
+        <th className="px-4 py-3 text-left text-gray-600 w-[12%]">NCF</th>
+                  <th className="px-4 py-3 text-left text-gray-600 w-[10%]">Cliente</th>
+                  <th className="px-4 py-3 text-left text-gray-600 w-[42%]">Total</th>
+          <th className="px-4 py-3 text-left text-gray-600 w-[9%]">Estado</th>
+              <th className="px-4 py-3 text-left text-gray-600 w-[9%]">Fecha</th>
+                <th className="px-4 py-3 text-left text-gray-600 w-[18%]">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -3740,7 +3753,7 @@ onKeyDown={e => {
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                   <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                  <td className="px-4 py-3">{parseFloat(f.nc_aplicada) > 0 ? (<span className="text-xs font-medium text-gray-800">Fact: {parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC: {parseFloat(f.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}</td>
+                <td className="px-4 py-3">{parseFloat(f.nc_aplicada) > 0 ?(<span className="text-xs font-medium text-gray-800">Fact: {parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {f.nc_numeros || ''}: {parseFloat(f.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>
                           {f.estado.toUpperCase()}
