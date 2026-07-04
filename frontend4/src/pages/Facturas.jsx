@@ -2697,8 +2697,9 @@ onKeyDown={e => {
                     <button onClick={async () => {
              const itemsNC = ncItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_nc) > 0)
                       if (!itemsNC.length) { alert('Selecciona al menos un producto'); return }
-                      const manualIncompleta = itemsNC.find(i => i.manual && (!i.descripcion.trim() || !(parseFloat(i.precio_unitario) > 0)))
+                 const manualIncompleta = itemsNC.find(i => i.manual && (!i.descripcion.trim() || !(parseFloat(i.precio_unitario) > 0)))
                       if (manualIncompleta) { alert('Las líneas agregadas deben tener descripción y precio'); return }
+                      if (!ncMotivo.trim()) { alert('Ingresa el motivo de la nota de crédito'); return }
                       if (!confirm('¿Emitir esta Nota de Crédito?')) return
                       try {
                         const resPost = await API.post('/invoices/nota-credito', {

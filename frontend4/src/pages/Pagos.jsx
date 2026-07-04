@@ -561,12 +561,13 @@ id="btn-si-recibo-pago"
               <th className="px-4 py-3 text-left text-gray-600">Monto</th>
               <th className="px-4 py-3 text-left text-gray-600">Método</th>
               <th className="px-4 py-3 text-left text-gray-600">Referencia</th>
+              <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
               <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
             </tr>
           </thead>
           <tbody>
             {pagos.length === 0 ? (
-              <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">No hay pagos registrados</td></tr>
+          <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No hay pagos registrados</td></tr>
             ) : (
               pagos.map((p) => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
@@ -575,6 +576,19 @@ id="btn-si-recibo-pago"
                   <td className="px-4 py-3 font-medium text-green-600">RD${parseFloat(p.monto).toLocaleString()}</td>
                   <td className="px-4 py-3 capitalize">{p.metodo}</td>
                   <td className="px-4 py-3">{p.referencia || '-'}</td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => {
+                      setPagoData({
+                        monto: p.monto,
+                        metodo: p.metodo,
+                        referencia: p.referencia,
+                        ncf: p.ncf || '',
+                        cliente: p.cliente_nombre || 'Consumidor Final',
+                        totalFactura: p.monto
+                      })
+                      setMostrarImprimirPago(true)
+                    }} className="text-blue-600 hover:underline text-xs">Imprimir</button>
+                  </td>
                   <td className="px-4 py-3">{new Date(p.creado_en).toLocaleDateString()}</td>
                 </tr>
               ))
