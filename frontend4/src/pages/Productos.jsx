@@ -111,10 +111,14 @@ const handleChange = (e) => {
     }
   }
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
+    // Validar costo negativo
+    if (parseFloat(form.costo) < 0) {
+      alert('⚠️ El Costo no puede ser negativo')
+      return
+    }
     // Validar codigo duplicado
     if (form.codigo && form.codigo.trim() !== '') {
       const codigoNormalizado = form.codigo.trim().toLowerCase()
