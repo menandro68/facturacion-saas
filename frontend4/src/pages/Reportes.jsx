@@ -14,6 +14,7 @@ export default function Reportes() {
   const [reporteData, setReporteData] = useState(null)
   const [reporteLoading, setReporteLoading] = useState(false)
   const [modalVer, setModalVer] = useState(null)
+  const [actividadVer, setActividadVer] = useState(null)
 
   const fetchReportes = async () => {
     setLoading(true)
@@ -180,6 +181,7 @@ export default function Reportes() {
           {reporteData && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                {reporteData.kpis.facturas.cantidad > 0 && (
                 <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500 relative">
                   <div className="text-xs text-gray-500 mb-1">🧾 Facturas emitidas</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.facturas.cantidad}</div>
@@ -189,6 +191,8 @@ export default function Reportes() {
                     Ver
                   </button>
                 </div>
+                )}
+                {reporteData.kpis.pagos.cantidad > 0 && (
                 <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500 relative">
                   <div className="text-xs text-gray-500 mb-1">💰 Pagos recibidos</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.pagos.cantidad}</div>
@@ -198,6 +202,8 @@ export default function Reportes() {
                     Ver
                   </button>
                 </div>
+                )}
+                {reporteData.kpis.pedidos.cantidad > 0 && (
                 <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500 relative">
                   <div className="text-xs text-gray-500 mb-1">📋 Pedidos creados</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.pedidos.cantidad}</div>
@@ -207,6 +213,8 @@ export default function Reportes() {
                     Ver
                   </button>
                 </div>
+                )}
+                {reporteData.kpis.cotizaciones.cantidad > 0 && (
                 <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500 relative">
                   <div className="text-xs text-gray-500 mb-1">📝 Cotizaciones</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.cotizaciones.cantidad}</div>
@@ -216,6 +224,8 @@ export default function Reportes() {
                     Ver
                   </button>
                 </div>
+                )}
+                {reporteData.kpis.anuladas.cantidad > 0 && (
                 <div className="bg-white rounded-lg shadow p-4 border-l-4 border-red-500 relative">
                   <div className="text-xs text-gray-500 mb-1">❌ Anulaciones</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.anuladas.cantidad}</div>
@@ -225,6 +235,8 @@ export default function Reportes() {
                     Ver
                   </button>
                 </div>
+                )}
+          {reporteData.kpis.notas_credito.cantidad > 0 && (
                 <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500 relative">
                   <div className="text-xs text-gray-500 mb-1">💵 Notas de crédito</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.notas_credito.cantidad}</div>
@@ -234,6 +246,21 @@ export default function Reportes() {
                     Ver
                   </button>
                 </div>
+                )}
+                {reporteData.kpis.devoluciones && reporteData.kpis.devoluciones.cantidad > 0 && (
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-pink-500 relative">
+                  <div className="text-xs text-gray-500 mb-1">🔄 Devoluciones</div>
+                  <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.devoluciones.cantidad}</div>
+                  <div className="text-sm text-pink-600 font-medium">RD$ {reporteData.kpis.devoluciones.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                </div>
+                )}
+                {reporteData.kpis.conduces && reporteData.kpis.conduces.cantidad > 0 && (
+                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-teal-500 relative">
+                  <div className="text-xs text-gray-500 mb-1">🚚 Conduces</div>
+                  <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.conduces.cantidad}</div>
+                  <div className="text-sm text-teal-600 font-medium">RD$ {reporteData.kpis.conduces.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                </div>
+                )}
               </div>
 
               <div className="bg-white rounded-lg shadow overflow-hidden mb-4">
@@ -298,11 +325,69 @@ export default function Reportes() {
                           <td className="px-4 py-2"><span className="text-xs">{p.estado}</span></td>
                           <td className="px-4 py-2 text-xs text-gray-500">{new Date(p.creado_en).toLocaleString('es-DO')}</td>
                         </tr>
+          ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {reporteData.registro_actividad && reporteData.registro_actividad.length > 0 && (
+              <div className="bg-white rounded-lg shadow overflow-hidden mt-4">
+                <div className="bg-gray-50 px-4 py-3 border-b">
+                  <h3 className="font-semibold text-gray-800">📋 Registro de Actividad ({reporteData.registro_actividad.length})</h3>
+                </div>
+                <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-gray-600">Módulo</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Acción</th>
+             <th className="px-4 py-2 text-left text-gray-600">Descripción</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Fecha</th>
+                        <th className="px-4 py-2 text-left text-gray-600">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reporteData.registro_actividad.map((a, idx) => (
+                        <tr key={idx} className="border-t hover:bg-gray-50">
+                          <td className="px-4 py-2"><span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-medium capitalize">{(a.modulo || '').replace(/_/g, ' ')}</span></td>
+                          <td className="px-4 py-2 text-xs capitalize">{(a.accion || '').replace(/_/g, ' ')}</td>
+                          <td className="px-4 py-2 text-xs">{a.descripcion}</td>
+                          <td className="px-4 py-2 text-xs text-gray-500">{new Date(a.creado_en).toLocaleString('es-DO')}</td>
+                          <td className="px-4 py-2">
+                            <button onClick={() => setActividadVer(a)}
+                              className="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700">
+                              Ver
+                            </button>
+                          </td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               </div>
+              )}
+
+              {actividadVer && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setActividadVer(null)}>
+                  <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                    <h3 className="font-semibold text-gray-800 mb-4">📋 Detalle de Actividad</h3>
+                    <div className="space-y-3 text-sm">
+                      <div><span className="text-gray-500">Módulo:</span> <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-medium capitalize">{(actividadVer.modulo || '').replace(/_/g, ' ')}</span></div>
+                      <div><span className="text-gray-500">Acción:</span> <span className="capitalize font-medium">{(actividadVer.accion || '').replace(/_/g, ' ')}</span></div>
+                      <div><span className="text-gray-500">Descripción:</span><br/><span className="font-medium">{actividadVer.descripcion}</span></div>
+                      <div><span className="text-gray-500">Fecha y hora:</span> <span className="font-medium">{new Date(actividadVer.creado_en).toLocaleString('es-DO')}</span></div>
+                      {actividadVer.referencia_id && (
+                        <div><span className="text-gray-500">Referencia:</span> <span className="font-mono text-xs">{actividadVer.referencia_id}</span></div>
+                      )}
+                    </div>
+                    <div className="mt-6 text-right">
+                      <button onClick={() => setActividadVer(null)}
+                        className="px-4 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700">Cerrar</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -375,7 +460,7 @@ export default function Reportes() {
 
       {/* Resumen de ventas */}
       {ventas && (
-        <div className="mb-6">
+        <div className="mb-6 hidden">
           <h3 className="text-lg font-semibold text-gray-700 mb-3">Resumen de Ventas</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg shadow p-4">
@@ -399,7 +484,7 @@ export default function Reportes() {
       )}
 
       {/* Reporte ITBIS por mes */}
-      <div className="mb-6">
+      <div className="mb-6 hidden">
         <h3 className="text-lg font-semibold text-gray-700 mb-3">ITBIS por Mes</h3>
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="w-full text-sm">
@@ -432,7 +517,7 @@ export default function Reportes() {
       </div>
 
       {/* Reporte por cliente */}
-      <div>
+      <div className="hidden">
         <h3 className="text-lg font-semibold text-gray-700 mb-3">Ventas por Cliente</h3>
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="w-full text-sm">

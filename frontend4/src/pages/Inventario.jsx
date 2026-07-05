@@ -20,6 +20,7 @@ export default function Inventario({ modulos_permitidos = null }) {
   const [form, setForm] = useState({
     product_id: '', stock_actual: '', stock_minimo: '', stock_maximo: '', unidad: 'unidad', ubicacion: ''
   })
+  const [movBusqueda, setMovBusqueda] = useState(null)
   const [movForm, setMovForm] = useState({
     tipo: 'entrada', cantidad: '', motivo: ''
   })
@@ -236,7 +237,31 @@ export default function Inventario({ modulos_permitidos = null }) {
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-ver-movimiento')?.click() } }}
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <button id="btn-ver-movimiento" onClick={async () => {
+            <button onClick={async () => {
+          const invId = document.getElementById('mov-producto').value
+          if (!invId) return alert('Selecciona un producto')
+          const fi = document.getElementById('mov-fecha-inicio').value
+          const ff = document.getElementById('mov-fecha-fin').value
+          let url = `/inventory/${invId}/movimientos`
+          const qs = []
+          if (fi) qs.push(`fecha_inicio=${fi}`)
+          if (ff) qs.push(`fecha_fin=${ff}`)
+          if (qs.length) url += '?' + qs.join('&')
+          try {
+            const res = await API.get(url)
+            const movs = res.data.data
+            const filtrados = movs.filter(m => {
+              const d = m.creado_en?.slice(0,10)
+              if (fi && d < fi) return false
+              if (ff && d > ff) return false
+              return true
+            })
+            setMovBusqueda(filtrados)
+          } catch(e) { alert('Error al cargar movimientos') }
+        }} className="bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 mr-2">
+          🔍 Buscar
+        </button>
+        <button id="btn-ver-movimiento" onClick={async () => {
              const invId = document.getElementById('mov-producto').value
               if (!invId) return alert('Selecciona un producto')
               const fi = document.getElementById('mov-fecha-inicio').value
@@ -305,6 +330,42 @@ export default function Inventario({ modulos_permitidos = null }) {
               🔍 Ver e Imprimir
             </button>
           </div>
+
+      {movBusqueda && (
+        <div className="bg-white rounded-lg shadow overflow-hidden mt-4">
+          <div className="bg-gray-50 px-4 py-3 border-b">
+            <h3 className="font-semibold text-gray-800">📦 Movimientos encontrados ({movBusqueda.length})</h3>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left text-gray-600">Tipo</th>
+                <th className="px-4 py-2 text-right text-gray-600">Cantidad</th>
+                <th className="px-4 py-2 text-right text-gray-600">Stock Anterior</th>
+                <th className="px-4 py-2 text-right text-gray-600">Stock Nuevo</th>
+                <th className="px-4 py-2 text-left text-gray-600">Motivo</th>
+                <th className="px-4 py-2 text-left text-gray-600">Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movBusqueda.length === 0 ? (
+                <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">Sin movimientos en el período</td></tr>
+              ) : (
+                movBusqueda.map((m, idx) => (
+                  <tr key={idx} className="border-t hover:bg-gray-50">
+                    <td className={`px-4 py-2 capitalize font-medium ${m.tipo === 'entrada' ? 'text-green-600' : m.tipo === 'salida' ? 'text-red-600' : 'text-gray-700'}`}>{m.tipo}</td>
+                    <td className="px-4 py-2 text-right">{parseFloat(m.cantidad).toLocaleString('es-DO')}</td>
+                    <td className="px-4 py-2 text-right">{parseFloat(m.stock_anterior).toLocaleString('es-DO')}</td>
+                    <td className="px-4 py-2 text-right">{parseFloat(m.stock_nuevo).toLocaleString('es-DO')}</td>
+                    <td className="px-4 py-2 text-xs">{m.motivo || '-'}</td>
+                    <td className="px-4 py-2 text-xs text-gray-500">{new Date(m.creado_en).toLocaleString('es-DO')}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
         </div>
       )}
 
