@@ -3502,6 +3502,7 @@ onKeyDown={e => {
                     />
                     {mostrarDropdown && (
                       <div className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto">
+          {/* Consumidor Final oculto del dropdown
                         <div
                           className={`px-3 py-2 text-sm cursor-pointer text-gray-500 ${clienteIndex === 0 ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                           onMouseEnter={() => setClienteIndex(0)}
@@ -3513,6 +3514,7 @@ onKeyDown={e => {
                           }}>
                           Consumidor Final
                         </div>
+                        */}
                         {clientes
                           .filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
                           .map(c => (
