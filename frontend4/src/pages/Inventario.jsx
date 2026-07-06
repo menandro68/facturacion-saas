@@ -21,6 +21,7 @@ export default function Inventario({ modulos_permitidos = null }) {
     product_id: '', stock_actual: '', stock_minimo: '', stock_maximo: '', unidad: 'unidad', ubicacion: ''
   })
   const [movBusqueda, setMovBusqueda] = useState(null)
+  const [movProductoSel, setMovProductoSel] = useState('')
   const [movForm, setMovForm] = useState({
     tipo: 'entrada', cantidad: '', motivo: ''
   })
@@ -178,7 +179,7 @@ export default function Inventario({ modulos_permitidos = null }) {
                 autoComplete="off"
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-64 w-full"
                 onChange={e => {
-                  document.getElementById('mov-producto').value = ''
+                  setMovProductoSel('')
                   const val = e.target.value.toLowerCase()
                   const list = document.getElementById('mov-producto-list')
                   list.innerHTML = ''
@@ -190,7 +191,7 @@ export default function Inventario({ modulos_permitidos = null }) {
                       div.textContent = i.producto_nombre
                       div.onmousedown = () => {
                         document.getElementById('mov-producto-input').value = i.producto_nombre
-                        document.getElementById('mov-producto').value = i.id
+                        setMovProductoSel(i.id)
                         list.innerHTML = ''
                       }
                       list.appendChild(div)
@@ -222,7 +223,6 @@ export default function Inventario({ modulos_permitidos = null }) {
                 }}
                 onBlur={() => setTimeout(() => { document.getElementById('mov-producto-list').innerHTML = '' }, 200)}
               />
-              <input type="hidden" id="mov-producto" value="" />
               <div id="mov-producto-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
             </div>
             <div>
@@ -238,7 +238,7 @@ export default function Inventario({ modulos_permitidos = null }) {
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <button onClick={async () => {
-          const invId = document.getElementById('mov-producto').value
+          const invId = movProductoSel
           if (!invId) return alert('Selecciona un producto')
           const fi = document.getElementById('mov-fecha-inicio').value
           const ff = document.getElementById('mov-fecha-fin').value
@@ -251,7 +251,7 @@ export default function Inventario({ modulos_permitidos = null }) {
             const res = await API.get(url)
             const movs = res.data.data
             const filtrados = movs.filter(m => {
-              const d = m.creado_en?.slice(0,10)
+             const d = new Date(m.creado_en).toLocaleDateString('en-CA', { timeZone: 'America/Santo_Domingo' })
               if (fi && d < fi) return false
               if (ff && d > ff) return false
               return true
@@ -262,7 +262,7 @@ export default function Inventario({ modulos_permitidos = null }) {
           🔍 Buscar
         </button>
         <button id="btn-ver-movimiento" onClick={async () => {
-             const invId = document.getElementById('mov-producto').value
+             const invId = movProductoSel
               if (!invId) return alert('Selecciona un producto')
               const fi = document.getElementById('mov-fecha-inicio').value
               const ff = document.getElementById('mov-fecha-fin').value
@@ -277,7 +277,7 @@ export default function Inventario({ modulos_permitidos = null }) {
                 const nombreProd = document.getElementById('mov-producto-input').value
                 // Filtrar por fecha en frontend si backend no soporta filtro
                 const filtrados = movs.filter(m => {
-                  const d = m.creado_en?.slice(0,10)
+                  const d = new Date(m.creado_en).toLocaleDateString('en-CA', { timeZone: 'America/Santo_Domingo' })
                   if (fi && d < fi) return false
                   if (ff && d > ff) return false
                   return true

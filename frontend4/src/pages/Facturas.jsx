@@ -2646,9 +2646,9 @@ onKeyDown={e => {
                           </td>
                           <td className="px-3 py-2 text-right">{item.manual ? '-' : parseFloat(item.cantidad).toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">
-                         <input type="number" value={item.cantidad_nc} min="0.01"
+                      <input type="number" value={item.cantidad_nc} min="1"
                               max={item.manual ? undefined : parseFloat(item.cantidad)}
-                              step="0.01"
+                              step="1"
                               disabled={!item.seleccionado}
                               onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_nc: e.target.value} : it))}
                               className="border rounded px-2 py-1 text-sm w-20 text-right disabled:bg-gray-100" />
@@ -3654,7 +3654,7 @@ onKeyDown={e => {
                           className="w-full border rounded px-2 py-1.5 text-sm" required />
                       </div>
                       <div className="col-span-2">
-                        <input name="cantidad" type="number" placeholder="Cant." value={item.cantidad} onChange={(e) => handleItemChange(index, e)}
+                       <input name="cantidad" type="number" placeholder="Cant." step="0.01" min="0.01" value={item.cantidad} onChange={(e) => handleItemChange(index, e)}
                           ref={el => cantidadRefs.current[index] = el}
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
@@ -3662,7 +3662,7 @@ onKeyDown={e => {
                               agregarLineaRef.current?.focus()
                             }
                           }}
-                          className="w-full border rounded px-2 py-1.5 text-sm" min="1" required />
+                         className="w-full border rounded px-2 py-1.5 text-sm" required />
                       </div>
                       <div className="col-span-2">
                         <input name="precio_unitario" type="number" placeholder="Precio" value={item.precio_unitario} onChange={(e) => handleItemChange(index, e)}
@@ -3766,10 +3766,10 @@ onKeyDown={e => {
                           <button onClick={() => handleEmitir(f.id)}
                             className="text-blue-600 hover:underline text-xs">Emitir</button>
                         )}
-                   {f.estado !== 'anulada' && puedeVerSubTab('anular') && (
+                  {/* Boton Anular oculto {f.estado !== 'anulada' && puedeVerSubTab('anular') && (
                           <button onClick={() => handleAnular(f.id)}
                             className="text-red-500 hover:underline text-xs">Anular</button>
-                        )}
+                        )} */}
                      {f.estado !== 'borrador' && (
                           <>
                             {puedeVerSubTab('imprimir') && <button onClick={() => handleImprimir(f.id)}
