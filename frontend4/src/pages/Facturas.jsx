@@ -2161,8 +2161,24 @@ onKeyDown={e => {
                       }} className="flex-1 bg-blue-600 text-white py-2 rounded text-xs font-medium text-center">✏️ Editar</button>
                       <button onClick={async () => {
                         if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
-                        if (!confirm('¿Convertir este pedido a factura?')) return
+                      if (!confirm('¿Convertir este pedido a factura?')) return
                         try {
+                          const detPed = await API.get(`/invoices/${p.id}`)
+                          const itemsPed = detPed.data.data.items || []
+                          const invRes = await API.get('/inventory')
+                          const invList = invRes.data.data
+                          for (const it of itemsPed) {
+                            if (!it.product_id) continue
+                            const invItem = invList.find(v => v.product_id === it.product_id)
+                      const minLista = Math.max(parseFloat(invItem?.stock_minimo || 0), parseFloat(invItem?.prod_stock_minimo || 0))
+                            if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
+                              alert(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${parseFloat(invItem.stock_actual || 0)}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nSolo puede facturar hasta ${parseFloat(invItem.stock_actual || 0)}.`)
+                              return
+                            }
+                            if (invItem && minLista > 0 && parseFloat(invItem.stock_actual || 0) <= minLista) {
+                              alert(`⚠️ STOCK BAJO: "${it.descripcion}"\n\nQuedan ${parseFloat(invItem.stock_actual || 0)} (mínimo ${minLista}).\n\nSe convertirá a factura, pero considere reabastecer.`)
+                            }
+                          }
                           await API.put(`/invoices/pedido/${p.id}/convertir`)
                           const res = await API.get('/invoices/pedidos/lista')
                           setPedidos(res.data.data)
@@ -2203,8 +2219,25 @@ onKeyDown={e => {
                       <td className="px-4 py-3 flex gap-2">
                         <button onClick={async () => {
                           try {
-                            const res = await API.get(`/invoices/${p.id}`)
+                       const res = await API.get(`/invoices/${p.id}`)
                             const data = res.data.data
+                            let avisoStock = ''
+                            try {
+                              const invRes = await API.get('/inventory')
+                              const invList = invRes.data.data
+                              for (const it of (data.items || [])) {
+                                if (!it.product_id) continue
+                                const invItem = invList.find(v => v.product_id === it.product_id)
+                           const minimo = Math.max(parseFloat(invItem?.stock_minimo || 0), parseFloat(invItem?.prod_stock_minimo || 0))
+                                if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
+                                  alert(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${parseFloat(invItem.stock_actual || 0)}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nSolo puede facturar hasta ${parseFloat(invItem.stock_actual || 0)}.`)
+                                  return
+                                }
+                                if (invItem && minimo > 0 && parseFloat(invItem.stock_actual || 0) <= minimo) {
+                                  avisoStock += `STOCK BAJO: ${it.descripcion} - quedan ${parseFloat(invItem.stock_actual || 0)} (minimo ${minimo})\n`
+                                }  
+                              }
+                            } catch(e) {}
                             const win = window.open('', '_blank')
                             const filas = data.items.map(it => `
                               <tr>
@@ -2230,6 +2263,7 @@ onKeyDown={e => {
               <div style="display:flex;gap:12px;margin-top:16px">
                 <button onclick="window.print()" style="padding:8px 20px;background:#1e40af;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
                 <button onclick="
+                 ${avisoStock ? `alert('${('⚠️ ' + avisoStock + 'Se convertira a factura, pero considere reabastecer.').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n')}');` : ''}
                   if(confirm('¿Desea convertir este pedido a factura?')){
                     fetch('/invoices/pedido/${p.id}/convertir',{method:'PUT',headers:{'Authorization':'Bearer '+sessionStorage.getItem('token'),'Content-Type':'application/json'}})
                     .then(r=>r.json()).then(d=>{if(d.success){const fid=d.data?.id||d.id;const tok=sessionStorage.getItem('token');if(window.opener)window.opener.location.reload();if(confirm('¿Desea imprimir esta factura?')){window.location.href='/invoices/'+fid+'/pdf?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
@@ -2536,8 +2570,24 @@ onKeyDown={e => {
                     <td className="px-4 py-3 flex gap-2">
                       <button onClick={() => handlePDF(c.id)} className="text-blue-600 hover:underline text-xs">PDF</button>
                       <button onClick={async () => {
-                        if (!confirm('¿Convertir esta cotización a factura?')) return
+                     if (!confirm('¿Convertir esta cotización a factura?')) return
                         try {
+                          const detCot = await API.get(`/invoices/${c.id}`)
+                          const itemsCotz = detCot.data.data.items || []
+                          const invRes = await API.get('/inventory')
+                          const invList = invRes.data.data
+                          for (const it of itemsCotz) {
+                            if (!it.product_id) continue
+                            const invItem = invList.find(v => v.product_id === it.product_id)
+                           const minCot = Math.max(parseFloat(invItem?.stock_minimo || 0), parseFloat(invItem?.prod_stock_minimo || 0))
+                            if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
+                              alert(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${parseFloat(invItem.stock_actual || 0)}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nSolo puede facturar hasta ${parseFloat(invItem.stock_actual || 0)}.`)
+                              return
+                            }
+                            if (invItem && minCot > 0 && parseFloat(invItem.stock_actual || 0) <= minCot) {
+                              alert(`⚠️ STOCK BAJO: "${it.descripcion}"\n\nQuedan ${parseFloat(invItem.stock_actual || 0)} (mínimo ${minCot}).\n\nSe convertirá a factura, pero considere reabastecer.`)
+                            }
+                          }
                           await API.put(`/invoices/cotizacion/${c.id}/convertir`)
                           const res = await API.get('/invoices/cotizaciones/lista')
                           setCotizaciones(res.data.data)
