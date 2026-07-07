@@ -213,6 +213,11 @@ const handleItemChange = (index, e) => {
   }
 const handleSubmit = async (e) => {
     e.preventDefault()
+    // Validar que la factura tenga un cliente registrado seleccionado
+    if (!form.customer_id) {
+      alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear la factura.')
+      return
+    }
     // Validar stock disponible por producto (suma cantidades de líneas repetidas)
     const cantidadesPorProducto = {}
     items.forEach(item => {
