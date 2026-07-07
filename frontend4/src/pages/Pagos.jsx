@@ -578,7 +578,7 @@ id="btn-si-recibo-pago"
                   <td className="px-4 py-3">{p.referencia || '-'}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => {
-                      setPagoData({
+         setPagoData({
                         monto: p.monto,
                         metodo: p.metodo,
                         referencia: p.referencia,
@@ -586,6 +586,7 @@ id="btn-si-recibo-pago"
                         cliente: p.cliente_nombre || 'Consumidor Final',
                         totalFactura: p.monto
                       })
+                      setPagoGuardadoId(p.id)
                       setMostrarImprimirPago(true)
                     }} className="text-blue-600 hover:underline text-xs">Imprimir</button>
                   </td>

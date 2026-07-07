@@ -550,12 +550,14 @@ export default function Inventario({ modulos_permitidos = null }) {
                       <td className={`px-4 py-3 ${stockColor(item)}`}>{item.stock_actual}</td>
                       <td className="px-4 py-3">{item.prod_stock_minimo || item.stock_minimo}</td>
                  <td className="px-4 py-3">{item.prod_stock_maximo || item.stock_maximo}</td>
-                      <td className="px-4 py-3">
-                        {parseFloat(item.stock_actual) <= parseFloat(item.prod_stock_minimo || item.stock_minimo || 0) ? (
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">⚠️ Stock Bajo</span>
-                        ) : (
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">✅ Normal</span>
-                        )}
+                   <td className="px-4 py-3">
+                        {(() => {
+                          const stockAct = parseFloat(item.stock_actual)
+                          const minimo = Math.max(parseFloat(item.stock_minimo || 0), parseFloat(item.prod_stock_minimo || 0))
+                          if (minimo > 0 && stockAct <= minimo) return <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">🔴 CRÍTICO</span>
+                          if (minimo > 0 && stockAct <= minimo * 1.5) return <span className="px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-700">🟡 BAJO</span>
+                          return <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">🟢 NORMAL</span>
+                        })()}
                       </td>
                       <td className="px-4 py-3 flex gap-2">
                       {/* <button onClick={() => { setShowMovimiento(item.id); setError('') }}
