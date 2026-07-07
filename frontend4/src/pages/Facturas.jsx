@@ -2083,8 +2083,9 @@ onKeyDown={e => {
                 }}
                   onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); pedGuardarRef.current?.focus() } }}
                   className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
-                <button ref={pedGuardarRef} onClick={async () => {
+            <button ref={pedGuardarRef} onClick={async () => {
                   const customer_id = pedClienteSeleccionadoId
+                  if (!customer_id) return alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear el pedido.')
                   const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   try {
@@ -2518,8 +2519,9 @@ onKeyDown={e => {
                 }}
                   onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); cotGuardarRef.current?.focus() } }}
                   className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
-                <button ref={cotGuardarRef} onClick={async () => {
+          <button ref={cotGuardarRef} onClick={async () => {
                 const customer_id = cotClienteId || document.getElementById('cot-cliente').value
+                  if (!customer_id) return alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear la cotización.')
                   const itemsValidos = itemsCot.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   try {
