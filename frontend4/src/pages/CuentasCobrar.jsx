@@ -1058,7 +1058,39 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
               }}
              onBlur={() => setTimeout(() => { const el = document.getElementById('hist-cliente-list'); if (el) el.innerHTML = '' }, 200)}
             />
-            <div id="hist-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+         <div id="hist-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
+            <button className="absolute top-6 -right-44 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
+              onClick={() => {
+                const tbody = document.getElementById('hist-tbody')
+                const titulo = document.getElementById('hist-titulo')
+                if (!tbody || !titulo || !titulo.innerHTML || tbody.innerHTML.includes('Busca un cliente') || tbody.innerHTML.includes('No hay facturas')) return alert('Primero busca un cliente')
+                const printW = window.open('', '_blank')
+                printW.document.write(`
+                  <!DOCTYPE html><html><head><title>Historial de Cliente</title>
+                  <style>
+                    body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+                    h2{color:#1e40af;margin-bottom:4px}
+                    p.sub{color:#64748b;font-size:13px;margin-bottom:12px}
+                    .info{background:#eff6ff;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+                    table{width:100%;border-collapse:collapse;font-size:13px}
+                    th{background:#1e40af;color:white;padding:8px;text-align:left}
+                    td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+                    tr:nth-child(even){background:#f8fafc}
+                    @media print{button{display:none}}
+                  </style></head><body>
+                  <h2>Historial de Cliente</h2>
+                  <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
+                  <div class="info">${titulo.innerHTML}</div>
+                  <table>
+                    <thead><tr><th>FACTURA</th><th style="text-align:right">VALOR</th><th>FECHA EMITIDA</th><th>FECHA PAGO</th><th style="text-align:center">DÍAS VENCIDO</th><th>ESTADO</th></tr></thead>
+                    <tbody>${tbody.innerHTML}</tbody>
+                  </table>
+                  <script>window.onload=()=>window.print()</script>
+                  </body></html>`)
+                printW.document.close()
+              }}>
+              🖨️ Imprimir
+            </button>
           </div>
           <div id="hist-titulo"></div>
           <table className="w-full text-sm">
