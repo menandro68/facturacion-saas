@@ -2,6 +2,10 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import API from '../services/api'
 
 export default function Facturas({ vendedor_id = null, modulos_permitidos = null }) {
+  // Feature Flag por tenant: modo POS responsive (solo empresas con features.responsive = true)
+  const usuarioSesion = useMemo(() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } }, [])
+  const modoPOS = usuarioSesion?.features?.responsive === true
+  const [posLineaAbierta, setPosLineaAbierta] = useState(false)
   const [tab, setTab] = useState(vendedor_id ? 'pedidos' : 'fecha')
   const [formatoImpresion, setFormatoImpresion] = useState(localStorage.getItem('formato_impresion') || 'media')
   const [showFormatoMenu, setShowFormatoMenu] = useState(false)
@@ -96,6 +100,111 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
   const [mostrarImprimir, setMostrarImprimir] = useState(false)
   const [facturaGuardadaId, setFacturaGuardadaId] = useState(null)
+  // Impresión térmica vía RawBT (solo modo POS / casa reyes)
+  const imprimirTicketRawBT = async (facturaId) => {
+    try {
+      const res = await API.get(`/invoices/${facturaId}`)
+      const f = res.data.data || res.data
+      const anchoLinea = 32
+      const linea = (izq, der) => {
+        izq = String(izq); der = String(der)
+        const espacios = Math.max(1, anchoLinea - izq.length - der.length)
+        return izq + ' '.repeat(espacios) + der + '\n'
+      }
+      const centrar = (t) => {
+        t = String(t)
+        const pad = Math.max(0, Math.floor((anchoLinea - t.length) / 2))
+        return ' '.repeat(pad) + t + '\n'
+      }
+      const divisor = '-'.repeat(anchoLinea) + '\n'
+      let t = ''
+      t += '\x1b\x61\x01' // centrar
+      t += '\x1b\x21\x30' // texto grande
+      t += (usuarioSesion.empresa || '') + '\n'
+      t += '\x1b\x21\x00' // texto normal
+      t += '\x1b\x61\x00' // alinear izquierda
+      t += centrar('FACTURA')
+      t += (f.ncf ? 'NCF: ' + f.ncf + '\n' : '')
+      t += 'Fecha: ' + new Date(f.creado_en || Date.now()).toLocaleString('es-DO') + '\n'
+      t += 'Cliente: ' + (f.cliente_nombre || 'Consumidor Final') + '\n'
+      t += divisor
+      t += linea('DESCRIPCION', 'VALOR')
+      t += divisor
+      ;(f.items || []).forEach(it => {
+        t += it.descripcion + '\n'
+        t += linea(parseFloat(it.cantidad).toFixed(2) + ' x ' + parseFloat(it.precio_unitario).toFixed(2),
+                   (parseFloat(it.cantidad) * parseFloat(it.precio_unitario)).toFixed(2))
+      })
+      t += divisor
+      t += linea('SUBTOTAL', parseFloat(f.subtotal || 0).toFixed(2))
+      t += linea('ITBIS', parseFloat(f.itbis || 0).toFixed(2))
+      t += '\x1b\x21\x10' // doble alto
+      t += linea('TOTAL', 'RD$' + parseFloat(f.total || 0).toFixed(2))
+      t += '\x1b\x21\x00'
+      t += divisor
+      t += centrar('Factura No.: ' + (f.numero_factura || f.id))
+      t += centrar('GRACIAS POR SU COMPRA')
+      t += '\n\n\n'
+      const b64 = btoa(unescape(encodeURIComponent(t)))
+      window.location.href = 'rawbt:base64,' + b64
+    } catch (e) {
+      alert('Error al imprimir: ' + e.message)
+    }
+  }
+
+  // Hoja completa con diálogo de impresión nativo (solo modo POS / casa reyes)
+  const imprimirHojaCompleta = async (facturaId) => {
+    try {
+      const res = await API.get(`/invoices/${facturaId}`)
+      const f = res.data.data || res.data
+      const filas = (f.items || []).map(it => `
+        <tr>
+          <td>${it.descripcion}</td>
+          <td style="text-align:right">${parseFloat(it.cantidad).toFixed(2)}</td>
+          <td style="text-align:right">RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+          <td style="text-align:right">RD$${(parseFloat(it.cantidad)*parseFloat(it.precio_unitario)).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+        </tr>`).join('')
+      const w = window.open('', '_blank')
+      if (!w) { alert('⚠️ Habilite las ventanas emergentes para imprimir.'); return }
+      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Factura ${f.ncf || ''}</title>
+        <style>
+          body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;max-width:700px;margin:0 auto}
+          .header{text-align:center;border-bottom:2px solid #1e40af;padding-bottom:12px;margin-bottom:16px}
+          .empresa{font-size:22px;font-weight:bold;color:#1e40af}
+          .titulo{font-size:13px;color:#64748b;margin-top:4px}
+          .info{background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.7}
+          table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px}
+          th{background:#1e40af;color:white;padding:8px;text-align:left}
+          td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+          .totales{text-align:right;font-size:14px;line-height:1.8}
+          .totales .total{font-size:18px;font-weight:bold;color:#1e40af}
+        </style></head><body>
+        <div class="header">
+          <div class="empresa">${usuarioSesion.empresa || ''}</div>
+          <div class="titulo">FACTURA ${f.ncf ? 'NCF: ' + f.ncf : ''}</div>
+          <div class="titulo">Factura No.: ${f.numero_factura || f.id} — ${new Date(f.creado_en || Date.now()).toLocaleString('es-DO')}</div>
+        </div>
+        <div class="info">
+          <div><b>Cliente:</b> ${f.cliente_nombre || 'Consumidor Final'}</div>
+          ${f.cliente_rnc ? `<div><b>RNC/Cédula:</b> ${f.cliente_rnc}</div>` : ''}
+        </div>
+        <table>
+          <thead><tr><th>Descripción</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Total</th></tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+        <div class="totales">
+          <div>Subtotal: RD$${parseFloat(f.subtotal || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</div>
+          <div>ITBIS: RD$${parseFloat(f.itbis || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</div>
+          <div class="total">TOTAL: RD$${parseFloat(f.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</div>
+        </div>
+        <script>window.onload=()=>setTimeout(()=>window.print(),400)</script>
+        </body></html>`)
+      w.document.close()
+    } catch (e) {
+      alert('Error al imprimir: ' + e.message)
+    }
+  }
+
   const [mostrarAutorizacion, setMostrarAutorizacion] = useState(false)
   const [claveAutorizacion, setClaveAutorizacion] = useState('')
   const [productosConDescuento, setProductosConDescuento] = useState([])
@@ -347,6 +456,11 @@ const handlePDF = (id) => {
   }
 
 const handleImprimir = (id) => {
+    if (modoPOS) {
+      setFacturaGuardadaId(id)
+      setMostrarImprimir(true)
+      return
+    }
     const token = sessionStorage.getItem('token')
     let endpoint = '/pdf'
     if (formatoImpresion === 'pos') endpoint = '/pdf-pos'
@@ -2173,17 +2287,30 @@ onKeyDown={e => {
                           const itemsPed = detPed.data.data.items || []
                           const invRes = await API.get('/inventory')
                           const invList = invRes.data.data
+                      let huboAjuste = false
                           for (const it of itemsPed) {
                             if (!it.product_id) continue
                             const invItem = invList.find(v => v.product_id === it.product_id)
                       const minLista = Math.max(parseFloat(invItem?.stock_minimo || 0), parseFloat(invItem?.prod_stock_minimo || 0))
                             if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
-                              alert(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${parseFloat(invItem.stock_actual || 0)}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nSolo puede facturar hasta ${parseFloat(invItem.stock_actual || 0)}.`)
-                              return
+                              const disponible = parseFloat(invItem.stock_actual || 0)
+                              if (disponible <= 0) {
+                                alert(`⚠️ Sin stock para "${it.descripcion}".\n\nDisponible: 0. No se puede facturar este artículo.`)
+                                return
+                              }
+                              if (!confirm(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${disponible}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\n¿Desea facturar solo ${disponible}?`)) return
+                              it.cantidad = disponible
+                              huboAjuste = true
                             }
                             if (invItem && minLista > 0 && parseFloat(invItem.stock_actual || 0) <= minLista) {
                               alert(`⚠️ STOCK BAJO: "${it.descripcion}"\n\nQuedan ${parseFloat(invItem.stock_actual || 0)} (mínimo ${minLista}).\n\nSe convertirá a factura, pero considere reabastecer.`)
                             }
+                          }
+                         if (huboAjuste) {
+                            await API.put(`/invoices/pedido/${p.id}/editar`, {
+                              customer_id: detPed.data.data.customer_id || null,
+                              items: itemsPed.map(it => ({ descripcion: it.descripcion, cantidad: it.cantidad, precio_unitario: it.precio_unitario, itbis_rate: it.itbis_rate, product_id: it.product_id || '' }))
+                            })
                           }
                           await API.put(`/invoices/pedido/${p.id}/convertir`)
                           const res = await API.get('/invoices/pedidos/lista')
@@ -2235,9 +2362,22 @@ onKeyDown={e => {
                                 if (!it.product_id) continue
                                 const invItem = invList.find(v => v.product_id === it.product_id)
                            const minimo = Math.max(parseFloat(invItem?.stock_minimo || 0), parseFloat(invItem?.prod_stock_minimo || 0))
-                                if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
-                                  alert(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${parseFloat(invItem.stock_actual || 0)}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nSolo puede facturar hasta ${parseFloat(invItem.stock_actual || 0)}.`)
-                                  return
+                             if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
+                                  const disponible = parseFloat(invItem.stock_actual || 0)
+                                  if (disponible <= 0) {
+                                    alert(`⚠️ Sin stock para "${it.descripcion}".\n\nDisponible: 0. No se puede facturar este artículo.`)
+                                    return
+                                  }
+                                  if (!confirm(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${disponible}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\n¿Desea facturar solo ${disponible}?`)) return
+                                  await API.put(`/invoices/pedido/${p.id}/editar`, {
+                                    customer_id: data.customer_id || null,
+                                    items: (data.items || []).map(x => ({ descripcion: x.descripcion, cantidad: x.product_id === it.product_id ? disponible : x.cantidad, precio_unitario: x.precio_unitario, itbis_rate: x.itbis_rate, product_id: x.product_id || '' }))
+                                  })
+                       it.cantidad = disponible
+                                  const resAjuste = await API.get(`/invoices/${p.id}`)
+                                  data.subtotal = resAjuste.data.data.subtotal
+                                  data.itbis = resAjuste.data.data.itbis
+                                  data.total = resAjuste.data.data.total
                                 }
                                 if (invItem && minimo > 0 && parseFloat(invItem.stock_actual || 0) <= minimo) {
                                   avisoStock += `STOCK BAJO: ${it.descripcion} - quedan ${parseFloat(invItem.stock_actual || 0)} (minimo ${minimo})\n`
@@ -3385,10 +3525,27 @@ onKeyDown={e => {
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
             <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la factura?</p>
             <div className="flex justify-center gap-6">
+         
+      {modoPOS && (
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium"
+                  onClick={() => {
+                    imprimirHojaCompleta(facturaGuardadaId)
+                    setMostrarImprimir(false)
+                  }}>
+                  📄 Hoja completa
+                </button>
+              )}
          <button
                 autoFocus
                 id="btn-si-imprimir"
-            onClick={() => {
+        onClick={() => {
+                  if (modoPOS) {
+                    imprimirTicketRawBT(facturaGuardadaId)
+                    setMostrarImprimir(false)
+                    return
+                  }
                   const token = sessionStorage.getItem('token')
                   const formato = localStorage.getItem('formato_impresion') || 'media'
                   let endpoint = '/pdf'
@@ -3399,10 +3556,10 @@ onKeyDown={e => {
                 }}
                 onKeyDown={e => {
                   if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-imprimir')?.focus() }
-                 if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); const formato = localStorage.getItem('formato_impresion') || 'media'; let endpoint = '/pdf'; if (formato === 'pos') endpoint = '/pdf-pos'; else if (formato === 'carta') endpoint = '/pdf-carta'; window.open(`/invoices/${facturaGuardadaId}${endpoint}?token=${token}`, '_blank'); setMostrarImprimir(false) }
+                 if (e.key === 'Enter') { if (modoPOS) { imprimirTicketRawBT(facturaGuardadaId); setMostrarImprimir(false); return } const token = sessionStorage.getItem('token'); const formato = localStorage.getItem('formato_impresion') || 'media'; let endpoint = '/pdf'; if (formato === 'pos') endpoint = '/pdf-pos'; else if (formato === 'carta') endpoint = '/pdf-carta'; window.open(`/invoices/${facturaGuardadaId}${endpoint}?token=${token}`, '_blank'); setMostrarImprimir(false) }
                 }}
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
-                Sí
+             className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
+                {modoPOS ? '🖨️ Ticket' : 'Sí'}
               </button>
          <button
                 id="btn-no-imprimir"
@@ -3618,10 +3775,51 @@ onKeyDown={e => {
                   <input type="date" name="fecha_vencimiento" value={form.fecha_vencimiento} onChange={handleFormChange} />
                 </div>
 
-                {/* Items */}
-                <div className="mb-4">
+                {/* Ticket POS en vivo — solo tenants con feature responsive (casa reyes) */}
+                {modoPOS && (
+                  <div className="pos-ticket">
+                    <div className="pos-ticket-empresa">{usuarioSesion.empresa || ''}</div>
+                    <div className="pos-ticket-cliente">
+                      Cliente: {(clientes.find(c => String(c.id) === String(form.customer_id))?.nombre) || 'Consumidor Final'}
+                    </div>
+                    <div className="pos-ticket-divider"></div>
+                    <div className="pos-ticket-cols"><span>DESCRIPCION</span><span>VALOR</span></div>
+                    <div className="pos-ticket-divider"></div>
+                    {items.filter(it => it.descripcion || it.precio_unitario).map((it, i) => (
+                      <div key={i} className="pos-ticket-linea">
+                        <div className="pos-ticket-desc">{it.descripcion}</div>
+                        <div className="pos-ticket-detalle">
+                          <span>{parseFloat(it.cantidad || 0).toFixed(2)} x {parseFloat(it.precio_unitario || 0).toFixed(2)}</span>
+                          <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {items.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
+                      <div className="pos-ticket-vacio">Agregue artículos abajo</div>
+                    )}
+                    <div className="pos-ticket-divider"></div>
+                    <div className="pos-ticket-tot"><span>SUBTOTAL</span><span>{subtotal.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="pos-ticket-tot"><span>ITBIS</span><span>{itbis.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="pos-ticket-total"><span>TOTAL A PAGAR</span><span>RD${total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                  </div>
+                )}
+
+                {/* Botón POS: abrir tarjeta de nueva línea (solo casa reyes, solo móvil) */}
+                {modoPOS && !posLineaAbierta && (
+                  <button type="button" className="pos-btn-agregar"
+                    onClick={() => {
+                      const ultimo = items[items.length - 1]
+                      if (ultimo && (ultimo.descripcion || ultimo.precio_unitario)) agregarItem()
+                      setPosLineaAbierta(true)
+                    }}>
+                    + Agregar línea
+                  </button>
+                )}
+
+             {/* Items */}
+                <div className={modoPOS && !posLineaAbierta ? "mb-4 pos-entrada-cerrada" : "mb-4"}>
                   {items.map((item, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+                    <div key={index} className={`grid grid-cols-12 gap-2 mb-2 ${modoPOS && index !== items.length - 1 ? 'pos-item-anterior' : ''}`}>
                       <div className="col-span-3 relative">
                         <input
                           type="text"
@@ -3749,6 +3947,22 @@ onKeyDown={e => {
                       </div>
                     </div>
                   ))}
+                     
+                     {/* Botón POS: confirmar artículo y cerrar tarjeta (solo casa reyes, solo móvil) */}
+                  {modoPOS && posLineaAbierta && (
+                    <button type="button" className="pos-btn-confirmar"
+                      onClick={() => {
+                        const ultimo = items[items.length - 1]
+                        if (!ultimo || !ultimo.descripcion || !parseFloat(ultimo.precio_unitario || 0)) {
+                          alert('Complete el artículo antes de agregarlo al ticket')
+                          return
+                        }
+                        setPosLineaAbierta(false)
+                      }}>
+                      ✓ Agregar al ticket
+                    </button>
+                  )}
+
                   <div className="flex items-center gap-4 mt-1">
                     <button type="button" ref={agregarLineaRef} onClick={agregarItem}
                       onKeyDown={e => {

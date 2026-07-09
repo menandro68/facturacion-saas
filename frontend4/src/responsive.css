@@ -1,0 +1,372 @@
+/* ============================================================
+   RESPONSIVE.CSS — Modo responsive por Feature Flag de tenant
+   Solo se activa si <body> tiene la clase .tenant-responsive
+   (empresas con features.responsive = true, ej: casa reyes)
+   Las demás empresas NO reciben ningún cambio visual.
+   Mobile-first: breakpoints 640px / 768px / 1024px
+   ============================================================ */
+
+/* ---------- BASE MÓVIL (pantallas hasta 767px) ---------- */
+@media (max-width: 767px) {
+
+  /* Evitar desbordamiento horizontal general */
+  body.tenant-responsive {
+    overflow-x: hidden;
+  }
+
+  body.tenant-responsive * {
+    min-width: 0;
+  }
+
+  /* Contenedores con padding grande → padding compacto */
+  body.tenant-responsive .p-6 {
+    padding: 0.75rem;
+  }
+
+  body.tenant-responsive .p-4 {
+    padding: 0.75rem;
+  }
+
+  /* Filas flex (filtros, barras de acciones) → apilar en columna */
+  body.tenant-responsive .flex.gap-4,
+  body.tenant-responsive .flex.gap-2,
+  body.tenant-responsive .flex.gap-3 {
+    flex-wrap: wrap;
+  }
+
+  body.tenant-responsive .flex.items-end,
+  body.tenant-responsive .flex.items-center.justify-between {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Grids de varias columnas → una sola columna */
+  body.tenant-responsive .grid-cols-2,
+  body.tenant-responsive .grid-cols-3,
+  body.tenant-responsive .grid-cols-4,
+  body.tenant-responsive .grid-cols-5,
+  body.tenant-responsive .grid-cols-6 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Inputs, selects y botones a ancho completo y táctiles (44px min) */
+  body.tenant-responsive input,
+  body.tenant-responsive select,
+  body.tenant-responsive textarea {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px; /* evita zoom automático de iOS */
+  }
+
+  body.tenant-responsive button {
+    min-height: 44px;
+  }
+
+  /* Tablas → scroll horizontal suave sin romper el layout */
+  body.tenant-responsive table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  /* Tabs (Venta por Fecha, Zona, Vendedor, etc.) → scroll horizontal */
+  body.tenant-responsive .flex.border-b,
+  body.tenant-responsive .flex.gap-2.border-b {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+  }
+
+  body.tenant-responsive .flex.border-b button,
+  body.tenant-responsive .flex.gap-2.border-b button {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* Modales → ocupar casi toda la pantalla */
+  body.tenant-responsive .fixed.inset-0 > div {
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    margin: auto;
+  }
+
+  /* Textos grandes → reducir levemente */
+  body.tenant-responsive .text-2xl {
+    font-size: 1.25rem;
+  }
+
+  body.tenant-responsive .text-xl {
+    font-size: 1.125rem;
+  }
+
+  /* Márgenes laterales automáticos → quitar en móvil */
+  body.tenant-responsive .ml-2 {
+    margin-left: 0;
+  }
+}
+
+/* ---------- TABLET (768px a 1023px) ---------- */
+@media (min-width: 768px) and (max-width: 1023px) {
+
+  body.tenant-responsive .grid-cols-4,
+  body.tenant-responsive .grid-cols-5,
+  body.tenant-responsive .grid-cols-6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  body.tenant-responsive table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  body.tenant-responsive .flex.border-b {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+}
+
+/* ============================================================
+   LÍNEAS DE FACTURA COMO TARJETAS MODERNAS (solo móvil)
+   Apunta únicamente a las filas de artículos usando :has()
+   ============================================================ */
+@media (max-width: 767px) {
+
+  /* La fila del artículo se convierte en tarjeta */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 0.875rem;
+    margin-bottom: 0.875rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Artículo y Descripción ocupan el ancho completo de la tarjeta */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(1),
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(2) {
+    grid-column: span 2;
+  }
+
+  /* Etiquetas modernas sobre cada campo */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div::before {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+  }
+
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(1)::before { content: "Artículo"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(2)::before { content: "Descripción"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(3)::before { content: "Cantidad"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(4)::before { content: "Precio"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(5)::before { content: "Subtotal"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(6)::before { content: "ITBIS"; }
+
+  /* Botón eliminar (×) centrado, sin etiqueta */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(7)::before {
+    content: "";
+    margin: 0;
+  }
+
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(7) {
+    grid-column: span 2;
+    justify-content: flex-end;
+  }
+
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(7) button {
+    min-height: 36px;
+    padding: 0 1rem;
+    border: 1px solid #fecaca;
+    border-radius: 0.5rem;
+    background: #fef2f2;
+  }
+
+  /* Campos dentro de la tarjeta más cómodos al tacto */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) input,
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) select {
+    min-height: 44px;
+    border-radius: 0.5rem;
+    font-size: 16px;
+  }
+}
+
+/* ============================================================
+   TICKET POS EN VIVO — estilo recibo de punto de venta
+   Solo se renderiza para tenants con features.responsive
+   ============================================================ */
+
+/* Por defecto (escritorio) el ticket se oculta: en pantalla
+   grande la app se usa igual que siempre */
+.pos-ticket {
+  display: none;
+}
+
+@media (max-width: 767px) {
+
+  body.tenant-responsive .pos-ticket {
+    display: block;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 1rem 0.875rem;
+    margin-bottom: 1rem;
+    font-family: 'Courier New', Courier, monospace;
+    color: #111827;
+    font-weight: 700;
+  }
+
+body.tenant-responsive .pos-ticket-empresa {
+    text-align: center;
+    font-size: 2.25rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+    line-height: 1.1;
+  }
+
+  body.tenant-responsive .pos-ticket-cliente {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+
+  body.tenant-responsive .pos-ticket-divider {
+    border-top: 1px dashed #9ca3af;
+    margin: 0.5rem 0;
+  }
+
+  body.tenant-responsive .pos-ticket-cols {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+body.tenant-responsive .pos-ticket-linea {
+    margin-bottom: 0.5rem;
+    color: #dc2626;
+  }
+
+  body.tenant-responsive .pos-ticket-desc {
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+ body.tenant-responsive .pos-ticket-detalle {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8125rem;
+    color: #dc2626;
+  }
+
+  body.tenant-responsive .pos-ticket-vacio {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    padding: 0.75rem 0;
+  }
+
+  body.tenant-responsive .pos-ticket-tot {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8125rem;
+    margin-bottom: 0.125rem;
+  }
+
+  body.tenant-responsive .pos-ticket-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.0625rem;
+    font-weight: 800;
+    margin-top: 0.375rem;
+    padding-top: 0.375rem;
+    border-top: 1px dashed #9ca3af;
+  }
+}
+
+/* ============================================================
+   FLUJO POS: tarjeta de entrada bajo demanda
+   Solo móvil + tenants con features.responsive (casa reyes)
+   ============================================================ */
+
+/* En escritorio los botones POS nunca se muestran */
+.pos-btn-agregar,
+.pos-btn-confirmar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+
+  /* Ocultar el bloque de entrada cuando la tarjeta está cerrada */
+  body.tenant-responsive .pos-entrada-cerrada {
+    display: none;
+  }
+
+  /* Ocultar las líneas anteriores (ya viven en el ticket) */
+  body.tenant-responsive .pos-item-anterior {
+    display: none !important;
+  }
+
+  /* Botón + Agregar línea (debajo del ticket) */
+  body.tenant-responsive .pos-btn-agregar {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  }
+
+  body.tenant-responsive .pos-btn-agregar:active {
+    transform: scale(0.98);
+  }
+
+  /* Botón ✓ Agregar al ticket (confirmar artículo) */
+  body.tenant-responsive .pos-btn-confirmar {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    background: #16a34a;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 0.75rem;
+    margin: 0.25rem 0 0.75rem 0;
+    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3);
+  }
+
+  body.tenant-responsive .pos-btn-confirmar:active {
+    transform: scale(0.98);
+  }
+
+  /* Ocultar el "+ Agregar línea" original en modo POS
+     (el flujo POS usa su propio botón azul bajo el ticket) */
+  body.tenant-responsive .pos-entrada-cerrada ~ * {}
+  body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"] {
+    display: none;
+  }
+}
+
+/* ---------- ESCRITORIO (1024px en adelante) ---------- */
+/* Sin cambios: en pantalla grande la app se ve igual que siempre */

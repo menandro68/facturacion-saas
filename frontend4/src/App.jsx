@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Clientes from './pages/Clientes'
@@ -32,6 +32,15 @@ function App() {
   const [mostrarSelector, setMostrarSelector] = useState(() => {
     return sessionStorage.getItem('empresaSeleccionada') !== 'true' && !!sessionStorage.getItem('usuario')
   })
+
+  // Feature Flag: modo responsive por tenant (solo empresas con features.responsive = true)
+  useEffect(() => {
+    if (usuario?.features?.responsive === true) {
+      document.body.classList.add('tenant-responsive')
+    } else {
+      document.body.classList.remove('tenant-responsive')
+    }
+  }, [usuario])
 
   const entrarAlSistema = (user) => {
     if (user.rol === 'vendedor') {
