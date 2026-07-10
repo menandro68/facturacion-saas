@@ -256,9 +256,26 @@ body.tenant-responsive .pos-ticket-empresa {
     letter-spacing: 0.05em;
   }
 
-body.tenant-responsive .pos-ticket-linea {
-    margin-bottom: 0.5rem;
+body.tenant-responsive .pos-ticket-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  body.tenant-responsive .pos-ticket-eliminar {
+    background: #fef2f2;
     color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    min-height: 26px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+    padding: 0;
   }
 
   body.tenant-responsive .pos-ticket-desc {

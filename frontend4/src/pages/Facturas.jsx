@@ -3785,14 +3785,28 @@ onKeyDown={e => {
                     <div className="pos-ticket-divider"></div>
                     <div className="pos-ticket-cols"><span>DESCRIPCION</span><span>VALOR</span></div>
                     <div className="pos-ticket-divider"></div>
-                    {items.filter(it => it.descripcion || it.precio_unitario).map((it, i) => (
-                      <div key={i} className="pos-ticket-linea">
-                        <div className="pos-ticket-desc">{it.descripcion}</div>
-                        <div className="pos-ticket-detalle">
-                          <span>{parseFloat(it.cantidad || 0).toFixed(2)} x {parseFloat(it.precio_unitario || 0).toFixed(2)}</span>
-                          <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+            {items.map((it, i) => (
+                      (it.descripcion || it.precio_unitario) ? (
+                        <div key={i} className="pos-ticket-linea">
+                          <div className="pos-ticket-fila">
+                            <div className="pos-ticket-desc">{it.descripcion}</div>
+                            <button type="button" className="pos-ticket-eliminar"
+                              onClick={() => {
+                                if (!confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
+                                if (items.length > 1) {
+                                  eliminarItem(i)
+                                } else {
+                                  setItems([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
+                                  setBuscarProducto({})
+                                }
+                              }}>✕</button>
+                          </div>
+                          <div className="pos-ticket-detalle">
+                            <span>{parseFloat(it.cantidad || 0).toFixed(2)} x {parseFloat(it.precio_unitario || 0).toFixed(2)}</span>
+                            <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                          </div>
                         </div>
-                      </div>
+                      ) : null
                     ))}
                     {items.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
                       <div className="pos-ticket-vacio">Agregue artículos abajo</div>
