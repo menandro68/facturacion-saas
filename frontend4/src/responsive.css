@@ -380,7 +380,8 @@ body.tenant-responsive .pos-ticket-fila {
   /* Ocultar el "+ Agregar línea" original en modo POS
      (el flujo POS usa su propio botón azul bajo el ticket) */
   body.tenant-responsive .pos-entrada-cerrada ~ * {}
-  body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"] {
+body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"],
+  body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="submit"] {
     display: none;
   }
 }

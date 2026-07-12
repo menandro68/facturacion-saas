@@ -42,8 +42,10 @@ function App() {
     }
   }, [usuario])
 
-  const entrarAlSistema = (user) => {
-    if (user.rol === 'vendedor') {
+ const entrarAlSistema = (user) => {
+    if (user.features?.responsive === true) {
+      setPagina('facturas')
+    } else if (user.rol === 'vendedor') {
       setPagina('facturas')
     } else if (user.rol === 'operador') {
       const permitidos = user.modulos_permitidos || []

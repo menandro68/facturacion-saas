@@ -88,7 +88,16 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [mostrarDropdown, setMostrarDropdown] = useState(false)
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [clienteIndex, setClienteIndex] = useState(-1)
-  const buscarClienteRef = useRef(null)
+const buscarClienteRef = useRef(null)
+
+  // Modo POS (casa reyes): abrir Nueva Factura automáticamente al entrar
+  useEffect(() => {
+    if (modoPOS && !vendedor_id) {
+      setShowForm(true)
+      setTimeout(() => buscarClienteRef.current?.focus(), 300)
+    }
+  }, [])
+
   const buscarProductoRef = useRef(null)
   const buscarProductoRefs = useRef({})
   const cantidadRefs = useRef({})
@@ -3818,8 +3827,8 @@ onKeyDown={e => {
                   </div>
                 )}
 
-                {/* Botón POS: abrir tarjeta de nueva línea (solo casa reyes, solo móvil) */}
-                {modoPOS && !posLineaAbierta && (
+               {/* Botón POS: confirmar línea y abrir nueva (solo casa reyes, solo móvil) */}
+                {modoPOS && (
                   <button type="button" className="pos-btn-agregar"
                     onClick={() => {
                       const ultimo = items[items.length - 1]
@@ -3962,20 +3971,7 @@ onKeyDown={e => {
                     </div>
                   ))}
                      
-                     {/* Botón POS: confirmar artículo y cerrar tarjeta (solo casa reyes, solo móvil) */}
-                  {modoPOS && posLineaAbierta && (
-                    <button type="button" className="pos-btn-confirmar"
-                      onClick={() => {
-                        const ultimo = items[items.length - 1]
-                        if (!ultimo || !ultimo.descripcion || !parseFloat(ultimo.precio_unitario || 0)) {
-                          alert('Complete el artículo antes de agregarlo al ticket')
-                          return
-                        }
-                        setPosLineaAbierta(false)
-                      }}>
-                      ✓ Agregar al ticket
-                    </button>
-                  )}
+               
 
                   <div className="flex items-center gap-4 mt-1">
                     <button type="button" ref={agregarLineaRef} onClick={agregarItem}
