@@ -320,12 +320,13 @@ const handleItemChange = (index, e) => {
     setItems(items.filter((_, i) => i !== index))
   }
 
-  const calcularTotales = () => {
+const calcularTotales = () => {
     let subtotal = 0, itbis = 0
     items.forEach(item => {
-      const s = parseFloat(item.cantidad || 0) * parseFloat(item.precio_unitario || 0)
-      subtotal += s
-      itbis += s * (parseFloat(item.itbis_rate || 0) / 100)
+      const bruto = parseFloat(item.cantidad || 0) * parseFloat(item.precio_unitario || 0)
+      const base = bruto / (1 + (parseFloat(item.itbis_rate || 0) / 100))
+      subtotal += base
+      itbis += bruto - base
     })
     return { subtotal, itbis, total: subtotal + itbis }
   }
@@ -336,7 +337,10 @@ const handleSubmit = async (e) => {
       alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear la factura.')
       return
     }
-    // Validar stock disponible por producto (suma cantidades de líneas repetidas)
+// Validar stock disponible por producto (suma cantidades de líneas repetidas)
+    // Feature Flag stock_negativo: permite facturar sin stock (ej: casa reyes)
+    const permiteStockNegativo = usuarioSesion?.features?.stock_negativo === true
+    if (!permiteStockNegativo) {
     const cantidadesPorProducto = {}
     items.forEach(item => {
       if (item.product_id) {
@@ -352,6 +356,7 @@ const handleSubmit = async (e) => {
           return
         }
       }
+    }
     }
     setMostrarConfirmar(true)
   }
@@ -497,12 +502,13 @@ const handleImprimir = (id) => {
     setShowFormatoMenu(false)
   }
 
-  const { subtotal, itbis, total } = useMemo(() => {
+const { subtotal, itbis, total } = useMemo(() => {
     let subtotal = 0, itbis = 0
     items.forEach(item => {
-      const s = parseFloat(item.cantidad || 0) * parseFloat(item.precio_unitario || 0)
-      subtotal += s
-      itbis += s * (parseFloat(item.itbis_rate || 0) / 100)
+      const bruto = parseFloat(item.cantidad || 0) * parseFloat(item.precio_unitario || 0)
+      const base = bruto / (1 + (parseFloat(item.itbis_rate || 0) / 100))
+      subtotal += base
+      itbis += bruto - base
     })
     return { subtotal, itbis, total: subtotal + itbis }
   }, [items])
@@ -3868,8 +3874,8 @@ onKeyDown={e => {
                            const idx = productoIndex[index] ?? -1
                               if (idx >= 0 && filtrados[idx]) {
                                 const p = filtrados[idx]
-                         if (parseFloat(p.stock_actual || 0) <= 0) {
-                                  alert(`âš ï¸ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
+                        if (usuarioSesion?.features?.stock_negativo !== true && parseFloat(p.stock_actual || 0) <= 0) {
+                                  alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
                                   return
                                 }
                                 if (parseFloat(p.stock_minimo || 0) > 0 && parseFloat(p.stock_actual || 0) <= parseFloat(p.stock_minimo || 0)) {
@@ -3904,8 +3910,8 @@ onKeyDown={e => {
                                   className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                                   onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
                     onMouseDown={() => {
-                                    if (parseFloat(p.stock_actual || 0) <= 0) {
-                                      alert(`âš ï¸ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
+                               if (usuarioSesion?.features?.stock_negativo !== true && parseFloat(p.stock_actual || 0) <= 0) {
+                                      alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
                                       return
                                     }
                                     if (parseFloat(p.stock_minimo || 0) > 0 && parseFloat(p.stock_actual || 0) <= parseFloat(p.stock_minimo || 0)) {
