@@ -63,8 +63,8 @@ export default function Reportes() {
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-filtrar-reporte')?.click() } }}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <button id="btn-filtrar-reporte" onClick={fetchReportes}
-          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+       <button id="btn-filtrar-reporte" onClick={fetchReportes}
+          className="hidden">
           Filtrar
         </button>
         <button onClick={() => { setDesde(''); setHasta(''); }}

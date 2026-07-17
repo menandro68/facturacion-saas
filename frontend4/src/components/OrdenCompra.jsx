@@ -6,6 +6,8 @@ import autoTable from 'jspdf-autotable'
 export default function OrdenCompra({ onInventarioUpdate }) {
   const [ordenes, setOrdenes] = useState([])
   const [busquedaOC, setBusquedaOC] = useState('')
+  const [ocDesde, setOcDesde] = useState('')
+  const [ocHasta, setOcHasta] = useState('')
   const [proveedores, setProveedores] = useState([])
   const [productos, setProductos] = useState([])
   const [showForm, setShowForm] = useState(false)
@@ -169,7 +171,11 @@ const handleItemChange = async (idx, field, value) => {
     <div>
   <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800">Órdenes de Compra</h3>
-        <div className="flex items-center gap-3">
+       <div className="flex items-center gap-3">
+          <input type="date" value={ocDesde} onChange={e => setOcDesde(e.target.value)}
+            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="date" value={ocHasta} onChange={e => setOcHasta(e.target.value)}
+            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           <input
             type="text"
             placeholder="🔍 Buscar No. de orden..."
@@ -378,9 +384,9 @@ const handleItemChange = async (idx, field, value) => {
             </tr>
           </thead>
           <tbody>
-            {ordenes.filter(o => !busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())).length === 0 ? (
+            {ordenes.filter(o => (!busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())) && (!ocDesde || new Date(o.fecha_orden || o.creado_en) >= new Date(ocDesde + 'T00:00:00')) && (!ocHasta || new Date(o.fecha_orden || o.creado_en) <= new Date(ocHasta + 'T23:59:59'))).length === 0 ? (
               <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No hay órdenes de compra</td></tr>
-            ) : ordenes.filter(o => !busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())).map(o => (
+            ) : ordenes.filter(o => (!busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())) && (!ocDesde || new Date(o.fecha_orden || o.creado_en) >= new Date(ocDesde + 'T00:00:00')) && (!ocHasta || new Date(o.fecha_orden || o.creado_en) <= new Date(ocHasta + 'T23:59:59'))).map(o => (
               <tr key={o.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{o.numero}</td>
                 <td className="px-4 py-3">{o.proveedor_nombre || '-'}</td>

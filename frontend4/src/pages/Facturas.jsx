@@ -316,8 +316,21 @@ const handleItemChange = (index, e) => {
     setItems([...items, { descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
   }
 
-  const eliminarItem = (index) => {
+ const eliminarItem = (index) => {
     setItems(items.filter((_, i) => i !== index))
+    // Reindexar los textos de los buscadores para que sigan alineados con sus lineas
+    const reindexar = (obj) => {
+      const nuevo = {}
+      Object.keys(obj).forEach(k => {
+        const i = parseInt(k)
+        if (i < index) nuevo[i] = obj[k]
+        else if (i > index) nuevo[i - 1] = obj[k]
+      })
+      return nuevo
+    }
+    setBuscarProducto(prev => reindexar(prev))
+    setMostrarDropdownProducto(prev => reindexar(prev))
+    setProductoIndex(prev => reindexar(prev))
   }
 
 const calcularTotales = () => {
@@ -2181,7 +2194,19 @@ onKeyDown={e => {
                         {item.precio_unitario && item.cantidad ? 'RD$' + (parseFloat(item.cantidad||0)*parseFloat(item.precio_unitario||0)).toLocaleString('es-DO',{minimumFractionDigits:2}) : 'RD$0.00'}
                       </span>
                       {itemsPed.length > 1 && (
-                        <button onClick={() => setItemsPed(prev => prev.filter((_,i) => i !== index))}
+                        <button onClick={() => {
+                          setItemsPed(prev => prev.filter((_,i) => i !== index))
+                          const reindexarPed = (obj) => {
+                            const nuevo = {}
+                            Object.keys(obj).forEach(k => {
+                              const i = parseInt(k)
+                              if (i < index) nuevo[i] = obj[k]
+                              else if (i > index) nuevo[i - 1] = obj[k]
+                            })
+                            return nuevo
+                          }
+                          setBuscarProductoPed(prev => reindexarPed(prev))
+                        }}
                           className="bg-red-100 text-red-500 hover:bg-red-200 rounded-full w-7 h-7 flex items-center justify-center text-lg font-bold">×</button>
                       )}
                     </div>
@@ -2190,12 +2215,13 @@ onKeyDown={e => {
               ))}
               <div className="flex justify-end mb-3">
                 <div className="text-sm text-right">
-                  {(() => {
+           {(() => {
                     let sub = 0, itb = 0
                     itemsPed.forEach(it => {
-                      const s = parseFloat(it.cantidad||0) * parseFloat(it.precio_unitario||0)
-                      sub += s
-                      itb += s * (parseFloat(it.itbis_rate||0) / 100)
+                      const bruto = parseFloat(it.cantidad||0) * parseFloat(it.precio_unitario||0)
+                      const base = bruto / (1 + (parseFloat(it.itbis_rate||0) / 100))
+                      sub += base
+                      itb += bruto - base
                     })
                     return <>
                       <p className="text-gray-600">Subtotal: <span className="font-medium">RD${sub.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
@@ -2644,7 +2670,19 @@ onKeyDown={e => {
                   </div>
                   <div className="col-span-0 flex items-center justify-center">
                     {itemsCot.length > 1 && (
-                      <button onClick={() => setItemsCot(prev => prev.filter((_,i) => i !== index))}
+                    <button onClick={() => {
+                        setItemsCot(prev => prev.filter((_,i) => i !== index))
+                        const reindexarCot = (obj) => {
+                          const nuevo = {}
+                          Object.keys(obj).forEach(k => {
+                            const i = parseInt(k)
+                            if (i < index) nuevo[i] = obj[k]
+                            else if (i > index) nuevo[i - 1] = obj[k]
+                          })
+                          return nuevo
+                        }
+                        setBuscarProductoCot(prev => reindexarCot(prev))
+                      }}
                         className="text-red-500 hover:text-red-700 text-lg">×</button>
                     )}
                   </div>
@@ -2653,11 +2691,12 @@ onKeyDown={e => {
               <div className="flex justify-end mb-3">
                 <div className="text-sm text-right">
                   {(() => {
-                    let sub = 0, itb = 0
+              let sub = 0, itb = 0
                     itemsCot.forEach(it => {
-                      const s = parseFloat(it.cantidad||0) * parseFloat(it.precio_unitario||0)
-                      sub += s
-                      itb += s * (parseFloat(it.itbis_rate||0) / 100)
+                      const bruto = parseFloat(it.cantidad||0) * parseFloat(it.precio_unitario||0)
+                      const base = bruto / (1 + (parseFloat(it.itbis_rate||0) / 100))
+                      sub += base
+                      itb += bruto - base
                     })
                     return <>
                       <p className="text-gray-600">Subtotal: <span className="font-medium">RD${sub.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
