@@ -171,11 +171,57 @@ const handleItemChange = async (idx, field, value) => {
     <div>
   <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800">Órdenes de Compra</h3>
-       <div className="flex items-center gap-3">
+   <div className="flex items-center gap-3">
           <input type="date" value={ocDesde} onChange={e => setOcDesde(e.target.value)}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           <input type="date" value={ocHasta} onChange={e => setOcHasta(e.target.value)}
             className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button onClick={() => {
+            const filtradas = ordenes.filter(o => (!busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())) && (!ocDesde || new Date(o.fecha_orden || o.creado_en) >= new Date(ocDesde + 'T00:00:00')) && (!ocHasta || new Date(o.fecha_orden || o.creado_en) <= new Date(ocHasta + 'T23:59:59')))
+            if (filtradas.length === 0) { alert('No hay órdenes de compra en el rango seleccionado'); return }
+            const doc = new jsPDF()
+            const empresa = sessionStorage.getItem('tenant_name') || 'MI EMPRESA'
+            doc.setFontSize(16)
+            doc.setFont('helvetica', 'bold')
+            doc.text(empresa.toUpperCase(), 105, 18, { align: 'center' })
+            doc.setFontSize(13)
+            doc.text('REPORTE DE ÓRDENES DE COMPRA', 105, 27, { align: 'center' })
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'normal')
+            const rango = (ocDesde || ocHasta)
+              ? `Rango: ${ocDesde ? new Date(ocDesde + 'T00:00:00').toLocaleDateString('es-DO') : 'Inicio'} — ${ocHasta ? new Date(ocHasta + 'T00:00:00').toLocaleDateString('es-DO') : 'Hoy'}`
+              : 'Rango: Todas las órdenes'
+            doc.text(rango, 105, 34, { align: 'center' })
+            const totalGeneral = filtradas.reduce((acc, o) => acc + parseFloat(o.total || 0), 0)
+            autoTable(doc, {
+              startY: 42,
+              head: [['Número', 'Proveedor', 'Fecha', 'Entrega', 'Estado', 'Total']],
+              body: filtradas.map(o => [
+                o.numero || '-',
+                o.proveedor_nombre || '-',
+                new Date(o.fecha_orden || o.creado_en).toLocaleDateString('es-DO'),
+                o.fecha_entrega ? new Date(o.fecha_entrega.substring(0, 10) + 'T00:00:00').toLocaleDateString('es-DO') : '-',
+                (o.estado || '').toUpperCase(),
+                `RD$${parseFloat(o.total || 0).toLocaleString('es-DO', {minimumFractionDigits:2})}`
+              ]),
+              theme: 'grid',
+              headStyles: { fillColor: [55, 65, 81], textColor: 255, fontStyle: 'bold' },
+              styles: { fontSize: 9, cellPadding: 3 }
+            })
+            const finalY = doc.lastAutoTable.finalY + 8
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(11)
+            doc.text(`Órdenes: ${filtradas.length}`, 14, finalY)
+            doc.setFontSize(12)
+            doc.text(`TOTAL COMPRAS: RD$${totalGeneral.toLocaleString('es-DO', {minimumFractionDigits:2})}`, 196, finalY, { align: 'right' })
+           doc.autoPrint()
+            const blobUrl = doc.output('bloburl')
+            const win = window.open(blobUrl)
+            if (!win) alert('Por favor permite las ventanas emergentes para imprimir')
+          }}
+            className="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 whitespace-nowrap">
+            🖨 Imprimir
+          </button>
           <input
             type="text"
             placeholder="🔍 Buscar No. de orden..."

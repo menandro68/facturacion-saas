@@ -5,7 +5,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   // Feature Flag por tenant: modo POS responsive (solo empresas con features.responsive = true)
   const usuarioSesion = useMemo(() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } }, [])
   const modoPOS = usuarioSesion?.features?.responsive === true
-  const [posLineaAbierta, setPosLineaAbierta] = useState(false)
+  const [posLineaAbierta, setPosLineaAbierta] = useState(true)
   const [tab, setTab] = useState(vendedor_id ? 'pedidos' : 'fecha')
   const [formatoImpresion, setFormatoImpresion] = useState(localStorage.getItem('formato_impresion') || 'media')
   const [showFormatoMenu, setShowFormatoMenu] = useState(false)
@@ -3855,8 +3855,13 @@ onKeyDown={e => {
                                 }
                               }}>✕</button>
                           </div>
-                          <div className="pos-ticket-detalle">
-                            <span>{parseFloat(it.cantidad || 0).toFixed(2)} x {parseFloat(it.precio_unitario || 0).toFixed(2)}</span>
+                       <div className="pos-ticket-detalle">
+                            <span>
+                              <input type="number" min="0.01" step="any" value={it.cantidad}
+                                onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
+                                className="pos-ticket-cantidad" />
+                              {' x '}{parseFloat(it.precio_unitario || 0).toFixed(2)}
+                            </span>
                             <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                           </div>
                         </div>
@@ -3872,17 +3877,7 @@ onKeyDown={e => {
                   </div>
                 )}
 
-               {/* Botón POS: confirmar línea y abrir nueva (solo casa reyes, solo móvil) */}
-                {modoPOS && (
-                  <button type="button" className="pos-btn-agregar"
-                    onClick={() => {
-                      const ultimo = items[items.length - 1]
-                      if (ultimo && (ultimo.descripcion || ultimo.precio_unitario)) agregarItem()
-                      setPosLineaAbierta(true)
-                    }}>
-                    + Agregar línea
-                  </button>
-                )}
+          
 
              {/* Items */}
                 <div className={modoPOS && !posLineaAbierta ? "mb-4 pos-entrada-cerrada" : "mb-4"}>
@@ -3930,9 +3925,17 @@ onKeyDown={e => {
                                   setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
                                   setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
                                 }
-                                setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+                        setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
                                 setProductoIndex(prev => ({...prev, [index]: -1}))
-                                setTimeout(() => cantidadRefs.current[index]?.focus(), 100)
+                        if (modoPOS) {
+                                  if (yaExisteIdx === -1) setItems(prev => [...prev, { descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
+                                  setTimeout(() => {
+                                    const ultima = document.querySelectorAll('input[placeholder*="Buscar Articulos"]')
+                                    ultima[ultima.length - 1]?.focus()
+                                  }, 150)
+                                } else {
+                                  setTimeout(() => cantidadRefs.current[index]?.focus(), 100)
+                                }
                               }
                             } else if (e.key === 'Escape') {
                               setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
@@ -3966,7 +3969,14 @@ onKeyDown={e => {
                                       setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
                                       setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
                                     }
-                                    setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+                                setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
+                                   if (modoPOS) {
+                                      if (yaExisteIdx === -1) setItems(prev => [...prev, { descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
+                                      setTimeout(() => {
+                                        const ultima = document.querySelectorAll('input[placeholder*="Buscar Articulos"]')
+                                        ultima[ultima.length - 1]?.focus()
+                                      }, 150)
+                                    }
                                   }}>
                                   {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
                                 </div>

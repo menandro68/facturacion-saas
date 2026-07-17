@@ -329,6 +329,17 @@ body.tenant-responsive .pos-ticket-fila {
 
 @media (max-width: 767px) {
 
+ /* Campo de cantidad editable en el ticket POS */
+  body.tenant-responsive .pos-ticket-cantidad {
+    width: 4.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    padding: 0.15rem 0.3rem;
+    text-align: right;
+    font-family: inherit;
+    font-size: inherit;
+    background: #fff;
+  }
   /* Ocultar el bloque de entrada cuando la tarjeta está cerrada */
   body.tenant-responsive .pos-entrada-cerrada {
     display: none;
