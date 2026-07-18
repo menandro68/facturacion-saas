@@ -15,6 +15,17 @@ export default function Reportes() {
   const [reporteLoading, setReporteLoading] = useState(false)
   const [modalVer, setModalVer] = useState(null)
   const [actividadVer, setActividadVer] = useState(null)
+  const [show606, setShow606] = useState(false)
+  const [mes606, setMes606] = useState(new Date().getMonth() + 1)
+  const [anio606, setAnio606] = useState(new Date().getFullYear())
+  const [data606, setData606] = useState(null)
+  const [loading606, setLoading606] = useState(false)
+  const [show607, setShow607] = useState(false)
+  const [mes607, setMes607] = useState(new Date().getMonth() + 1)
+  const [anio607, setAnio607] = useState(new Date().getFullYear())
+  const [data607, setData607] = useState(null)
+  const [loading607, setLoading607] = useState(false)
+  const [rncEmpresa, setRncEmpresa] = useState('')
 
   const fetchReportes = async () => {
     setLoading(true)
@@ -38,9 +49,10 @@ export default function Reportes() {
     }
   }
 
-  useEffect(() => {
+useEffect(() => {
     fetchReportes()
     API.get('/operadores').then(r => setOperadores(r.data.data || [])).catch(() => {})
+    API.get('/tenant/profile').then(t => setRncEmpresa(((t.data.data?.rnc) || '').replace(/\D/g, ''))).catch(() => {})
   }, [])
 
   if (loading) return <p className="text-gray-500 p-6">Cargando reportes...</p>
@@ -74,6 +86,14 @@ export default function Reportes() {
         <button onClick={() => setShowReporteOperador(!showReporteOperador)}
           className={`px-4 py-2 rounded text-sm ${showReporteOperador ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
           📊 Operador
+        </button>
+        <button onClick={() => setShow606(!show606)}
+          className={`px-4 py-2 rounded text-sm ${show606 ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+          📄 Reporte 606
+        </button>
+        <button onClick={() => setShow607(!show607)}
+          className={`px-4 py-2 rounded text-sm ${show607 ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}>
+          📄 Reporte 607
         </button>
       </div>
 
@@ -453,6 +473,277 @@ export default function Reportes() {
           {!reporteData && !reporteLoading && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center text-blue-700 text-sm">
               📊 Selecciona un operador y haz clic en <strong>"Generar Reporte"</strong> para ver su actividad
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reporte 606 - Compras DGII */}
+      {show606 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">Reporte 606 — Compras de Bienes y Servicios (DGII)</h3>
+          <div className="bg-white rounded-lg shadow p-4 mb-4 flex gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+              <select value={mes606} onChange={e => setMes606(parseInt(e.target.value))}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((m, i) => (
+                  <option key={i} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Año</label>
+              <select value={anio606} onChange={e => setAnio606(parseInt(e.target.value))}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                {[0, 1, 2, 3, 4].map(n => {
+                  const a = new Date().getFullYear() - n
+                  return <option key={a} value={a}>{a}</option>
+                })}
+              </select>
+            </div>
+            <button onClick={async () => {
+              setLoading606(true)
+              try {
+                const res = await API.get(`/purchase-orders/reporte-606?mes=${mes606}&anio=${anio606}`)
+                setData606(res.data.data)
+              } catch (err) {
+                alert('Error al generar el 606: ' + (err.response?.data?.mensaje || err.message))
+              } finally {
+                setLoading606(false)
+              }
+            }} disabled={loading606}
+              className="bg-emerald-600 text-white px-4 py-2 rounded text-sm hover:bg-emerald-700 disabled:opacity-50">
+              {loading606 ? 'Generando...' : '🔍 Generar 606'}
+            </button>
+            {data606 && data606.incluidas.length > 0 && (
+              <button onClick={() => {
+                const periodo = `${anio606}${String(mes606).padStart(2, '0')}`
+                const rncEmp = rncEmpresa
+                const lineas = data606.incluidas.map(o => {
+                  const rnc = (o.proveedor_rnc || '').replace(/\D/g, '')
+                  const tipoId = rnc.length === 11 ? '2' : '1'
+                  const total = parseFloat(o.total || 0)
+                  const base = total / 1.18
+                  const itbis = total - base
+                  const f = new Date(o.creado_en)
+                  const fechaAAAAMM = `${f.getFullYear()}${String(f.getMonth() + 1).padStart(2, '0')}`
+                  const fechaDD = String(f.getDate()).padStart(2, '0')
+                  const formaPago = o.estado_pago === 'pagada' ? '01' : '04'
+                  return `${rnc}|${tipoId}|09|${o.ncf_proveedor}||${fechaAAAAMM}|${fechaDD}|||0.00|${base.toFixed(2)}|${base.toFixed(2)}|${itbis.toFixed(2)}|0.00|0.00|0.00|0.00|0.00||0.00|0.00|0.00|0.00|0.00|${formaPago}`
+                })
+                const contenido = [`606|${rncEmp}|${periodo}|${data606.incluidas.length}`, ...lineas].join('\r\n')
+                const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `DGII_F_606_${rncEmp}_${periodo}.txt`
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+                className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
+                💾 Exportar TXT DGII
+              </button>
+            )}
+          </div>
+
+          {data606 && data606.sin_ncf.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-4 text-sm text-yellow-800">
+              ⚠️ <strong>{data606.sin_ncf.length} orden(es) recibida(s) SIN NCF</strong> — no incluidas en el 606: {data606.sin_ncf.map(o => o.numero).join(', ')}
+            </div>
+          )}
+
+          {data606 && (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
+                <h3 className="font-semibold text-gray-800">📄 Compras incluidas ({data606.incluidas.length})</h3>
+                <span className="text-sm text-gray-500">Período: {String(mes606).padStart(2, '0')}/{anio606}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-gray-600">Orden</th>
+                      <th className="px-4 py-2 text-left text-gray-600">Proveedor</th>
+                      <th className="px-4 py-2 text-left text-gray-600">RNC</th>
+                      <th className="px-4 py-2 text-left text-gray-600">NCF</th>
+                      <th className="px-4 py-2 text-left text-gray-600">Fecha</th>
+                      <th className="px-4 py-2 text-right text-gray-600">Monto (sin ITBIS)</th>
+                      <th className="px-4 py-2 text-right text-gray-600">ITBIS</th>
+                      <th className="px-4 py-2 text-right text-gray-600">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data606.incluidas.length === 0 ? (
+                      <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay compras con NCF en este período</td></tr>
+                    ) : data606.incluidas.map(o => {
+                      const total = parseFloat(o.total || 0)
+                      const base = total / 1.18
+                      const itbis = total - base
+                      return (
+                        <tr key={o.id} className="border-t hover:bg-gray-50">
+                          <td className="px-4 py-2 font-medium">{o.numero}</td>
+                          <td className="px-4 py-2">{o.proveedor_nombre || '-'}</td>
+                          <td className="px-4 py-2 font-mono text-xs">{o.proveedor_rnc || '⚠️ Sin RNC'}</td>
+                          <td className="px-4 py-2 font-mono text-xs">{o.ncf_proveedor}</td>
+                          <td className="px-4 py-2 text-xs">{new Date(o.creado_en).toLocaleDateString('es-DO')}</td>
+                          <td className="px-4 py-2 text-right">RD${base.toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                          <td className="px-4 py-2 text-right text-orange-600">RD${itbis.toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                          <td className="px-4 py-2 text-right font-medium">RD${total.toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  {data606.incluidas.length > 0 && (
+                    <tfoot className="bg-gray-50 font-semibold">
+                      <tr>
+                        <td colSpan="5" className="px-4 py-2 text-right">TOTALES:</td>
+                        <td className="px-4 py-2 text-right">RD${data606.incluidas.reduce((s, o) => s + parseFloat(o.total || 0) / 1.18, 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                        <td className="px-4 py-2 text-right text-orange-600">RD${data606.incluidas.reduce((s, o) => s + (parseFloat(o.total || 0) - parseFloat(o.total || 0) / 1.18), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                        <td className="px-4 py-2 text-right">RD${data606.incluidas.reduce((s, o) => s + parseFloat(o.total || 0), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reporte 607 - Ventas DGII */}
+      {show607 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">Reporte 607 — Ventas de Bienes y Servicios (DGII)</h3>
+          <div className="bg-white rounded-lg shadow p-4 mb-4 flex gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+              <select value={mes607} onChange={e => setMes607(parseInt(e.target.value))}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((m, i) => (
+                  <option key={i} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Año</label>
+              <select value={anio607} onChange={e => setAnio607(parseInt(e.target.value))}
+                className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                {[0, 1, 2, 3, 4].map(n => {
+                  const a = new Date().getFullYear() - n
+                  return <option key={a} value={a}>{a}</option>
+                })}
+              </select>
+            </div>
+            <button onClick={async () => {
+              setLoading607(true)
+              try {
+                const res = await API.get(`/reports/reporte-607?mes=${mes607}&anio=${anio607}`)
+                setData607(res.data.data)
+              } catch (err) {
+                alert('Error al generar el 607: ' + (err.response?.data?.mensaje || err.message))
+              } finally {
+                setLoading607(false)
+              }
+            }} disabled={loading607}
+              className="bg-cyan-600 text-white px-4 py-2 rounded text-sm hover:bg-cyan-700 disabled:opacity-50">
+              {loading607 ? 'Generando...' : '🔍 Generar 607'}
+            </button>
+            {data607 && data607.incluidas.length > 0 && (
+              <button onClick={() => {
+                const periodo = `${anio607}${String(mes607).padStart(2, '0')}`
+                 const rncEmp = rncEmpresa
+                const lineas = data607.incluidas.map(f => {
+                  const doc = (f.rnc_cedula || '').replace(/\D/g, '')
+                  const tipoId = doc.length === 11 ? '2' : (doc ? '1' : '2')
+                  const anulada = f.estado === 'anulada'
+                  const base = anulada ? 0 : parseFloat(f.subtotal || 0)
+                  const itbis = anulada ? 0 : parseFloat(f.itbis || 0)
+                  const total = anulada ? 0 : parseFloat(f.total || 0)
+                  const fe = new Date(f.fecha_emision || f.creado_en)
+                  const fechaAAAAMM = `${fe.getFullYear()}${String(fe.getMonth() + 1).padStart(2, '0')}`
+                  const fechaDD = String(fe.getDate()).padStart(2, '0')
+                  const efectivo = f.estado === 'pagada' ? total : 0
+                  const credito = f.estado === 'pagada' ? 0 : total
+                  return `${doc}|${tipoId}|${f.ncf}|${f.ncf_modificado || ''}|01|${fechaAAAAMM}|${fechaDD}|${base.toFixed(2)}|${itbis.toFixed(2)}|0.00|0.00|0.00|0.00|0.00|0.00|0.00|${efectivo.toFixed(2)}|0.00|0.00|${credito.toFixed(2)}|0.00|0.00|0.00`
+                })
+                const contenido = [`607|${rncEmp}|${periodo}|${data607.incluidas.length}`, ...lineas].join('\r\n')
+                const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `DGII_F_607_${rncEmp}_${periodo}.txt`
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+                className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
+                💾 Exportar TXT DGII
+              </button>
+            )}
+          </div>
+
+          {data607 && data607.sin_ncf.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-4 text-sm text-yellow-800">
+              ⚠️ <strong>{data607.sin_ncf.length} venta(s) SIN NCF</strong> — no incluidas en el 607: {data607.sin_ncf.map(f => f.numero_factura ? `FAC-${f.numero_factura}` : (f.cliente_nombre || 'Consumidor Final')).join(', ')}
+            </div>
+          )}
+
+          {data607 && (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
+                <h3 className="font-semibold text-gray-800">📄 Ventas incluidas ({data607.incluidas.length})</h3>
+                <span className="text-sm text-gray-500">Período: {String(mes607).padStart(2, '0')}/{anio607}</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-gray-600">Cliente</th>
+                      <th className="px-4 py-2 text-left text-gray-600">RNC/Cédula</th>
+                      <th className="px-4 py-2 text-left text-gray-600">NCF</th>
+                      <th className="px-4 py-2 text-left text-gray-600">NCF Modif.</th>
+                      <th className="px-4 py-2 text-left text-gray-600">Estado</th>
+                      <th className="px-4 py-2 text-left text-gray-600">Fecha</th>
+                      <th className="px-4 py-2 text-right text-gray-600">Monto (sin ITBIS)</th>
+                      <th className="px-4 py-2 text-right text-gray-600">ITBIS</th>
+                      <th className="px-4 py-2 text-right text-gray-600">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data607.incluidas.length === 0 ? (
+                      <tr><td colSpan="9" className="px-4 py-8 text-center text-gray-400">No hay ventas con NCF en este período</td></tr>
+                    ) : data607.incluidas.map(f => {
+                      const anulada = f.estado === 'anulada'
+                      const base = anulada ? 0 : parseFloat(f.subtotal || 0)
+                      const itbis = anulada ? 0 : parseFloat(f.itbis || 0)
+                      const total = anulada ? 0 : parseFloat(f.total || 0)
+                      return (
+                        <tr key={f.id} className={`border-t hover:bg-gray-50 ${anulada ? 'text-gray-400' : ''}`}>
+                          <td className="px-4 py-2">{f.cliente_nombre || 'Consumidor Final'}</td>
+                          <td className="px-4 py-2 font-mono text-xs">{f.rnc_cedula || '-'}</td>
+                          <td className="px-4 py-2 font-mono text-xs">{f.ncf}</td>
+                          <td className="px-4 py-2 font-mono text-xs">{f.ncf_modificado || '-'}</td>
+                          <td className="px-4 py-2 text-xs">{(f.estado || '').replace('_', ' ').toUpperCase()}</td>
+                          <td className="px-4 py-2 text-xs">{new Date(f.fecha_emision || f.creado_en).toLocaleDateString('es-DO')}</td>
+                          <td className="px-4 py-2 text-right">RD${base.toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                          <td className="px-4 py-2 text-right text-orange-600">RD${itbis.toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                          <td className="px-4 py-2 text-right font-medium">RD${total.toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  {data607.incluidas.length > 0 && (
+                    <tfoot className="bg-gray-50 font-semibold">
+                      <tr>
+                        <td colSpan="6" className="px-4 py-2 text-right">TOTALES:</td>
+                        <td className="px-4 py-2 text-right">RD${data607.incluidas.reduce((s, f) => s + (f.estado === 'anulada' ? 0 : parseFloat(f.subtotal || 0)), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                        <td className="px-4 py-2 text-right text-orange-600">RD${data607.incluidas.reduce((s, f) => s + (f.estado === 'anulada' ? 0 : parseFloat(f.itbis || 0)), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                        <td className="px-4 py-2 text-right">RD${data607.incluidas.reduce((s, f) => s + (f.estado === 'anulada' ? 0 : parseFloat(f.total || 0)), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
             </div>
           )}
         </div>

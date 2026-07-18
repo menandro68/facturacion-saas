@@ -92,6 +92,27 @@ const handleItemChange = async (idx, field, value) => {
     }
   }
 
+  const [modalRecibir, setModalRecibir] = useState(null)
+  const [recibirForm, setRecibirForm] = useState({ factura_proveedor: '', ncf_proveedor: '' })
+
+  const handleConfirmarRecibir = async () => {
+    try {
+      await API.put(`/purchase-orders/${modalRecibir}/estado`, {
+        estado: 'recibida',
+        factura_proveedor: recibirForm.factura_proveedor,
+        ncf_proveedor: recibirForm.ncf_proveedor
+      })
+      setModalRecibir(null)
+      setRecibirForm({ factura_proveedor: '', ncf_proveedor: '' })
+      fetchData()
+      if (onInventarioUpdate) {
+        onInventarioUpdate()
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const handleEstado = async (id, estado) => {
     try {
       await API.put(`/purchase-orders/${id}/estado`, { estado })
@@ -451,7 +472,7 @@ const handleItemChange = async (idx, field, value) => {
                     className={`hover:underline text-xs ${o.estado === 'recibida' ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600'}`}>
                     Editar</button>
                   {o.estado === 'pendiente' && (
-                    <button onClick={() => handleEstado(o.id, 'recibida')}
+                    <button onClick={() => { setRecibirForm({ factura_proveedor: '', ncf_proveedor: '' }); setModalRecibir(o.id) }}
                       className="text-green-600 hover:underline text-xs">Recibida</button>
                   )}
                   <button onClick={() => o.estado === 'recibida' ? alert('❌ Esta orden ya fue recibida y no puede eliminarse.') : handleEliminar(o.id)}
@@ -605,6 +626,8 @@ const handleItemChange = async (idx, field, value) => {
               <div><span className="font-medium text-gray-600">Fecha:</span> {new Date(verOrden.creado_en).toLocaleDateString()}</div>
               <div><span className="font-medium text-gray-600">Entrega:</span> {verOrden.fecha_entrega ? new Date(verOrden.fecha_entrega.substring(0, 10) + 'T00:00:00').toLocaleDateString() : '-'}</div>
               <div><span className="font-medium text-gray-600">Vence Pago:</span> {verOrden.fecha_vencimiento_pago ? new Date(verOrden.fecha_vencimiento_pago).toLocaleDateString() : '-'}</div>
+              <div><span className="font-medium text-gray-600">No. Factura:</span> {verOrden.factura_proveedor || '-'}</div>
+              <div><span className="font-medium text-gray-600">NCF:</span> {verOrden.ncf_proveedor || '-'}</div>
               <div><span className="font-medium text-gray-600">Notas:</span> {verOrden.notas || '-'}</div>
               <div><span className="font-medium text-gray-600">Total:</span> RD${parseFloat(verOrden.total).toLocaleString()}</div>
             </div>
@@ -674,6 +697,35 @@ const handleItemChange = async (idx, field, value) => {
               </button>
               <button onClick={() => setVerOrden(null)}
                 className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Recibir Orden */}
+      {modalRecibir && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Recibir Orden de Compra</h3>
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">No. Factura del Proveedor</label>
+              <input autoFocus value={recibirForm.factura_proveedor}
+                onChange={e => setRecibirForm({ ...recibirForm, factura_proveedor: e.target.value })}
+                placeholder="Ej: FACT-00123 (opcional)"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">NCF (Comprobante Fiscal)</label>
+              <input value={recibirForm.ncf_proveedor}
+                onChange={e => setRecibirForm({ ...recibirForm, ncf_proveedor: e.target.value })}
+                placeholder="Ej: B0100000123 (opcional)"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setModalRecibir(null)}
+                className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button onClick={handleConfirmarRecibir}
+                className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">✓ Recibir</button>
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@ export default function Proveedores() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    nombre: '', rnc: '', email: '', telefono: '', direccion: '', contacto: ''
+    nombre: '', rnc: '', email: '', telefono: '', direccion: '', contacto: '', condiciones: ''
   })
   const [error, setError] = useState('')
 
@@ -47,7 +47,7 @@ export default function Proveedores() {
   }
 
   const handleNuevo = () => {
-    setForm({ nombre: '', rnc: '', email: '', telefono: '', direccion: '', contacto: '' })
+    setForm({ nombre: '', rnc: '', email: '', telefono: '', direccion: '', contacto: '', condiciones: '' })
     setEditando(null)
     setShowForm(true)
     setError('')
@@ -60,7 +60,8 @@ export default function Proveedores() {
       email: proveedor.email || '',
       telefono: proveedor.telefono || '',
       direccion: proveedor.direccion || '',
-      contacto: proveedor.contacto || ''
+      contacto: proveedor.contacto || '',
+      condiciones: proveedor.condiciones || ''
     })
     setEditando(proveedor.id)
     setShowForm(true)
@@ -122,9 +123,16 @@ export default function Proveedores() {
           <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h3>
           {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
           <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+      <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
               <input id="prov-nombre" autoFocus name="nombre" value={form.nombre} onChange={handleChange} required
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prov-rnc')?.focus() } }}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">RNC</label>
+              <input id="prov-rnc" name="rnc" value={form.rnc} onChange={handleChange}
+                placeholder="Ej: 131234567"
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prov-email')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
@@ -150,7 +158,20 @@ export default function Proveedores() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Dirección *</label>
               <input id="prov-direccion" name="direccion" value={form.direccion} onChange={handleChange} required
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('prov-condiciones')?.focus() } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Condiciones de Pago</label>
+              <select id="prov-condiciones" name="condiciones" value={form.condiciones} onChange={handleChange}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="">-- Seleccionar --</option>
+                <option value="Contado">Contado</option>
+                <option value="Crédito 15 días">Crédito 15 días</option>
+                <option value="Crédito 30 días">Crédito 30 días</option>
+                <option value="Crédito 45 días">Crédito 45 días</option>
+                <option value="Crédito 60 días">Crédito 60 días</option>
+              </select>
             </div>
             <div className="md:col-span-2 flex gap-3 justify-end">
               <button type="button" onClick={() => setShowForm(false)}
