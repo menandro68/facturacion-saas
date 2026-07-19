@@ -33,13 +33,17 @@ export default function Pagos() {
 
   const fetchData = async () => {
     try {
-      const [p, f, t] = await Promise.all([
+      const [p, f, t, cd] = await Promise.all([
         API.get('/payments'),
         API.get('/invoices'),
-        API.get('/tenant/profile')
+        API.get('/tenant/profile'),
+        API.get('/conduces').catch(() => ({ data: { data: [] } }))
       ])
       setPagos(p.data.data)
-      setFacturas(f.data.data.filter(f => f.estado === 'emitida'))
+      const conducesPago = (cd.data.data || [])
+        .filter(x => x.estado === 'emitido')
+        .map(x => ({ id: x.id, ncf: x.numero, cliente_nombre: x.cliente_nombre, total: x.total, estado: 'emitida', es_conduce: true }))
+      setFacturas([...f.data.data.filter(f => f.estado === 'emitida'), ...conducesPago])
       setNotasCredito(f.data.data.filter(f => f.estado === 'nota_credito'))
       if (t.data.data?.nombre) {
         sessionStorage.setItem('tenant_name', t.data.data.nombre)
@@ -311,9 +315,9 @@ id="btn-si-recibo-pago"
                       setError('')
                 const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                       const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                      const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id || p.conduce_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
-                      setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
+                      setForm(prev => ({ ...prev, invoice_id: factura.es_conduce ? '' : factura.id, conduce_id: factura.es_conduce ? factura.id : '', monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
                document.getElementById('pago-ncf-resultado').innerHTML =
                         `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                       setTimeout(() => document.getElementById('pago-monto-input')?.focus(), 50)
@@ -327,9 +331,9 @@ id="btn-si-recibo-pago"
                     setError('')
               const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                     const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                    const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                    const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id || p.conduce_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
-                    setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
+                    setForm(prev => ({ ...prev, invoice_id: factura.es_conduce ? '' : factura.id, conduce_id: factura.es_conduce ? factura.id : '', monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
                     document.getElementById('pago-ncf-resultado').innerHTML =
                       `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                   }}

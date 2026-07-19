@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import API from '../services/api'
 import { listarDispositivos, imprimirEnDispositivo } from '../utils/bluetoothPrint'
 
@@ -31,17 +31,35 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
 
   const fetchData = async () => {
     try {
-      const [c, res, cli, fac] = await Promise.all([
+ const [c, res, cli, fac, cond] = await Promise.all([
         API.get('/accounts-receivable'),
         API.get('/accounts-receivable/resumen'),
         API.get('/customers'),
-        API.get('/invoices')
+        API.get('/invoices'),
+        API.get('/conduces').catch(() => ({ data: { data: [] } }))
       ])
       setCuentas(c.data.data)
       setResumen(res.data.data)
       setClientes(cli.data.data)
-      setTodasFacturas(fac.data.data)
-      setFacturas(fac.data.data.filter(f => f.estado === 'emitida'))
+      // Conduces emitidos entran como documentos de cobro (sin valor fiscal)
+      const conducesCxc = (cond.data.data || [])
+        .filter(cd => cd.estado === 'emitido')
+        .map(cd => ({
+          id: cd.id,
+          ncf: cd.numero,
+          customer_id: cd.customer_id,
+          cliente_nombre: cd.cliente_nombre,
+          total: cd.total,
+          subtotal: cd.total,
+          itbis: 0,
+          estado: 'emitida',
+          creado_en: cd.creado_en,
+          fecha_emision: cd.creado_en,
+          fecha_vencimiento: cd.fecha_vencimiento || null,
+          es_conduce: true
+        }))
+      setTodasFacturas([...fac.data.data, ...conducesCxc])
+      setFacturas([...fac.data.data.filter(f => f.estado === 'emitida'), ...conducesCxc])
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
       API.get('/payments').then(r => setPagos(r.data.data)).catch(() => {})
       API.get('/invoices/items/todos').then(r => setInvoiceItems(r.data.data)).catch(() => {})
@@ -96,7 +114,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
   }
 
   const handleEliminar = async (id) => {
-    if (!confirm('¿Eliminar esta cuenta?')) return
+    if (!confirm('Â¿Eliminar esta cuenta?')) return
     try {
       await API.delete(`/accounts-receivable/${id}`)
       fetchData()
@@ -125,7 +143,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
         {vendedor_id && (
           <button onClick={() => setTab('cobro_vendedor')}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm flex items-center gap-2">
-            ← Volver
+            â† Volver
           </button>
         )}
         <button onClick={() => {
@@ -139,7 +157,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           setModalResumen({ totalCuentas: totalPendiente + totalCobrado, totalPendiente, totalCobrado, totalVencidas, fecha: hoy.toLocaleDateString('es-DO') })
         }}
           className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
-          🖨️ Imprimir Resumen
+          ðŸ–¨ï¸ Imprimir Resumen
         </button>
       </div>
 
@@ -214,12 +232,12 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Sin factura</option>
                     {facturas.map(f => (
-                      <option key={f.id} value={f.id}>{f.ncf} — RD${parseFloat(f.total).toLocaleString()}</option>
+                      <option key={f.id} value={f.id}>{f.ncf} â€” RD${parseFloat(f.total).toLocaleString()}</option>
                     ))}
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">DescripciÃ³n *</label>
                   <input name="descripcion" value={form.descripcion} onChange={handleChange} required
                     className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
@@ -275,7 +293,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Descripción</th>
+                  <th className="px-4 py-3 text-left text-gray-600">DescripciÃ³n</th>
                   <th className="px-4 py-3 text-left text-gray-600">Total</th>
                   <th className="px-4 py-3 text-left text-gray-600">Pagado</th>
                   <th className="px-4 py-3 text-left text-gray-600">Pendiente</th>
@@ -311,7 +329,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                             {estadoTxt.toUpperCase()}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-400">—</td>
+                        <td className="px-4 py-3 text-xs text-gray-400">â€”</td>
                       </tr>
                     )
                   })
@@ -346,7 +364,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   <input
                     id="cob-vendedor-input"
                     type="text"
-                    placeholder="🔍 Buscar vendedor..."
+                    placeholder="ðŸ” Buscar vendedor..."
                     autoComplete="off"
                     className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
                     onChange={e => {
@@ -495,7 +513,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           <button className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
             onClick={async () => {
               const tbody = document.getElementById('cob-tbody')
-              if (!tbody || tbody.innerHTML.includes('No hay') || tbody.innerHTML.includes('Selecciona')) return alert('Primero realiza una búsqueda')
+              if (!tbody || tbody.innerHTML.includes('No hay') || tbody.innerHTML.includes('Selecciona')) return alert('Primero realiza una bÃºsqueda')
               const resultado = document.getElementById('cob-resultado')
               if (vendedor_id && window.bluetoothSerial) {
                 try {
@@ -579,9 +597,9 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   if (savedAddress) {
                     try {
                       await imprimirEnDispositivo(savedAddress, lineas)
-                      alert('✅ Impreso en ' + (savedName || savedAddress))
+                      alert('âœ… Impreso en ' + (savedName || savedAddress))
                     } catch (err) {
-                      alert('❌ Error al imprimir: ' + err)
+                      alert('âŒ Error al imprimir: ' + err)
                     }
                     return
                   }
@@ -590,7 +608,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   setBtLineas(lineas)
                   setBtModal(true)
                 } catch (err) {
-                  alert('❌ ' + err)
+                  alert('âŒ ' + err)
                 } finally {
                   setBtLoading(false)
                 }
@@ -610,7 +628,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
                   @media print{button{display:none}}
                 </style></head><body>
-              <h2>Cobro por Vendedor — ${vendedor_id ? (vendedores.find(v => v.id === vendedor_id)?.nombre || '') : (vendedores.find(v => v.id === document.getElementById('cob-vendedor')?.value)?.nombre || '')}</h2>
+              <h2>Cobro por Vendedor â€” ${vendedor_id ? (vendedores.find(v => v.id === vendedor_id)?.nombre || '') : (vendedores.find(v => v.id === document.getElementById('cob-vendedor')?.value)?.nombre || '')}</h2>
                 <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
                 <table>
                   <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total Cobrado</th><th>Fecha</th></tr></thead>
@@ -621,7 +639,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 </body></html>`)
               printW.document.close()
             }}>
-            🖨️ Imprimir Reporte
+            ðŸ–¨ï¸ Imprimir Reporte
           </button>
         </div>
           <table className="w-full text-sm">
@@ -652,7 +670,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   <input
                     id="cxc-vendedor-input"
                     type="text"
-                    placeholder="🔍 Buscar vendedor..."
+                    placeholder="ðŸ” Buscar vendedor..."
                     autoComplete="off"
                     className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
                     onChange={e => {
@@ -731,7 +749,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
            const ncTodas = todasFacturas.filter(x => x.estado === 'nota_credito')
                 const pendienteDe = f => {
                   const montoNc = ncTodas.filter(n => n.referencia_id === f.id).reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                  const montoPagado = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  const montoPagado = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   return Math.max(0, parseFloat(f.total || 0) - montoNc - montoPagado)
                 }
              const filtradas = todasFacturas.filter(f =>
@@ -775,7 +793,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     : 0
                   const nc = notasCredito.filter(n => n.referencia_id === f.id)
                   const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                  const abono = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   const balance = Math.max(0, parseFloat(f.total) - montoNc - abono)
                   return `<tr>
                     <td>${f.ncf || 'N/A'}</td>
@@ -790,7 +808,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 }).join('')
                   const totalBalance = cxcFiltradas.reduce((s,f) => {
                   const montoNc = notasCredito.filter(n => n.referencia_id === f.id).reduce((a, n) => a + parseFloat(n.total || 0), 0)
-                  const abono = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((a, p) => a + parseFloat(p.monto || 0), 0)
+                  const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((a, p) => a + parseFloat(p.monto || 0), 0)
                   return s + Math.max(0, parseFloat(f.total||0) - montoNc - abono)
                 }, 0)
                 printW.document.write(`
@@ -806,7 +824,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     .total-row{font-weight:bold;background:#f1f5f9}
                     @media print{button{display:none}}
                   </style></head><body>
-                  <h2>Cuenta por Cobrar — Vendedor: ${vendedorNombre}</h2>
+                  <h2>Cuenta por Cobrar â€” Vendedor: ${vendedorNombre}</h2>
                   <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
                   <table>
                     <thead><tr>
@@ -814,8 +832,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       <th>CLIENTE</th>
                       <th style="text-align:center">FECHA EMITIDA</th>
                       <th style="text-align:right">VALOR</th>
-                      <th style="text-align:center">DÍAS VENCIDO</th>
-                      <th style="text-align:right">NOTA DE CRÉDITO</th>
+                      <th style="text-align:center">DÃAS VENCIDO</th>
+                      <th style="text-align:right">NOTA DE CRÃ‰DITO</th>
                       <th style="text-align:right">ABONO</th>
                       <th style="text-align:right">BALANCE</th>
                     </tr></thead>
@@ -833,7 +851,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   </body></html>`)
                 printW.document.close()
               }}>
-              🖨️ Imprimir
+              ðŸ–¨ï¸ Imprimir
             </button>
           </div>
           <div id="cxc-resultado" className="mb-4 text-right bg-red-50 p-3 rounded-lg min-h-8"></div>
@@ -858,7 +876,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Estado de Cuenta por Cliente</h3>
           <div className="relative mb-6 max-w-md">
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente</label>
-            <input type="text" placeholder="🔍 Escriba el nombre del cliente..." autoComplete="off"
+            <input type="text" placeholder="ðŸ” Escriba el nombre del cliente..." autoComplete="off"
               className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               onChange={e => {
                 const val = e.target.value.toLowerCase()
@@ -879,7 +897,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                const facturasCliente = todasFacturas.filter(f => {
                       if (f.customer_id !== c.id || f.estado !== 'emitida') return false
                       const montoNc = notasCliente.filter(n => n.referencia_id === f.id).reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                      const abono = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                       const balance = parseFloat(f.total) - montoNc - abono
                       return balance >= 0.01
                     })
@@ -888,7 +906,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                const filas = facturasCliente.map(f => {
                       const nc = notasCliente.filter(n => n.referencia_id === f.id)
                       const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                      const abono = pagos.filter(p => p.invoice_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                       const balance = parseFloat(f.total) - montoNc - abono
                       const diasVencido = f.fecha_vencimiento ? Math.max(0, Math.floor((hoy - new Date(f.fecha_vencimiento)) / (1000*60*60*24))) : 0
                       totalFacturas += parseFloat(f.total)
@@ -909,7 +927,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       <div class="flex gap-4 flex-wrap mb-4">
                         <div class="bg-gray-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Facturas</p><p class="text-lg font-bold text-gray-800">${facturasCliente.length}</p></div>
                         <div class="bg-orange-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Total Facturado</p><p class="text-lg font-bold text-orange-600">RD$${totalFacturas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
-                        <div class="bg-blue-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Nota Crédito</p><p class="text-lg font-bold text-blue-600">RD$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                        <div class="bg-blue-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Nota CrÃ©dito</p><p class="text-lg font-bold text-blue-600">RD$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
                         <div class="bg-green-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Abonado</p><p class="text-lg font-bold text-green-600">RD$${totalAbono.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
                         <div class="bg-red-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Balance</p><p class="text-lg font-bold text-red-600">RD$${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
                         <button onclick="
@@ -918,11 +936,11 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                           printW.document.write('<!DOCTYPE html><html><head><title>Estado de Cuenta</title><style>body{font-family:Arial;padding:20px;color:#1e293b}h2{color:#1e40af;margin-bottom:4px}p.sub{color:#64748b;font-size:12px;margin-bottom:16px}.resumen{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;text-align:center;min-width:100px}.card p.lbl{font-size:11px;color:#64748b;margin:0 0 4px}.card p.val{font-size:16px;font-weight:bold;margin:0}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#1e40af;color:white;padding:7px;text-align:left}td{padding:6px 8px;border:1px solid #cbd5e1}tr:nth-child(even){background:#f8fafc}.total{font-weight:bold;background:#f1f5f9}@media print{button{display:none}}</style></head><body>');
                           printW.document.write('<h2>Estado de Cuenta: ${c.nombre}</h2>');
                           printW.document.write('<p class=sub>Fecha: ${new Date().toLocaleDateString('es-DO')}</p>');
-                          printW.document.write('<div class=resumen><div class=card><p class=lbl>Facturas</p><p class=val>${facturasCliente.length}</p></div><div class=card><p class=lbl>Total Facturado</p><p class=val style=color:#ea580c>RD\$${totalFacturas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Nota Crédito</p><p class=val style=color:#2563eb>RD\$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Abonado</p><p class=val style=color:#16a34a>RD\$${totalAbono.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Balance</p><p class=val style=color:#dc2626>RD\$${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div></div>');
-                          printW.document.write('<table><thead><tr><th>FACTURA</th><th>FECHA</th><th style=text-align:right>VALOR</th><th style=text-align:right>DÍAS VEN.</th><th style=text-align:right>NOTA CR.</th><th style=text-align:right>ABONO</th><th style=text-align:right>BALANCE</th></tr></thead><tbody>'+filas+'</tbody></table>');
+                          printW.document.write('<div class=resumen><div class=card><p class=lbl>Facturas</p><p class=val>${facturasCliente.length}</p></div><div class=card><p class=lbl>Total Facturado</p><p class=val style=color:#ea580c>RD\$${totalFacturas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Nota CrÃ©dito</p><p class=val style=color:#2563eb>RD\$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Abonado</p><p class=val style=color:#16a34a>RD\$${totalAbono.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Balance</p><p class=val style=color:#dc2626>RD\$${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div></div>');
+                          printW.document.write('<table><thead><tr><th>FACTURA</th><th>FECHA</th><th style=text-align:right>VALOR</th><th style=text-align:right>DÃAS VEN.</th><th style=text-align:right>NOTA CR.</th><th style=text-align:right>ABONO</th><th style=text-align:right>BALANCE</th></tr></thead><tbody>'+filas+'</tbody></table>');
                           printW.document.write('<script>window.onload=()=>window.print()<\/script></body></html>');
                           printW.document.close();
-                        " style="background:#16a34a;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;align-self:center;display:${vendedor_id ? 'none' : 'inline-block'}">🖨️ Imprimir</button>
+                        " style="background:#16a34a;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;align-self:center;display:${vendedor_id ? 'none' : 'inline-block'}">ðŸ–¨ï¸ Imprimir</button>
                     </div>` }
                     { const ecTbodyEl = document.getElementById('ec-tbody'); if (ecTbodyEl) ecTbodyEl.innerHTML = filas || '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No hay facturas pendientes</td></tr>' }
                   }
@@ -962,7 +980,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 <th className="px-4 py-3 text-left text-gray-600">FACTURA</th>
                 <th className="px-4 py-3 text-left text-gray-600">FECHA</th>
                 <th className="px-4 py-3 text-right text-gray-600">VALOR</th>
-                <th className="px-4 py-3 text-right text-gray-600">DÍAS VEN.</th>
+                <th className="px-4 py-3 text-right text-gray-600">DÃAS VEN.</th>
                 <th className="px-4 py-3 text-right text-gray-600">NOTA CR.</th>
                 <th className="px-4 py-3 text-right text-gray-600">ABONO</th>
                 <th className="px-4 py-3 text-right text-gray-600">BALANCE</th>
@@ -979,7 +997,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Historial de Cliente</h3>
           <div className="relative mb-6 max-w-md">
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente</label>
-            <input type="text" placeholder="🔍 Escriba el nombre del cliente..." autoComplete="off"
+            <input type="text" placeholder="ðŸ” Escriba el nombre del cliente..." autoComplete="off"
               className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               onChange={e => {
                 const val = e.target.value.toLowerCase()
@@ -1006,7 +1024,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     { const histTitEl = document.getElementById('hist-titulo'); if (histTitEl) histTitEl.innerHTML = `
                       <div class="mb-3 p-3 bg-blue-50 rounded-lg text-sm">
                         <span class="font-medium text-gray-700">Cliente: </span><span class="text-blue-700 font-bold">${c.nombre}</span>
-                        <span class="ml-4 font-medium text-gray-700">Condición: </span><span class="text-gray-600">${c.condiciones?.replace(/_/g, ' ') || 'contado'} (${diasCondicion} días)</span>
+                        <span class="ml-4 font-medium text-gray-700">CondiciÃ³n: </span><span class="text-gray-600">${c.condiciones?.replace(/_/g, ' ') || 'contado'} (${diasCondicion} dÃ­as)</span>
                   </div>` }
                     const filas = facturasCliente.map(f => {
                       const fechaEmitida = new Date(f.creado_en)
@@ -1021,7 +1039,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       <td class="px-4 py-3 text-right text-sm font-medium">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' <span style="color:#ef4444;font-size:11px">(NC)</span>' : ''}</td>
                         <td class="px-4 py-3 text-sm">${fechaEmitida.toLocaleDateString('es-DO')}</td>
                         <td class="px-4 py-3 text-sm">${fechaPago ? fechaPago.toLocaleDateString('es-DO') : '-'}</td>
-                        <td class="px-4 py-3 text-sm text-center" style="${vencidoColor}">${diasVencido > 0 ? diasVencido+' días' : 'Al día'}</td>
+                        <td class="px-4 py-3 text-sm text-center" style="${vencidoColor}">${diasVencido > 0 ? diasVencido+' dÃ­as' : 'Al dÃ­a'}</td>
                         <td class="px-4 py-3 text-sm">
                           <span class="px-2 py-1 rounded text-xs font-medium ${f.estado === 'pagada' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
                             ${f.estado.toUpperCase()}
@@ -1082,14 +1100,14 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
                   <div class="info">${titulo.innerHTML}</div>
                   <table>
-                    <thead><tr><th>FACTURA</th><th style="text-align:right">VALOR</th><th>FECHA EMITIDA</th><th>FECHA PAGO</th><th style="text-align:center">DÍAS VENCIDO</th><th>ESTADO</th></tr></thead>
+                    <thead><tr><th>FACTURA</th><th style="text-align:right">VALOR</th><th>FECHA EMITIDA</th><th>FECHA PAGO</th><th style="text-align:center">DÃAS VENCIDO</th><th>ESTADO</th></tr></thead>
                     <tbody>${tbody.innerHTML}</tbody>
                   </table>
                   <script>window.onload=()=>window.print()</script>
                   </body></html>`)
                 printW.document.close()
               }}>
-              🖨️ Imprimir
+              ðŸ–¨ï¸ Imprimir
             </button>
           </div>
           <div id="hist-titulo"></div>
@@ -1100,7 +1118,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 <th className="px-4 py-3 text-right text-gray-600">VALOR</th>
                 <th className="px-4 py-3 text-left text-gray-600">FECHA EMITIDA</th>
                 <th className="px-4 py-3 text-left text-gray-600">FECHA PAGO</th>
-                <th className="px-4 py-3 text-center text-gray-600">DÍAS VENCIDO</th>
+                <th className="px-4 py-3 text-center text-gray-600">DÃAS VENCIDO</th>
                 <th className="px-4 py-3 text-left text-gray-600">ESTADO</th>
               </tr>
             </thead>
@@ -1128,12 +1146,12 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     localStorage.setItem('bt_printer_name', d.name)
                     try {
                       await imprimirEnDispositivo(d.address, btLineas)
-                      alert('✅ Impreso en ' + d.name)
+                      alert('âœ… Impreso en ' + d.name)
                     } catch (err) {
-                      alert('❌ ' + err)
+                      alert('âŒ ' + err)
                     }
                   }}>
-                  <span className="text-2xl">🖨️</span>
+                  <span className="text-2xl">ðŸ–¨ï¸</span>
                   <div>
                     <p className="font-medium text-gray-800 text-sm">{d.name}</p>
                     <p className="text-xs text-gray-400">{d.address}</p>
@@ -1150,13 +1168,13 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
       {modalResumen && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto p-4">
       <div className="flex justify-between items-center mb-6 no-print">
-            <h2 className="text-xl font-bold text-blue-700">Resumen — CxC</h2>
+            <h2 className="text-xl font-bold text-blue-700">Resumen â€” CxC</h2>
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">🖨️ Imprimir</button>
-              <button onClick={() => setModalResumen(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">← Volver</button>
+              <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">ðŸ–¨ï¸ Imprimir</button>
+              <button onClick={() => setModalResumen(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">â† Volver</button>
             </div>
           </div>
-          <h2 className="text-xl font-bold text-blue-700 mb-2 hidden print:block">Resumen — Cuentas por Cobrar</h2>
+          <h2 className="text-xl font-bold text-blue-700 mb-2 hidden print:block">Resumen â€” Cuentas por Cobrar</h2>
           <p className="text-gray-400 text-sm mb-6">Fecha: {modalResumen.fecha}</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 border rounded-lg p-4">
@@ -1181,3 +1199,4 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
     </div>
   )
 }
+

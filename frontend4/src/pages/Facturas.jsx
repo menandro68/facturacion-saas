@@ -20,18 +20,22 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [fechaFin, setFechaFin] = useState('')
   const [facturas, setFacturas] = useState([])
   const [facturasFiltradas, setFacturasFiltradas] = useState([])
+  const [conducesVenta, setConducesVenta] = useState([])
   const [busquedaNcf, setBusquedaNcf] = useState('')
   const [busquedaNc, setBusquedaNc] = useState('')
   const [resumen, setResumen] = useState(null)
   const [zonaSeleccionada, setZonaSeleccionada] = useState('')
   const [facturasZona, setFacturasZona] = useState([])
   const [resumenZona, setResumenZona] = useState(null)
+  const [conducesZona, setConducesZona] = useState([])
   const [vendedorSeleccionado, setVendedorSeleccionado] = useState('')
   const [facturasVendedor, setFacturasVendedor] = useState([])
   const [resumenVendedor, setResumenVendedor] = useState(null)
+  const [conducesVendedor, setConducesVendedor] = useState([])
   const [productosReporte, setProductosReporte] = useState([])
   const [facturasCliente, setFacturasCliente] = useState([])
   const [resumenCliente, setResumenCliente] = useState(null)
+  const [conducesCliente, setConducesCliente] = useState([])
   const [facturasChofer, setFacturasChofer] = useState([])
   const [choferesLista, setChoferesLista] = useState([])
   const [choferSeleccionado, setChoferSeleccionado] = useState('')
@@ -248,6 +252,7 @@ const buscarClienteRef = useRef(null)
       setClientes(c.data.data)
       setProductos(p.data.data)
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
+      API.get('/conduces').then(r => setConducesVenta(r.data.data || [])).catch(() => {})
       API.get('/mantenimiento/zonas').then(r => setZonas(r.data.data)).catch(() => {})
       API.get('/invoices/cotizaciones/lista').then(r => setCotizaciones(r.data.data)).catch(() => {})
       API.get('/invoices/pedidos/lista').then(r => setPedidos(r.data.data)).catch(() => {})
@@ -723,11 +728,22 @@ const { subtotal, itbis, total } = useMemo(() => {
                 if (fechaFin && fecha > fechaFin) return false
                 return true
               })
-            setFacturasCliente(filtradas)
+        setFacturasCliente(filtradas)
+              const cdCliente = conducesVenta.filter(cd => {
+                if (cd.customer_id !== clienteId) return false
+                if (cd.estado !== 'emitido' || cd.facturado) return false
+                const d = new Date(cd.creado_en)
+                const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fcd < fechaInicio) return false
+                if (fechaFin && fcd > fechaFin) return false
+                return true
+              })
+              setConducesCliente(cdCliente)
               const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
               const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
               const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
-      setResumenCliente({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+              const totalConducesCliente = cdCliente.reduce((s, cd) => s + parseFloat(cd.total || 0), 0)
+      setResumenCliente({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal, total_conduces: totalConducesCliente })
             }
             // Si estamos en el tab zona, buscar las facturas de la zona
             if (tab === 'zona') {
@@ -743,11 +759,22 @@ const { subtotal, itbis, total } = useMemo(() => {
                 if (fechaFin && fecha > fechaFin) return false
                 return true
               })
-          setFacturasZona(filtradas)
+       setFacturasZona(filtradas)
+              const cdZona = conducesVenta.filter(cd => {
+                if (!idsClientes.includes(cd.customer_id)) return false
+                if (cd.estado !== 'emitido' || cd.facturado) return false
+                const d = new Date(cd.creado_en)
+                const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fcd < fechaInicio) return false
+                if (fechaFin && fcd > fechaFin) return false
+                return true
+              })
+              setConducesZona(cdZona)
               const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
               const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
               const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
-       setResumenZona({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+              const totalConducesZona = cdZona.reduce((s, cd) => s + parseFloat(cd.total || 0), 0)
+       setResumenZona({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal, total_conduces: totalConducesZona })
             }
             // Si estamos en el tab vendedor, buscar las facturas del vendedor
             if (tab === 'vendedor') {
@@ -763,11 +790,22 @@ const { subtotal, itbis, total } = useMemo(() => {
                 if (fechaFin && fecha > fechaFin) return false
                 return true
               })
-      setFacturasVendedor(filtradas)
+    setFacturasVendedor(filtradas)
+              const cdVendedor = conducesVenta.filter(cd => {
+                if (!idsClientes.includes(cd.customer_id)) return false
+                if (cd.estado !== 'emitido' || cd.facturado) return false
+                const d = new Date(cd.creado_en)
+                const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fcd < fechaInicio) return false
+                if (fechaFin && fcd > fechaFin) return false
+                return true
+              })
+              setConducesVendedor(cdVendedor)
               const totalVentas = filtradas.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
               const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
               const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
-        setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal })
+              const totalConducesVendedor = cdVendedor.reduce((s, cd) => s + parseFloat(cd.total || 0), 0)
+        setResumenVendedor({ total_ventas: totalVentas, total_itbis: totalItbis, total_subtotal: totalSubtotal, total_conduces: totalConducesVendedor })
             }
      // Si estamos en el tab cotizacion, aplicar el filtro de fechas
             if (tab === 'cotizacion') {
@@ -855,13 +893,20 @@ const { subtotal, itbis, total } = useMemo(() => {
               if (tab === 'vendedor' && resumenVendedor) {
                 const vendedor = vendedores.find(v => v.id === vendedorSeleccionado)
                 const pwv = window.open('', '_blank')
-        const filasVend = facturasVendedor.map(f => `
+      const filasVend = facturasVendedor.map(f => `
                   <tr>
                     <td>${f.ncf || 'BORRADOR'}</td>
                     <td>${f.cliente_nombre || 'Consumidor Final'}</td>
                     <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' (NC)' : ''}</td>
                     <td style="text-align:center">${f.estado.toUpperCase()}</td>
                     <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('') + conducesVendedor.map(cd => `
+                  <tr>
+                    <td>${cd.numero || 'CD'} <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:1px 4px;border-radius:3px;font-weight:bold">CONDUCE</span></td>
+                    <td>${cd.cliente_nombre || 'Consumidor Final'}</td>
+                    <td style="text-align:right">RD$${parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">CONDUCE</td>
+                    <td style="text-align:center">${new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>`).join('')
                 pwv.document.write(`
                   <!DOCTYPE html><html><head><title>Reporte por Vendedor</title>
@@ -887,7 +932,9 @@ const { subtotal, itbis, total } = useMemo(() => {
                   <div class="resumen">
                     <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenVendedor.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                     <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenVendedor.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenVendedor.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                   <div class="resumen-fila total"><span>Ventas con NCF:</span><span>RD$${resumenVendedor.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila"><span>Ventas por Conduce:</span><span>RD$${parseFloat(resumenVendedor.total_conduces || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila total"><span>TOTAL GENERAL:</span><span>RD$${(parseFloat(resumenVendedor.total_ventas) + parseFloat(resumenVendedor.total_conduces || 0)).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                   </div>
                   <script>window.onload=()=>window.print()</script>
                   </body></html>`)
@@ -898,13 +945,20 @@ const { subtotal, itbis, total } = useMemo(() => {
               if (tab === 'zona' && resumenZona) {
                 const zona = zonas.find(z => z.id === zonaSeleccionada)
                 const pw = window.open('', '_blank')
-          const filasZona = facturasZona.map(f => `
+       const filasZona = facturasZona.map(f => `
                   <tr>
                     <td>${f.ncf || 'BORRADOR'}</td>
                     <td>${f.cliente_nombre || 'Consumidor Final'}</td>
                     <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' (NC)' : ''}</td>
                     <td style="text-align:center">${f.estado.toUpperCase()}</td>
                     <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('') + conducesZona.map(cd => `
+                  <tr>
+                    <td>${cd.numero || 'CD'} <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:1px 4px;border-radius:3px;font-weight:bold">CONDUCE</span></td>
+                    <td>${cd.cliente_nombre || 'Consumidor Final'}</td>
+                    <td style="text-align:right">RD$${parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">CONDUCE</td>
+                    <td style="text-align:center">${new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>`).join('')
                 pw.document.write(`
                   <!DOCTYPE html><html><head><title>Reporte por Zona</title>
@@ -928,9 +982,11 @@ const { subtotal, itbis, total } = useMemo(() => {
                     <tbody>${filasZona}</tbody>
                   </table>
                   <div class="resumen">
-                    <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenZona.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenZona.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                     <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenZona.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenZona.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila total"><span>Ventas con NCF:</span><span>RD$${resumenZona.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila"><span>Ventas por Conduce:</span><span>RD$${parseFloat(resumenZona.total_conduces || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila total"><span>TOTAL GENERAL:</span><span>RD$${(parseFloat(resumenZona.total_ventas) + parseFloat(resumenZona.total_conduces || 0)).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                   </div>
                   <script>window.onload=()=>window.print()</script>
                   </body></html>`)
@@ -941,12 +997,18 @@ const { subtotal, itbis, total } = useMemo(() => {
               if (tab === 'cliente' && resumenCliente) {
                 const clienteNombre = document.getElementById('cli-cliente-input').value
                 const printW = window.open('', '_blank')
-            const filas = facturasCliente.map(f => `
+        const filas = facturasCliente.map(f => `
                   <tr>
                     <td>${f.ncf || 'BORRADOR'}</td>
                     <td style="text-align:right">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' (NC)' : ''}</td>
                     <td style="text-align:center">${f.estado.toUpperCase()}</td>
                     <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>`).join('') + conducesCliente.map(cd => `
+                  <tr>
+                    <td>${cd.numero || 'CD'} <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:1px 4px;border-radius:3px;font-weight:bold">CONDUCE</span></td>
+                    <td style="text-align:right">RD$${parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td style="text-align:center">CONDUCE</td>
+                    <td style="text-align:center">${new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>`).join('')
                 printW.document.write(`
                   <!DOCTYPE html><html><head><title>Reporte por Cliente</title>
@@ -972,14 +1034,16 @@ const { subtotal, itbis, total } = useMemo(() => {
                   <div class="resumen">
                     <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumenCliente.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                     <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumenCliente.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                    <div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumenCliente.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                   <div class="resumen-fila total"><span>Ventas con NCF:</span><span>RD$${resumenCliente.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila"><span>Ventas por Conduce:</span><span>RD$${parseFloat(resumenCliente.total_conduces || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                    <div class="resumen-fila total"><span>TOTAL GENERAL:</span><span>RD$${(parseFloat(resumenCliente.total_ventas) + parseFloat(resumenCliente.total_conduces || 0)).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                   </div>
                   <script>window.onload=()=>window.print()</script>
                   </body></html>`)
                 printW.document.close()
                 return
               }
-              const printW = window.open('', '_blank')
+            const printW = window.open('', '_blank')
          const filas = facturasFiltradas.filter(f => f.estado === 'emitida' || f.estado === 'pagada').map(f => `
                 <tr>
                   <td>${f.ncf || 'BORRADOR'}</td>
@@ -988,6 +1052,24 @@ const { subtotal, itbis, total } = useMemo(() => {
                   <td style="text-align:center">${f.estado.toUpperCase()}</td>
                   <td style="text-align:center">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                 </tr>`).join('')
+              const conducesRango = conducesVenta.filter(cd => {
+                if (cd.estado !== 'emitido' || cd.facturado) return false
+                const d = new Date(cd.creado_en)
+                const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fcd < fechaInicio) return false
+                if (fechaFin && fcd > fechaFin) return false
+                return true
+              })
+              const filasConduces = conducesRango.map(cd => `
+                <tr>
+                  <td>${cd.numero || 'CD'} <span style="background:#fef3c7;color:#92400e;font-size:10px;padding:1px 4px;border-radius:3px;font-weight:bold">CONDUCE</span></td>
+                  <td>${cd.cliente_nombre || 'Consumidor Final'}</td>
+                  <td style="text-align:right">RD$${parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                  <td style="text-align:center">CONDUCE</td>
+                  <td style="text-align:center">${new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
+                </tr>`).join('')
+              const totalConduces = conducesRango.reduce((s, cd) => s + parseFloat(cd.total || 0), 0)
+              const totalGeneralVentas = parseFloat(resumen.total_ventas) + totalConduces
               printW.document.write(`
                 <!DOCTYPE html><html><head><title>Reporte de Ventas</title>
                 <style>
@@ -1008,12 +1090,14 @@ const { subtotal, itbis, total } = useMemo(() => {
                 <p class="periodo">Período: ${fechaInicio || 'Inicio'} al ${fechaFin || 'Hoy'}</p>
                 <table>
                   <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
-                  <tbody>${filas}</tbody>
+                  <tbody>${filas}${filasConduces}</tbody>
                 </table>
                 <div class="resumen">
                   <div class="resumen-fila"><span>Subtotal (sin ITBIS):</span><span>RD$${resumen.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                   <div class="resumen-fila"><span>ITBIS:</span><span>RD$${resumen.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-<div class="resumen-fila total"><span>Total Ventas:</span><span>RD$${resumen.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+<div class="resumen-fila total"><span>Ventas con NCF:</span><span>RD$${resumen.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  <div class="resumen-fila"><span>Ventas por Conduce:</span><span>RD$${totalConduces.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                  <div class="resumen-fila total"><span>TOTAL GENERAL:</span><span>RD$${totalGeneralVentas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                 </div>
                 <script>window.onload=()=>window.print()</script>
                 </body></html>`)
@@ -1192,7 +1276,7 @@ const { subtotal, itbis, total } = useMemo(() => {
                 </tr>
               </thead>
               <tbody>
-                {facturasZona.map(f => (
+         {facturasZona.map(f => (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
 <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
@@ -1201,15 +1285,26 @@ const { subtotal, itbis, total } = useMemo(() => {
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
                 ))}
+                {conducesZona.map(cd => (
+                  <tr key={'cdz-' + cd.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
+                    <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
+                    <td className="px-4 py-3">RD${parseFloat(cd.total || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">CONDUCE</span></td>
+                    <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
-          {resumenZona && (
+     {resumenZona && (
             <div className="flex justify-end mt-4">
               <div className="text-sm text-right bg-gray-50 p-4 rounded-lg">
                 <p className="text-gray-600">Subtotal: <span className="font-medium">RD${resumenZona.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                 <p className="text-gray-600">ITBIS: <span className="font-medium">RD${resumenZona.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
-                <p className="text-lg font-bold text-gray-800">Total: RD${resumenZona.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                <p className="text-gray-600">Ventas con NCF: <span className="font-medium">RD${resumenZona.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                <p className="text-gray-600">Ventas por Conduce: <span className="font-medium">RD${parseFloat(resumenZona.total_conduces || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                <p className="text-lg font-bold text-gray-800">TOTAL GENERAL: RD${(parseFloat(resumenZona.total_ventas) + parseFloat(resumenZona.total_conduces || 0)).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
               </div>
             </div>
           )}
@@ -1581,13 +1676,22 @@ onKeyDown={e => {
                 </tr>
               </thead>
               <tbody>
-             {facturasVendedor.map(f => (
+       {facturasVendedor.map(f => (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                     <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
                     <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>
+                ))}
+                {conducesVendedor.map(cd => (
+                  <tr key={'cdv-' + cd.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
+                    <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
+                    <td className="px-4 py-3">RD${parseFloat(cd.total || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">CONDUCE</span></td>
+                    <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1598,7 +1702,9 @@ onKeyDown={e => {
               <div className="text-sm text-right bg-gray-50 p-4 rounded-lg">
                 <p className="text-gray-600">Subtotal: <span className="font-medium">RD${resumenVendedor.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                 <p className="text-gray-600">ITBIS: <span className="font-medium">RD${resumenVendedor.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
-                <p className="text-lg font-bold text-gray-800">Total: RD${resumenVendedor.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                <p className="text-gray-600">Ventas con NCF: <span className="font-medium">RD${resumenVendedor.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                <p className="text-gray-600">Ventas por Conduce: <span className="font-medium">RD${parseFloat(resumenVendedor.total_conduces || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                <p className="text-lg font-bold text-gray-800">TOTAL GENERAL: RD${(parseFloat(resumenVendedor.total_ventas) + parseFloat(resumenVendedor.total_conduces || 0)).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
               </div>
             </div>
           )}
@@ -1684,12 +1790,20 @@ onKeyDown={e => {
                 </tr>
               </thead>
               <tbody>
-           {facturasCliente.map(f => (
+   {facturasCliente.map(f => (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                     <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
+                  </tr>
+                ))}
+                {conducesCliente.map(cd => (
+                  <tr key={'cdc-' + cd.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
+                    <td className="px-4 py-3">RD${parseFloat(cd.total || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">CONDUCE</span></td>
+                    <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1700,7 +1814,9 @@ onKeyDown={e => {
               <div className="text-sm text-right bg-gray-50 p-4 rounded-lg">
                 <p className="text-gray-600">Subtotal: <span className="font-medium">RD${resumenCliente.total_subtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                 <p className="text-gray-600">ITBIS: <span className="font-medium">RD${resumenCliente.total_itbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
-                <p className="text-lg font-bold text-gray-800">Total: RD${resumenCliente.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                <p className="text-gray-600">Ventas con NCF: <span className="font-medium">RD${resumenCliente.total_ventas.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                <p className="text-gray-600">Ventas por Conduce: <span className="font-medium">RD${parseFloat(resumenCliente.total_conduces || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                <p className="text-lg font-bold text-gray-800">TOTAL GENERAL: RD${(parseFloat(resumenCliente.total_ventas) + parseFloat(resumenCliente.total_conduces || 0)).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
               </div>
             </div>
           )}
@@ -3404,7 +3520,13 @@ onKeyDown={e => {
 
           {/* Lista de devoluciones */}
           {(() => {
-            const lista = devoluciones.filter(d => filtroEstadoDev === 'todos' || d.estado === filtroEstadoDev)
+           const lista = devoluciones.filter(d => {
+              if (filtroEstadoDev !== 'todos' && d.estado !== filtroEstadoDev) return false
+              const fechaDev = (d.creado_en || '').substring(0, 10)
+              if (fechaInicio && fechaDev < fechaInicio) return false
+              if (fechaFin && fechaDev > fechaFin) return false
+              return true
+            })
             if (lista.length === 0) return <p className="text-gray-400 text-sm text-center py-8">No hay devoluciones {filtroEstadoDev !== 'todos' ? `en estado ${filtroEstadoDev}` : ''}</p>
             return (
               <table className="w-full text-sm">
@@ -4204,8 +4326,28 @@ onKeyDown={e => {
                         )}
                       </td>
                     </tr>
-                  ))
+   ))
                 )}
+                {conducesVenta.filter(cd => {
+                  if (cd.estado !== 'emitido' || cd.facturado) return false
+                  if (busquedaNcf && !(cd.numero || '').toUpperCase().includes(busquedaNcf.toUpperCase())) return false
+                  const d = new Date(cd.creado_en)
+                  const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                  if (fechaInicio && fcd < fechaInicio) return false
+                  if (fechaFin && fcd > fechaFin) return false
+                  return true
+                }).map(cd => (
+                  <tr key={'cd-' + cd.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
+                    <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
+                    <td className="px-4 py-3">RD${parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">CONDUCE</span>
+                    </td>
+                    <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">-</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
