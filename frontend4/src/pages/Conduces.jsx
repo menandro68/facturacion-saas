@@ -19,6 +19,10 @@ export default function Conduces() {
   const [mostrarConfirmarCd, setMostrarConfirmarCd] = useState(false)
   const [mostrarImprimirCd, setMostrarImprimirCd] = useState(false)
   const [conduceGuardadoId, setConduceGuardadoId] = useState(null)
+  const [cdFechaInicio, setCdFechaInicio] = useState('')
+  const [cdFechaFin, setCdFechaFin] = useState('')
+  const [cdFiltroInicio, setCdFiltroInicio] = useState('')
+  const [cdFiltroFin, setCdFiltroFin] = useState('')
 
   const cargar = async () => {
     try {
@@ -162,6 +166,30 @@ export default function Conduces() {
 
       {mensaje && <div className="bg-green-100 text-green-800 p-3 rounded mb-4">{mensaje}</div>}
       {error && <div className="bg-red-100 text-red-800 p-3 rounded mb-4">{error}</div>}
+
+      {/* Buscador por fechas */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6 flex gap-4 items-end flex-wrap">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
+          <input type="date" value={cdFechaInicio} onChange={e => setCdFechaInicio(e.target.value)}
+            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
+          <input type="date" value={cdFechaFin} onChange={e => setCdFechaFin(e.target.value)}
+            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <button onClick={() => { setCdFiltroInicio(cdFechaInicio); setCdFiltroFin(cdFechaFin) }}
+          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+          Buscar
+        </button>
+        {(cdFiltroInicio || cdFiltroFin) && (
+          <button onClick={() => { setCdFechaInicio(''); setCdFechaFin(''); setCdFiltroInicio(''); setCdFiltroFin('') }}
+            className="border border-gray-300 px-4 py-2 rounded text-sm hover:bg-gray-50 text-gray-700">
+            Limpiar
+          </button>
+        )}
+      </div>
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow mb-6">
@@ -348,7 +376,14 @@ export default function Conduces() {
             </tr>
           </thead>
           <tbody>
-            {conduces.map(co => (
+            {conduces.filter(co => {
+              if (!cdFiltroInicio && !cdFiltroFin) return true
+              const d = new Date(co.creado_en)
+              const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+              if (cdFiltroInicio && fcd < cdFiltroInicio) return false
+              if (cdFiltroFin && fcd > cdFiltroFin) return false
+              return true
+            }).map(co => (
               <tr key={co.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono">{co.numero || 'CD-' + String(co.numero_conduce).padStart(4, '0')}</td>
                 <td className="px-4 py-3">{co.cliente_nombre || '-'}</td>

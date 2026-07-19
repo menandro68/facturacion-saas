@@ -70,6 +70,8 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [devoluciones, setDevoluciones] = useState([])
   const [showDevolucion, setShowDevolucion] = useState(false)
   const [devFacturaBuscar, setDevFacturaBuscar] = useState('')
+  const [mostrarImprimirNcc, setMostrarImprimirNcc] = useState(false)
+  const [nccGuardadaId, setNccGuardadaId] = useState(null)
   const [devFacturaEncontrada, setDevFacturaEncontrada] = useState(null)
   const [devItemsSeleccionados, setDevItemsSeleccionados] = useState([])
   const [devMotivo, setDevMotivo] = useState('')
@@ -2996,6 +2998,21 @@ onKeyDown={e => {
                     className="border rounded px-3 py-2 text-sm w-56 uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <button id="btn-buscar-nc" onClick={async () => {
+                  const busqNc = ncFacturaBuscar.trim().toUpperCase()
+                  if (busqNc.startsWith('CD-')) {
+                    const cdEnc = conducesVenta.find(cd => (cd.numero||'').toUpperCase() === busqNc)
+                    if (!cdEnc) { alert('Conduce no encontrado: ' + busqNc); return }
+                    if (cdEnc.facturado) { alert('Este conduce fue convertido en factura. Haga la NC a la factura.'); return }
+                    if (cdEnc.estado !== 'emitido') { alert('Solo se puede hacer NC a conduces emitidos'); return }
+                    try {
+                      const resCd = await API.get(`/conduces/${cdEnc.id}`)
+                      const dataCd = resCd.data.data || {}
+                      const itemsCd = dataCd.items || []
+                      setNcFacturaEncontrada({ ...cdEnc, es_conduce: true, ncf: cdEnc.numero })
+                      setNcItemsSeleccionados(itemsCd.map(it => ({ ...it, seleccionado: false, cantidad_nc: it.cantidad, itbis_rate: 0 })))
+                    } catch (e) { alert('Error al cargar el conduce') }
+                    return
+                  }
                   const factura = facturas.find(f => (f.ncf||'').toUpperCase() === ncFacturaBuscar.trim())
                   if (!factura) { alert('Factura no encontrada'); return }
                   if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crÃ©dito a facturas emitidas'); return }
@@ -3034,7 +3051,7 @@ onKeyDown={e => {
                 <>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
                     <p><span className="font-medium">Cliente:</span> {ncFacturaEncontrada.cliente_nombre || 'Consumidor Final'}</p>
-                    <p><span className="font-medium">NCF:</span> {ncFacturaEncontrada.ncf}</p>
+                   <p><span className="font-medium">NCF:</span> {ncFacturaEncontrada.ncf} {ncFacturaEncontrada.es_conduce && <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold ml-1">CONDUCE</span>}</p>
                     <p><span className="font-medium">Total factura:</span> RD${parseFloat(ncFacturaEncontrada.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
                   </div>
 
@@ -3133,6 +3150,24 @@ onKeyDown={e => {
                       if (!ncMotivo.trim()) { alert('Ingresa el motivo de la nota de crédito'); return }
                       if (!confirm('¿Emitir esta Nota de Crédito?')) return
                       try {
+                       if (ncFacturaEncontrada.es_conduce) {
+                          await API.post(`/conduces/${ncFacturaEncontrada.id}/nota-credito`, {
+                            motivo: ncMotivo,
+                            items: itemsNC.map(it => ({
+                              product_id: it.product_id,
+                              descripcion: it.descripcion,
+                              cantidad: parseFloat(it.cantidad_nc),
+                              precio_unitario: parseFloat(it.precio_unitario)
+                            }))
+                          })
+                          setShowNotaCredito(false)
+                          setNcFacturaBuscar('')
+                          setNcFacturaEncontrada(null)
+                          setNcItemsSeleccionados([])
+                          setNcMotivo('')
+                          alert('✅ Nota de Crédito de conduce creada correctamente')
+                          return
+                        }
                         const resPost = await API.post('/invoices/nota-credito', {
                           factura_id: ncFacturaEncontrada.id,
                           motivo: ncMotivo,
@@ -3232,6 +3267,21 @@ onKeyDown={e => {
                     className="border rounded px-3 py-2 text-sm w-56 uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <button id="btn-buscar-dev" onClick={async () => {
+                 const busqDev = devFacturaBuscar.trim().toUpperCase()
+                  if (busqDev.startsWith('CD-')) {
+                    const cdEncDev = conducesVenta.find(cd => (cd.numero||'').toUpperCase() === busqDev)
+                    if (!cdEncDev) { alert('Conduce no encontrado: ' + busqDev); return }
+                    if (cdEncDev.facturado) { alert('Este conduce fue convertido en factura. Haga la devolución a la factura.'); return }
+                    if (cdEncDev.estado !== 'emitido') { alert('Solo se pueden hacer devoluciones a conduces emitidos'); return }
+                    try {
+                      const resCdDev = await API.get(`/conduces/${cdEncDev.id}`)
+                      const dataCdDev = resCdDev.data.data || {}
+                      const itemsCdDev = dataCdDev.items || []
+                      setDevFacturaEncontrada({ ...cdEncDev, es_conduce: true, ncf: cdEncDev.numero })
+                      setDevItemsSeleccionados(itemsCdDev.map(it => ({ ...it, seleccionado: false, cantidad_dev: 0, itbis_rate: 0 })))
+                    } catch (e) { alert('Error al cargar el conduce') }
+                    return
+                  }
                   const factura = facturas.find(f => (f.ncf||'').toUpperCase() === devFacturaBuscar.trim())
                   if (!factura) { alert('Factura no encontrada'); return }
                   if (factura.estado !== 'emitida') { alert('Solo se pueden hacer devoluciones a facturas emitidas'); return }
@@ -3270,7 +3320,7 @@ onKeyDown={e => {
                 <>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
                     <p><span className="font-medium">Cliente:</span> {devFacturaEncontrada.cliente_nombre || 'Consumidor Final'}</p>
-                    <p><span className="font-medium">NCF:</span> {devFacturaEncontrada.ncf}</p>
+                    <p><span className="font-medium">NCF:</span> {devFacturaEncontrada.ncf} {devFacturaEncontrada.es_conduce && <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold ml-1">CONDUCE</span>}</p>
                     <p><span className="font-medium">Total factura:</span> RD${parseFloat(devFacturaEncontrada.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
                   </div>
 
@@ -3371,8 +3421,9 @@ onKeyDown={e => {
                       let devolucionRegistrada = false
                       let devolucionId = null
                       try {
-                        const resPost = await API.post('/devoluciones', {
-                          factura_id: devFacturaEncontrada.id,
+                       const resPost = await API.post('/devoluciones', {
+                          factura_id: devFacturaEncontrada.es_conduce ? null : devFacturaEncontrada.id,
+                          conduce_id: devFacturaEncontrada.es_conduce ? devFacturaEncontrada.id : null,
                           factura_ncf: devFacturaEncontrada.ncf,
                           customer_id: devFacturaEncontrada.customer_id || null,
                           cliente_nombre: devFacturaEncontrada.cliente_nombre || 'Consumidor Final',
@@ -3597,7 +3648,11 @@ onKeyDown={e => {
                                   setDevoluciones(resLista.data.data)
                                   const resNC = await API.get('/invoices/nota-credito/lista')
                                   setNotasCredito(resNC.data.data)
-                                  alert(`✅ NC generada: ${res.data.data.ncf}`)
+                                  alert(`✅ NC generada: ${res.data.data?.ncf || res.data.data?.numero || res.data.mensaje || ''}`)
+                              if (res.data.data?.numero && String(res.data.data.numero).startsWith('NCC')) {
+                                    setNccGuardadaId(res.data.data.id)
+                                    setMostrarImprimirNcc(true)
+                                  }
                                 } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
                               }} className="text-blue-600 hover:underline text-xs font-medium">Procesar → NC</button>
                               <button onClick={async () => {
@@ -3901,6 +3956,28 @@ onKeyDown={e => {
       )}
 
       {/* Modal confirmar guardar */}
+       
+       {mostrarImprimirNcc && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 text-center w-96">
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la Nota de Crédito del conduce?</p>
+            <div className="flex justify-center gap-6">
+              <button autoFocus id="btn-si-imprimir-ncc"
+                onClick={() => { setMostrarImprimirNcc(false); const tokenNcc = sessionStorage.getItem('token'); window.open(`/conduces/nc/${nccGuardadaId}/pdf?token=${tokenNcc}`, '_blank') }}
+                onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-imprimir-ncc')?.focus() } }}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
+                Sí
+              </button>
+              <button id="btn-no-imprimir-ncc" onClick={() => setMostrarImprimirNcc(false)}
+                onKeyDown={e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-imprimir-ncc')?.focus() } }}
+                className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {mostrarConfirmar && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">

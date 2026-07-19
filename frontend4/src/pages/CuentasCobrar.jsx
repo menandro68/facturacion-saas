@@ -58,7 +58,28 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           fecha_vencimiento: cd.fecha_vencimiento || null,
           es_conduce: true
         }))
-      setTodasFacturas([...fac.data.data, ...conducesCxc])
+   // NC de conduces entran como pseudo-notas de credito (referencia_id = conduce_id)
+      let ncConducesCxc = []
+      try {
+        const ncCond = await API.get('/conduces/nc/lista')
+        ncConducesCxc = (ncCond.data.data || [])
+          .filter(n => n.estado === 'emitida')
+          .map(n => ({
+            id: n.id,
+            ncf: n.numero,
+            customer_id: n.customer_id,
+            cliente_nombre: n.cliente_nombre,
+            total: n.total,
+            subtotal: n.total,
+            itbis: 0,
+            estado: 'nota_credito',
+            referencia_id: n.conduce_id,
+            creado_en: n.creado_en,
+            fecha_emision: n.creado_en,
+            es_conduce_nc: true
+          }))
+      } catch (e) { ncConducesCxc = [] }
+      setTodasFacturas([...fac.data.data, ...conducesCxc, ...ncConducesCxc])
       setFacturas([...fac.data.data.filter(f => f.estado === 'emitida'), ...conducesCxc])
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
       API.get('/payments').then(r => setPagos(r.data.data)).catch(() => {})
