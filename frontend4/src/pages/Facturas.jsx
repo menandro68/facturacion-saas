@@ -6,7 +6,14 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const usuarioSesion = useMemo(() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } }, [])
   const modoPOS = usuarioSesion?.features?.responsive === true
   const [posLineaAbierta, setPosLineaAbierta] = useState(true)
-  const [tab, setTab] = useState(vendedor_id ? 'pedidos' : 'fecha')
+  const [tab, setTab] = useState(() => {
+    const tabGuardado = sessionStorage.getItem('facturas_tab_regreso')
+    if (tabGuardado) {
+      sessionStorage.removeItem('facturas_tab_regreso')
+      return tabGuardado
+    }
+    return vendedor_id ? 'pedidos' : 'fecha'
+  })
   const [formatoImpresion, setFormatoImpresion] = useState(localStorage.getItem('formato_impresion') || 'media')
   const [showFormatoMenu, setShowFormatoMenu] = useState(false)
   const [fechaInicio, setFechaInicio] = useState('')
@@ -2144,9 +2151,10 @@ onKeyDown={e => {
                     )}
                   </div>
                   {/* Descripción */}
-                  <input placeholder="Descripción" value={item.descripcion}
+<input placeholder="Descripción" value={item.descripcion}
+                    readOnly={!!item.product_id}
                     onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, descripcion: e.target.value} : it))}
-                    className="w-full border rounded-lg px-3 py-2.5 text-sm mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className={`w-full border rounded-lg px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
                   {/* Cant, Precio, ITBIS en fila */}
                   <div className="grid grid-cols-3 gap-2 mb-2">
                     <div>
@@ -2159,9 +2167,18 @@ onKeyDown={e => {
                     </div>
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Precio</label>
-                      <input type="number" placeholder="0.00" value={item.precio_unitario}
+                  <input type="number" placeholder="0.00" value={item.precio_unitario}
                         ref={el => pedPrecioRefs.current[index] = el}
                         onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: e.target.value} : it))}
+                        onBlur={e => {
+                          if (item.product_id && e.target.value !== '') {
+                            const prod = productos.find(p => p.id === item.product_id)
+                            if (prod && parseFloat(e.target.value) < parseFloat(prod.precio)) {
+                              alert(`⚠️ El precio no puede ser menor al precio de venta del artículo: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+                              setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: prod.precio} : it))
+                            }
+                          }
+                        }}
                         onKeyDown={e => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
@@ -2241,8 +2258,16 @@ onKeyDown={e => {
             <button ref={pedGuardarRef} onClick={async () => {
                   const customer_id = pedClienteSeleccionadoId
                   if (!customer_id) return alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear el pedido.')
-                  const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
+                 const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
+                  for (const it of itemsValidos) {
+                    if (it.product_id) {
+                      const prod = productos.find(p => p.id === it.product_id)
+                      if (prod && parseFloat(it.precio_unitario) < parseFloat(prod.precio)) {
+                        return alert(`⚠️ El precio de "${it.descripcion}" (RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2})}) es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrígelo antes de guardar.`)
+                      }
+                    }
+                  }
                   try {
                   if (pedidoEditandoId) {
                     await API.put(`/invoices/pedido/${pedidoEditandoId}/editar`, { customer_id: customer_id || null, items: itemsValidos })
@@ -2451,9 +2476,9 @@ onKeyDown={e => {
                 <button onclick="window.print()" style="padding:8px 20px;background:#1e40af;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
                 <button onclick="
                  ${avisoStock ? `alert('${('⚠️ ' + avisoStock + 'Se convertira a factura, pero considere reabastecer.').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n')}');` : ''}
-                  if(confirm('¿Desea convertir este pedido a factura?')){
+                if(confirm('¿Desea convertir este pedido a factura?')){
                     fetch('/invoices/pedido/${p.id}/convertir',{method:'PUT',headers:{'Authorization':'Bearer '+sessionStorage.getItem('token'),'Content-Type':'application/json'}})
-                    .then(r=>r.json()).then(d=>{if(d.success){const fid=d.data?.id||d.id;const tok=sessionStorage.getItem('token');if(window.opener)window.opener.location.reload();if(confirm('¿Desea imprimir esta factura?')){window.location.href='/invoices/'+fid+'/pdf?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
+                    .then(r=>r.json()).then(d=>{if(d.success){const fid=d.data?.id||d.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('¿Desea imprimir esta factura?')){window.location.href='/invoices/'+fid+'/print?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
                     .catch(()=>alert('Error al convertir'))
                   }
                 " style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✅ Convertir a Factura</button>
@@ -2625,9 +2650,10 @@ onKeyDown={e => {
                     )}
                   </div>
                   <div className="col-span-3">
-                    <input placeholder="Descripción" value={item.descripcion}
+                  <input placeholder="Descripción" value={item.descripcion}
+                      readOnly={!!item.product_id}
                       onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, descripcion: e.target.value} : it))}
-                      className="w-full border rounded px-2 py-1.5 text-sm" />
+                      className={`w-full border rounded px-2 py-1.5 text-sm ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`} />
                   </div>
                   <div className="col-span-2">
                     <input type="number" placeholder="Cant." value={item.cantidad} min="1"
@@ -2637,9 +2663,18 @@ onKeyDown={e => {
                       className="w-full border rounded px-2 py-1.5 text-sm" />
                   </div>
                   <div className="col-span-2">
-                    <input type="number" placeholder="Precio" value={item.precio_unitario}
+                  <input type="number" placeholder="Precio" value={item.precio_unitario}
                       ref={el => cotPrecioRefs.current[index] = el}
                       onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: e.target.value} : it))}
+                      onBlur={e => {
+                        if (item.product_id && e.target.value !== '') {
+                          const prod = productos.find(p => p.id === item.product_id)
+                          if (prod && parseFloat(e.target.value) < parseFloat(prod.precio)) {
+                            alert(`⚠️ El precio no puede ser menor al precio de venta del artículo: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+                            setItemsCot(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: prod.precio} : it))
+                          }
+                        }
+                      }}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -2717,6 +2752,14 @@ onKeyDown={e => {
                 const customer_id = cotClienteId || document.getElementById('cot-cliente').value
                   if (!customer_id) return alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear la cotización.')
                   const itemsValidos = itemsCot.filter(i => i.descripcion && i.precio_unitario)
+                for (const it of itemsValidos) {
+                    if (it.product_id) {
+                      const prod = productos.find(p => p.id === it.product_id)
+                      if (prod && parseFloat(it.precio_unitario) < parseFloat(prod.precio)) {
+                        return alert(`⚠️ El precio de "${it.descripcion}" (RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2})}) es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrígelo antes de guardar.`)
+                      }
+                    }
+                  }
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   try {
                     await API.post('/invoices/cotizacion', { customer_id: customer_id || null, items: itemsValidos })
@@ -4027,8 +4070,9 @@ onKeyDown={e => {
                         )}
                       </div>
                       <div className="col-span-3">
-                        <input name="descripcion" placeholder="Descripción" value={item.descripcion} onChange={(e) => handleItemChange(index, e)}
-                          className="w-full border rounded px-2 py-1.5 text-sm" required />
+                       <input name="descripcion" placeholder="Descripción" value={item.descripcion} onChange={(e) => handleItemChange(index, e)}
+                          readOnly={!!item.product_id}
+                          className={`w-full border rounded px-2 py-1.5 text-sm ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`} required />
                       </div>
                       <div className="col-span-2">
                        <input name="cantidad" type="number" placeholder="Cant." step="0.01" min="0.01" value={item.cantidad} onChange={(e) => handleItemChange(index, e)}
