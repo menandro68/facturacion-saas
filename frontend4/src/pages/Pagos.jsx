@@ -73,8 +73,12 @@ const handleEnviarMetodo = () => {
     const tarjeta = parseFloat(metodos.tarjeta || 0)
     const cheque = parseFloat(metodos.cheque_valor || 0)
     const total = efectivo + transferencia + tarjeta + cheque
-    if (total <= 0) {
+if (total <= 0) {
       alert('⚠️ Debe llenar al menos un método de pago con un monto mayor a 0.')
+      return
+    }
+    if (form.balance_max !== undefined && total > form.balance_max) {
+      alert(`⚠️ El total de los métodos (RD$${total.toLocaleString('es-DO', {minimumFractionDigits: 2})}) no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
       return
     }
 // Contar cuántos métodos se usaron
@@ -308,8 +312,8 @@ id="btn-si-recibo-pago"
                 const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                       const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                       const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                      const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
-                      setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '' }))
+                  const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                      setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
                document.getElementById('pago-ncf-resultado').innerHTML =
                         `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                       setTimeout(() => document.getElementById('pago-monto-input')?.focus(), 50)
@@ -324,8 +328,8 @@ id="btn-si-recibo-pago"
               const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                     const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                     const pagosDeFactura = pagos.filter(p => p.invoice_id === factura.id).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                    const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
-                    setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '' }))
+                  const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                    setForm(prev => ({ ...prev, invoice_id: factura.id, monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
                     document.getElementById('pago-ncf-resultado').innerHTML =
                       `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                   }}
@@ -337,7 +341,15 @@ id="btn-si-recibo-pago"
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
-          <input name="monto" id="pago-monto-input" type="number" step="0.01" value={form.monto} onChange={handleChange} required
+         <input name="monto" id="pago-monto-input" type="number" step="0.01" value={form.monto}
+                onChange={e => {
+                  let val = e.target.value
+                  if (form.balance_max !== undefined && val !== '' && parseFloat(val) > form.balance_max) {
+                    alert(`⚠️ El monto no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+                    val = form.balance_max.toFixed(2)
+                  }
+                  setForm(prev => ({ ...prev, monto: val }))
+                }} required
                 placeholder="DIGITAR MONTO"
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); setShowMetodo(true) } }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />

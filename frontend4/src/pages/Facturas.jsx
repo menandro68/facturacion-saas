@@ -2840,15 +2840,26 @@ onKeyDown={e => {
                   const factura = facturas.find(f => (f.ncf||'').toUpperCase() === ncFacturaBuscar.trim())
                   if (!factura) { alert('Factura no encontrada'); return }
                   if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crÃ©dito a facturas emitidas'); return }
-                  try {
+           try {
                     const res = await API.get(`/invoices/${factura.id}`)
                     const data = res.data.data
+                    let devueltos = []
+                    try {
+                      const dev = await API.get(`/invoices/${factura.id}/devuelto`)
+                      devueltos = dev.data.data || []
+                    } catch(e2) { devueltos = [] }
                     setNcFacturaEncontrada(data)
-                    setNcItemsSeleccionados(data.items.map(it => ({
-                      ...it,
-                      seleccionado: true,
-                      cantidad_nc: 0
-                    })))
+                    setNcItemsSeleccionados(data.items.map(it => {
+                      const d = devueltos.find(x => (it.product_id && x.product_id === it.product_id) || (!it.product_id && x.descripcion === it.descripcion))
+                      const yaDevuelto = d ? parseFloat(d.cantidad_devuelta) : 0
+                      const disponible = Math.max(parseFloat(it.cantidad) - yaDevuelto, 0)
+                      return {
+                        ...it,
+                        seleccionado: disponible > 0,
+                        cantidad_nc: 0,
+                        disponible
+                      }
+                    }))
                   } catch(e) { alert('Error al cargar factura') }
                 }}
          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
@@ -2897,11 +2908,21 @@ onKeyDown={e => {
                           </td>
                           <td className="px-3 py-2 text-right">{item.manual ? '-' : parseFloat(item.cantidad).toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">
-                      <input type="number" value={item.cantidad_nc} min="1"
-                              max={item.manual ? undefined : parseFloat(item.cantidad)}
+                 <input type="number" value={item.cantidad_nc} min="1"
+                              max={item.manual ? undefined : (item.disponible !== undefined ? item.disponible : parseFloat(item.cantidad))}
                               step="1"
                               disabled={!item.seleccionado}
-                              onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_nc: e.target.value} : it))}
+                         onChange={e => {
+                                let val = e.target.value
+                                if (!item.manual && val !== '') {
+                                  const maxCant = item.disponible !== undefined ? item.disponible : parseFloat(item.cantidad)
+                                  if (parseFloat(val) > maxCant) {
+                                    alert(`⚠️ No puede devolver más de ${maxCant.toFixed(0)} (disponible: original ${parseFloat(item.cantidad).toFixed(0)} menos lo devuelto en NC anteriores)`)
+                                    val = String(maxCant)
+                                  }
+                                }
+                                setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_nc: val} : it))
+                              }}
                               className="border rounded px-2 py-1 text-sm w-20 text-right disabled:bg-gray-100" />
                           </td>
                         <td className="px-3 py-2 text-right">
@@ -3057,13 +3078,24 @@ onKeyDown={e => {
                   if (factura.estado !== 'emitida') { alert('Solo se pueden hacer devoluciones a facturas emitidas'); return }
                   try {
                     const res = await API.get(`/invoices/${factura.id}`)
-                    const data = res.data.data
+            const data = res.data.data
+                    let devueltosDev = []
+                    try {
+                      const devd = await API.get(`/invoices/${data.id}/devuelto-dev`)
+                      devueltosDev = devd.data.data || []
+                    } catch(e2) { devueltosDev = [] }
                     setDevFacturaEncontrada(data)
-                    setDevItemsSeleccionados(data.items.map(it => ({
-                      ...it,
-                      seleccionado: false,
-                      cantidad_dev: 0
-                    })))
+                    setDevItemsSeleccionados(data.items.map(it => {
+                      const d = devueltosDev.find(x => (it.product_id && x.product_id === it.product_id) || (!it.product_id && x.descripcion === it.descripcion))
+                      const yaDevuelto = d ? parseFloat(d.cantidad_devuelta) : 0
+                      const disponible = Math.max(parseFloat(it.cantidad) - yaDevuelto, 0)
+                      return {
+                        ...it,
+                        seleccionado: false,
+                        cantidad_dev: 0,
+                        disponible
+                      }
+                    }))
                   } catch(e) { alert('Error al cargar factura') }
                 }}
           className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
@@ -3112,11 +3144,21 @@ onKeyDown={e => {
                           </td>
                           <td className="px-3 py-2 text-right">{item.manual ? '-' : parseFloat(item.cantidad).toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">
-                          <input type="number" value={item.cantidad_dev} min="0"
-                              max={item.manual ? undefined : parseFloat(item.cantidad)}
+                     <input type="number" value={item.cantidad_dev} min="0"
+                              max={item.manual ? undefined : (item.disponible !== undefined ? item.disponible : parseFloat(item.cantidad))}
                               step="0.01"
                               disabled={!item.seleccionado}
-                              onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_dev: e.target.value} : it))}
+                              onChange={e => {
+                                let val = e.target.value
+                                if (!item.manual && val !== '') {
+                                  const maxCant = item.disponible !== undefined ? item.disponible : parseFloat(item.cantidad)
+                                  if (parseFloat(val) > maxCant) {
+                                    alert(`⚠️ No puede devolver más de ${maxCant.toFixed(0)} (disponible: original ${parseFloat(item.cantidad).toFixed(0)} menos lo devuelto en devoluciones anteriores)`)
+                                    val = String(maxCant)
+                                  }
+                                }
+                                setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, cantidad_dev: val} : it))
+                              }}
                               className="border rounded px-2 py-1 text-sm w-20 text-right disabled:bg-gray-100" />
                           </td>
              <td className="px-3 py-2 text-right">
