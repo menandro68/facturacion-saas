@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const API = axios.create({
-  baseURL: ''
+  baseURL: window.Capacitor ? 'https://facturacion-saas-production.up.railway.app' : ''
 })
 
 // Interceptor de request: agregar token JWT
