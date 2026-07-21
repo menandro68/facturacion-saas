@@ -4,6 +4,10 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 export default function OrdenCompra({ onInventarioUpdate }) {
+  // Feature Flag por tenant: responsive (solo empresas con features.responsive = true)
+  const usuarioSesionOC = (() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } })()
+  const esResponsiveOC = usuarioSesionOC?.features?.responsive === true
+  const [posLineaAbiertaOC, setPosLineaAbiertaOC] = useState(true)
   const [ordenes, setOrdenes] = useState([])
   const [busquedaOC, setBusquedaOC] = useState('')
   const [ocDesde, setOcDesde] = useState('')
@@ -86,6 +90,7 @@ const handleItemChange = async (idx, field, value) => {
       setShowForm(false)
       setForm({ supplier_id: '', fecha_entrega: '', fecha_vencimiento_pago: '', notas: '' })
       setItems([{ product_id: '', descripcion: '', cantidad: '', precio_unitario: '' }])
+      setPosLineaAbiertaOC(true)
       fetchData()
     } catch (err) {
       setError(err.response?.data?.mensaje || 'Error al guardar')
@@ -190,13 +195,13 @@ const handleItemChange = async (idx, field, value) => {
 
   return (
     <div>
-  <div className="flex justify-between items-center mb-4">
+ <div className={esResponsiveOC ? "flex flex-col gap-3 mb-4 sm:flex-row sm:justify-between sm:items-center" : "flex justify-between items-center mb-4"}>
         <h3 className="text-lg font-semibold text-gray-800">Órdenes de Compra</h3>
-   <div className="flex items-center gap-3">
-          <input type="date" value={ocDesde} onChange={e => setOcDesde(e.target.value)}
-            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+   <div className={esResponsiveOC ? "flex flex-wrap items-center gap-2 w-full sm:w-auto" : "flex items-center gap-3"}>
+        <input type="date" value={ocDesde} onChange={e => setOcDesde(e.target.value)}
+            className={"border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" + (esResponsiveOC ? " flex-1 min-w-[140px]" : "")} />
           <input type="date" value={ocHasta} onChange={e => setOcHasta(e.target.value)}
-            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className={"border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" + (esResponsiveOC ? " flex-1 min-w-[140px]" : "")} />
           <button onClick={() => {
             const filtradas = ordenes.filter(o => (!busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())) && (!ocDesde || new Date(o.fecha_orden || o.creado_en) >= new Date(ocDesde + 'T00:00:00')) && (!ocHasta || new Date(o.fecha_orden || o.creado_en) <= new Date(ocHasta + 'T23:59:59')))
             if (filtradas.length === 0) { alert('No hay órdenes de compra en el rango seleccionado'); return }
@@ -240,7 +245,7 @@ const handleItemChange = async (idx, field, value) => {
             const win = window.open(blobUrl)
             if (!win) alert('Por favor permite las ventanas emergentes para imprimir')
           }}
-            className="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 whitespace-nowrap">
+    className={"px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 whitespace-nowrap" + (esResponsiveOC ? " flex-1 min-w-[120px]" : "")}>
             🖨 Imprimir
           </button>
           <input
@@ -248,10 +253,10 @@ const handleItemChange = async (idx, field, value) => {
             placeholder="🔍 Buscar No. de orden..."
             value={busquedaOC}
             onChange={e => setBusquedaOC(e.target.value)}
-            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+            className={"border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" + (esResponsiveOC ? " w-full sm:w-56" : " w-56")}
           />
           <button onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+            className={"bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm" + (esResponsiveOC ? " w-full sm:w-auto" : "")}>
             + Nueva Orden
           </button>
         </div>
@@ -340,10 +345,56 @@ const handleItemChange = async (idx, field, value) => {
             </div>
           </div>
 
+          {/* Ticket POS en vivo — solo tenants con feature responsive (casa reyes) */}
+          {esResponsiveOC && (
+            <div className="pos-ticket">
+              <div className="pos-ticket-empresa">{usuarioSesionOC.empresa || ''}</div>
+              <div className="pos-ticket-cliente">
+                Proveedor: {(proveedores.find(p => String(p.id) === String(form.supplier_id))?.nombre) || '-'}
+              </div>
+              <div className="pos-ticket-divider"></div>
+              <div className="pos-ticket-cols"><span>DESCRIPCION</span><span>VALOR</span></div>
+              <div className="pos-ticket-divider"></div>
+              {items.map((it, i) => (
+                (it.descripcion || it.precio_unitario) ? (
+                  <div key={i} className="pos-ticket-linea">
+                    <div className="pos-ticket-fila">
+                      <div className="pos-ticket-desc">{it.descripcion}</div>
+                      <button type="button" className="pos-ticket-eliminar"
+                        onClick={() => {
+                          if (!confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
+                          if (items.length > 1) {
+                            eliminarItem(i)
+                          } else {
+                            setItems([{ product_id: '', descripcion: '', cantidad: '', precio_unitario: '' }])
+                            setPosLineaAbiertaOC(true)
+                          }
+                        }}>✕</button>
+                    </div>
+                    <div className="pos-ticket-detalle">
+                      <span>
+                        <input type="number" min="0.01" step="any" value={it.cantidad}
+                          onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
+                          className="pos-ticket-cantidad" />
+                        {' x '}{parseFloat(it.precio_unitario || 0).toFixed(2)}
+                      </span>
+                      <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                ) : null
+              ))}
+              {items.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
+                <div className="pos-ticket-vacio">Agregue productos abajo</div>
+              )}
+              <div className="pos-ticket-divider"></div>
+              <div className="pos-ticket-total"><span>TOTAL ORDEN</span><span>RD${totalOrden.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+            </div>
+          )}
+
           <h5 className="font-medium text-gray-700 mb-2">Productos</h5>
-          <div className="space-y-2 mb-4">
-            {items.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+          <div className={esResponsiveOC && !posLineaAbiertaOC ? "space-y-2 mb-4 pos-entrada-cerrada" : "space-y-2 mb-4"}>
+      {items.map((item, idx) => (
+              <div key={idx} className={`grid grid-cols-12 gap-2 items-center ${esResponsiveOC && idx !== items.length - 1 ? 'pos-item-anterior' : ''}`}>
         <div className="col-span-3 relative">
                   <input
                     id={`oc-prod-input-${idx}`}
@@ -400,13 +451,13 @@ const handleItemChange = async (idx, field, value) => {
                   />
                   <div id={`oc-prod-list-${idx}`} className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
                 </div>
-                <div className="col-span-4">
+               <div className="col-span-4">
                   <input id={`oc-prod-desc-${idx}`} value={item.descripcion} onChange={e => handleItemChange(idx, 'descripcion', e.target.value)}
                     placeholder="Descripción"
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`oc-prod-cant-${idx}`)?.focus() } }}
                     className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
-                <div className="col-span-2">
+              <div className="col-span-2">
                   <input type="number" id={`oc-prod-cant-${idx}`} value={item.cantidad} onChange={e => handleItemChange(idx, 'cantidad', e.target.value)}
                     placeholder="Cant."
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`oc-prod-precio-${idx}`)?.focus() } }}
@@ -423,10 +474,23 @@ const handleItemChange = async (idx, field, value) => {
                 </div>
               </div>
             ))}
+      
           </div>
 
+          {esResponsiveOC && (
+            <button type="button" className="pos-btn-agregar"
+              onClick={() => {
+                const nuevoIdx = items.length
+                agregarItem()
+                setPosLineaAbiertaOC(true)
+                setTimeout(() => document.getElementById(`oc-prod-input-${nuevoIdx}`)?.focus(), 100)
+              }}>
+              + Agregar línea
+            </button>
+          )}
+
           <div className="flex justify-between items-center mb-4">
-            <button onClick={agregarItem} className="text-blue-600 hover:underline text-sm">+ Agregar línea</button>
+            <button onClick={agregarItem} className={"text-blue-600 hover:underline text-sm" + (esResponsiveOC ? " oc-agregar-original" : "")}>+ Agregar línea</button>
             <p className="font-semibold text-gray-800">Total: RD${totalOrden.toLocaleString('es-DO', {minimumFractionDigits: 2})}</p>
           </div>
 
@@ -437,7 +501,7 @@ const handleItemChange = async (idx, field, value) => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className={"bg-white rounded-lg shadow " + (esResponsiveOC ? "overflow-x-auto" : "overflow-hidden")}>
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>

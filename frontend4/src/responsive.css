@@ -399,3 +399,82 @@ body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"
 
 /* ---------- ESCRITORIO (1024px en adelante) ---------- */
 /* Sin cambios: en pantalla grande la app se ve igual que siempre */
+
+/* ============================================================
+   ORDEN DE COMPRA — línea de productos como tarjeta (solo móvil)
+   Apunta únicamente a las filas de Nueva Orden de Compra
+   usando los ids oc-prod-input-N (no toca facturas ni editar)
+   ============================================================ */
+@media (max-width: 767px) {
+
+  /* La fila del producto se convierte en tarjeta */
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 0.875rem;
+    margin-bottom: 0.875rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Buscar y Descripción ocupan el ancho completo de la tarjeta */
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(1),
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(2) {
+    grid-column: span 2;
+  }
+
+  /* Etiquetas modernas sobre cada campo */
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div::before {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+  }
+
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(1)::before { content: "Artículo"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(2)::before { content: "Descripción"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(3)::before { content: "Cantidad"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(4)::before { content: "Precio"; }
+
+  /* Botón eliminar (×) sin etiqueta, a la derecha */
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(5)::before {
+    content: "";
+    margin: 0;
+  }
+
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(5) {
+    grid-column: span 2;
+  }
+
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(5) button {
+    min-height: 36px;
+    padding: 0 1rem;
+    border: 1px solid #fecaca;
+    border-radius: 0.5rem;
+    background: #fef2f2;
+  }
+
+  /* Campos dentro de la tarjeta más cómodos al tacto */
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) input {
+    min-height: 44px;
+    border-radius: 0.5rem;
+    font-size: 16px;
+  }
+}
+/* ============================================================
+   ORDEN DE COMPRA - flujo POS (solo movil, casa reyes)
+   Ocultar el "+ Agregar linea" original:
+   el flujo POS usa su boton azul y el TOTAL vive en el ticket
+   ============================================================ */
+@media (max-width: 767px) {
+
+  body.tenant-responsive .oc-agregar-original {
+    display: none;
+  }
+}
