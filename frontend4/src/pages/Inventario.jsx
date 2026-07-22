@@ -8,6 +8,9 @@ export default function Inventario({ modulos_permitidos = null }) {
   const [inventario, setInventario] = useState([])
   const [alertas, setAlertas] = useState([])
   const [productos, setProductos] = useState([])
+  const [productosTodos, setProductosTodos] = useState([])
+  const [consultaBusqueda, setConsultaBusqueda] = useState('')
+  const [consultaIdx, setConsultaIdx] = useState(-1)
   const [movimientos, setMovimientos] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('inventario')
@@ -35,6 +38,7 @@ export default function Inventario({ modulos_permitidos = null }) {
       ])
       setInventario(inv.data.data)
       setAlertas(alt.data.data)
+      setProductosTodos(prod.data.data)
       const conInventario = inv.data.data.map(i => i.product_id)
       setProductos(prod.data.data.filter(p => !conInventario.includes(p.id)))
     } catch (err) {
@@ -127,7 +131,7 @@ export default function Inventario({ modulos_permitidos = null }) {
             <p>Fecha: ${new Date().toLocaleDateString('es-DO')} — ${prods.length} producto(s)</p>
             <table>
               <thead><tr><th>Producto</th><th>Código</th><th style="text-align:right">Precio</th></tr></thead>
-              <tbody>${filas}</tbody>
+            <tbody>${filas}</tbody>
             </table>
             <script>window.onload=()=>window.print()</script>
             </body></html>`)
@@ -147,6 +151,7 @@ export default function Inventario({ modulos_permitidos = null }) {
           { id: 'stock_minimo', label: 'Stock Mínimo' },
           { id: 'orden_compra', label: 'Crear Orden de Compra' },
           { id: 'mov_producto', label: 'Movimiento de Producto' },
+          { id: 'consulta', label: '🔍 Consulta de Artículos' },
         ].filter(t => !modulos_permitidos || modulos_permitidos.includes(`inventario:${t.id}`)).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -165,6 +170,101 @@ export default function Inventario({ modulos_permitidos = null }) {
 
       {tab === 'valor' && <ValorInventario />}
       {tab === 'stock_minimo' && <StockMinimo />}
+
+      {tab === 'consulta' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">🔍 Consulta de Artículos</h3>
+          {(() => {
+            const q = consultaBusqueda.trim().toLowerCase()
+            const resultados = q
+              ? productosTodos.filter(p =>
+                  (p.nombre || '').toLowerCase().includes(q) ||
+                  (p.codigo || '').toLowerCase().includes(q)
+                )
+              : []
+            return (
+              <>
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    value={consultaBusqueda}
+                    onChange={e => { setConsultaBusqueda(e.target.value); setConsultaIdx(-1) }}
+                    onKeyDown={e => {
+                      if (resultados.length === 0) return
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        setConsultaIdx(prev => (prev + 1) % resultados.length)
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        setConsultaIdx(prev => prev <= 0 ? resultados.length - 1 : prev - 1)
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        const idx = consultaIdx >= 0 ? consultaIdx : 0
+                        const sel = resultados[idx]
+                        if (sel) {
+                          setConsultaBusqueda(sel.nombre)
+                          setConsultaIdx(-1)
+                        }
+                      }
+                    }}
+                    placeholder="🔍 Buscar por nombre o código del artículo..."
+                    autoFocus
+                    autoComplete="off"
+                    className="w-full md:w-96 border rounded px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                {!q ? (
+                  <p className="text-gray-400 text-sm py-8 text-center">Escribe el nombre o código de un artículo para consultar su existencia, costo, precio de venta y suplidor</p>
+                ) : resultados.length === 0 ? (
+                  <p className="text-gray-400 text-sm py-8 text-center">No se encontraron artículos con "{consultaBusqueda}"</p>
+                ) : (
+                  <div className="bg-white rounded-lg border overflow-x-auto">
+                    <div className="bg-gray-50 px-4 py-2 border-b text-sm text-gray-600 font-medium">
+                      {resultados.length} artículo(s) encontrado(s)
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-gray-600">Artículo</th>
+                          <th className="px-4 py-3 text-left text-gray-600">Código</th>
+                          <th className="px-4 py-3 text-right text-gray-600">Existencia</th>
+                          <th className="px-4 py-3 text-right text-gray-600">Costo</th>
+                          <th className="px-4 py-3 text-right text-gray-600">Precio Venta</th>
+                          <th className="px-4 py-3 text-left text-gray-600">Suplidor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {resultados.map((p, idx) => {
+                          const stock = parseFloat(p.stock_actual || 0)
+                          return (
+                            <tr key={p.id}
+                              ref={idx === consultaIdx ? (el => el && el.scrollIntoView({ block: 'nearest' })) : null}
+                              onClick={() => { setConsultaBusqueda(p.nombre); setConsultaIdx(-1) }}
+                              className={`border-t cursor-pointer ${idx === consultaIdx ? 'bg-blue-100' : 'hover:bg-blue-50'}`}>
+                              <td className="px-4 py-3 font-medium text-gray-800">{p.nombre}</td>
+                              <td className="px-4 py-3 text-gray-500">{p.codigo || '-'}</td>
+                              <td className={`px-4 py-3 text-right font-bold ${stock <= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {stock.toLocaleString('es-DO', { minimumFractionDigits: 2 })} {p.unidad || 'unidad'}
+                              </td>
+                              <td className="px-4 py-3 text-right text-gray-700">
+                                RD${parseFloat(p.costo || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="px-4 py-3 text-right font-semibold text-blue-700">
+                                RD${parseFloat(p.precio || 0).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="px-4 py-3 text-gray-700">{p.suplidor || '-'}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+        </div>
+      )}
 
       {tab === 'mov_producto' && (
         <div className="bg-white rounded-lg shadow p-6">
