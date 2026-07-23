@@ -15,6 +15,7 @@ import CuentasPagar from './pages/CuentasPagar'
 import Mantenimiento from './pages/Mantenimiento'
 import SuperAdmin from './pages/SuperAdmin'
 import SelectorEmpresas from './pages/SelectorEmpresas'
+import POS from './pages/POS'
 
 function App() {
   // Detectar si la URL es /super-admin para mostrar el panel super-admin
@@ -108,6 +109,7 @@ const handleEntrarEmpresa = (user) => {
     { id: 'clientes', label: '👥 Clientes', modulo: 'clientes' },
     { id: 'productos', label: '📦 Articulos', modulo: 'productos' },
     { id: 'facturas', label: '🧾 Facturas', modulo: 'facturas' },
+    { id: 'pos', label: '🛒 Punto de Venta', modulo: 'facturas' },
     { id: 'conduces', label: '🚚 Conduce', modulo: 'conduces' },
     { id: 'pagos', label: '💰 Pagos', modulo: 'pagos' },
     { id: 'reportes', label: '📈 Reportes', modulo: 'reportes' },
@@ -256,6 +258,7 @@ const handleEntrarEmpresa = (user) => {
                 {pagina === 'clientes' && !esVendedor && puedeVer('clientes') && <Clientes />}
                 {pagina === 'productos' && !esVendedor && puedeVer('productos') && <Productos />}
                 {pagina === 'facturas' && (esVendedor || puedeVer('facturas')) && <Facturas vendedor_id={esVendedor ? usuario.id : null} modulos_permitidos={esOperador ? permitidos : null} />}
+                {pagina === 'pos' && !esVendedor && puedeVer('facturas') && <POS />}
                 {pagina === 'conduces' && !esVendedor && puedeVer('conduces') && <Conduces />}
                 {pagina === 'pagos' && (esVendedor || puedeVer('pagos')) && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
                 {pagina === 'reportes' && (esVendedor || puedeVer('reportes')) && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
