@@ -3,7 +3,7 @@ import API from '../services/api'
 
 // ============ HELPERS DE INDEXEDDB (MODO OFFLINE) ============
 const DB_NAME = 'pos_offline_db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 const abrirDB = () => {
   return new Promise((resolve, reject) => {
@@ -16,32 +16,34 @@ const abrirDB = () => {
       if (!db.objectStoreNames.contains('ventas_pendientes')) {
         db.createObjectStore('ventas_pendientes', { keyPath: 'local_id', autoIncrement: true })
       }
+      if (!db.objectStoreNames.contains('clientes_cache')) {
+        db.createObjectStore('clientes_cache', { keyPath: 'id' })
+      }
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error)
   })
 }
 
-const guardarProductosCache = async (productos) => {
+const guardarCache = async (storeName, datos) => {
   try {
     const db = await abrirDB()
-    const tx = db.transaction('productos_cache', 'readwrite')
-    const store = tx.objectStore('productos_cache')
+    const tx = db.transaction(storeName, 'readwrite')
+    const store = tx.objectStore(storeName)
     store.clear()
-    for (const p of productos) store.put(p)
+    for (const d of datos) store.put(d)
     await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error) })
     db.close()
   } catch (e) {
-    console.error('Error guardando cache de productos:', e)
+    console.error(`Error guardando cache ${storeName}:`, e)
   }
 }
 
-const leerProductosCache = async () => {
+const leerCache = async (storeName) => {
   try {
     const db = await abrirDB()
-    const tx = db.transaction('productos_cache', 'readonly')
-    const store = tx.objectStore('productos_cache')
-    const req = store.getAll()
+    const tx = db.transaction(storeName, 'readonly')
+    const req = tx.objectStore(storeName).getAll()
     const data = await new Promise((res, rej) => {
       req.onsuccess = () => res(req.result || [])
       req.onerror = () => rej(req.error)
@@ -49,7 +51,7 @@ const leerProductosCache = async () => {
     db.close()
     return data
   } catch (e) {
-    console.error('Error leyendo cache de productos:', e)
+    console.error(`Error leyendo cache ${storeName}:`, e)
     return []
   }
 }
@@ -96,6 +98,15 @@ function POS() {
   const [ticket, setTicket] = useState([])
   const [cargando, setCargando] = useState(true)
 
+  // Estados de clientes
+  const [clientes, setClientes] = useState([])
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
+  const [mostrarBuscarCliente, setMostrarBuscarCliente] = useState(false)
+  const [busquedaCliente, setBusquedaCliente] = useState('')
+  const [consultandoDgii, setConsultandoDgii] = useState(false)
+  const [resultadoDgii, setResultadoDgii] = useState(null)
+  const [errorDgii, setErrorDgii] = useState('')
+
   // Estados de caja
   const [caja, setCaja] = useState(null)
   const [cargandoCaja, setCargandoCaja] = useState(true)
@@ -114,6 +125,16 @@ function POS() {
   const [errorCobro, setErrorCobro] = useState('')
   const [ventaExitosa, setVentaExitosa] = useState(null)
 
+  // Estados de descuento
+  const [mostrarDescuento, setMostrarDescuento] = useState(false)
+  const [descuentoLineaId, setDescuentoLineaId] = useState(null)
+  const [descuentoTipo, setDescuentoTipo] = useState('porcentaje')
+  const [descuentoValor, setDescuentoValor] = useState('')
+  const [descuentoAutorizado, setDescuentoAutorizado] = useState(false)
+  const [claveDesc, setClaveDesc] = useState('')
+  const [errorDesc, setErrorDesc] = useState('')
+  const [procesandoDesc, setProcesandoDesc] = useState(false)
+
   // Estados de modo offline
   const [enLinea, setEnLinea] = useState(navigator.onLine)
   const [pendientes, setPendientes] = useState(0)
@@ -122,9 +143,15 @@ function POS() {
   const inputRef = useRef(null)
   const montoRef = useRef(null)
   const aperturaRef = useRef(null)
+  const clienteRef = useRef(null)
+  const descValorRef = useRef(null)
   const sincronizandoRef = useRef(false)
 
   const usuario = JSON.parse(sessionStorage.getItem('usuario') || '{}')
+
+  // NCF según cliente: con RNC → B01, sin cliente o sin RNC → B02
+  const tieneRnc = clienteSeleccionado && clienteSeleccionado.rnc_cedula && String(clienteSeleccionado.rnc_cedula).trim() !== ''
+  const ncfTipo = tieneRnc ? 'B01' : 'B02'
 
   // Reloj en vivo
   useEffect(() => {
@@ -162,7 +189,6 @@ function POS() {
           await eliminarVentaPendiente(v.local_id)
           setPendientes(prev => Math.max(0, prev - 1))
         } catch (err) {
-          // Si es error de red, parar (seguimos offline). Si es error del servidor, también paramos para no perder datos.
           console.error('Error sincronizando venta pendiente:', err)
           break
         }
@@ -203,16 +229,33 @@ function POS() {
         const res = await API.get('/products')
         const lista = res.data.data || []
         setProductos(lista)
-        guardarProductosCache(lista)
+        guardarCache('productos_cache', lista)
       } catch (err) {
         console.error('Error cargando productos, usando cache:', err)
-        const cache = await leerProductosCache()
+        const cache = await leerCache('productos_cache')
         setProductos(cache)
       } finally {
         setCargando(false)
       }
     }
     cargarProductos()
+  }, [])
+
+  // Cargar clientes al iniciar (con cache offline)
+  useEffect(() => {
+    const cargarClientes = async () => {
+      try {
+        const res = await API.get('/customers')
+        const lista = res.data.data || []
+        setClientes(lista)
+        guardarCache('clientes_cache', lista)
+      } catch (err) {
+        console.error('Error cargando clientes, usando cache:', err)
+        const cache = await leerCache('clientes_cache')
+        setClientes(cache)
+      }
+    }
+    cargarClientes()
   }, [])
 
   // Foco en apertura de caja
@@ -222,34 +265,56 @@ function POS() {
 
   // Foco permanente en la búsqueda
   useEffect(() => {
-    if (caja && !cargando && !mostrarCobro && !ventaExitosa && !mostrarCierre && inputRef.current) {
+    if (caja && !cargando && !mostrarCobro && !ventaExitosa && !mostrarCierre && !mostrarDescuento && inputRef.current) {
       inputRef.current.focus()
     }
-  }, [caja, cargando, mostrarCobro, ventaExitosa, mostrarCierre])
+  }, [caja, cargando, mostrarCobro, ventaExitosa, mostrarCierre, mostrarDescuento])
 
-  // Foco en el monto al abrir cobro
+  // Foco en el monto al abrir cobro (si no está buscando cliente)
   useEffect(() => {
-    if (mostrarCobro && montoRef.current) montoRef.current.focus()
-  }, [mostrarCobro])
+    if (mostrarCobro && !mostrarBuscarCliente && montoRef.current) montoRef.current.focus()
+  }, [mostrarCobro, mostrarBuscarCliente])
 
-  // TECLA F1 = COBRAR (global en el POS)
+  // Foco en búsqueda de cliente
   useEffect(() => {
-    const manejarF1 = (e) => {
+    if (mostrarBuscarCliente && clienteRef.current) clienteRef.current.focus()
+  }, [mostrarBuscarCliente])
+
+  // Foco en valor de descuento
+  useEffect(() => {
+    if (mostrarDescuento && descValorRef.current) descValorRef.current.focus()
+  }, [mostrarDescuento])
+
+// TECLAS F1 = COBRAR / F2 = DESCUENTO (globales en el POS)
+  useEffect(() => {
+    const manejarTeclasGlobales = (e) => {
+      const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento
       if (e.key === 'F1') {
         e.preventDefault()
-        if (caja && !mostrarCobro && !ventaExitosa && !mostrarCierre && ticket.length > 0) {
+        if (caja && !modalAbierto && ticket.length > 0) {
           setFormaPago('efectivo')
           setMontoRecibido('')
           setErrorCobro('')
           setMostrarCobro(true)
         }
+} else if (e.key === 'F2') {
+        e.preventDefault()
+        if (caja && !modalAbierto && ticket.length > 0) {
+          abrirDescuentoGlobal()
+        }
+      } else if (e.key === 'F3') {
+        e.preventDefault()
+        if (caja && !modalAbierto) {
+          abrirCierre()
+        }
       }
     }
-    window.addEventListener('keydown', manejarF1)
-    return () => window.removeEventListener('keydown', manejarF1)
-  }, [caja, mostrarCobro, ventaExitosa, mostrarCierre, ticket])
+    window.addEventListener('keydown', manejarTeclasGlobales)
+    return () => window.removeEventListener('keydown', manejarTeclasGlobales)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caja, mostrarCobro, ventaExitosa, mostrarCierre, mostrarDescuento, ticket])
 
-  // Buscar mientras escribe
+  // Buscar productos mientras escribe
   useEffect(() => {
     const texto = busqueda.trim().toLowerCase()
     if (!texto) {
@@ -264,6 +329,194 @@ function POS() {
     setResultados(encontrados)
     setSeleccionado(0)
   }, [busqueda, productos])
+
+  // Clientes filtrados por búsqueda (nombre o RNC)
+  const clientesFiltrados = busquedaCliente.trim()
+    ? clientes.filter(c => {
+        const texto = busquedaCliente.trim().toLowerCase()
+        return (
+          (c.nombre && c.nombre.toLowerCase().includes(texto)) ||
+          (c.rnc_cedula && String(c.rnc_cedula).toLowerCase().includes(texto))
+        )
+      }).slice(0, 8)
+    : []
+
+  // Seleccionar cliente
+  const seleccionarCliente = (cliente) => {
+    setClienteSeleccionado(cliente)
+    setMostrarBuscarCliente(false)
+    setBusquedaCliente('')
+  }
+
+  // Quitar cliente (volver a CONSUMIDOR FINAL)
+  const quitarCliente = () => {
+    setClienteSeleccionado(null)
+    setMostrarBuscarCliente(false)
+    setBusquedaCliente('')
+    setResultadoDgii(null)
+    setErrorDgii('')
+  }
+
+  // ¿Lo escrito parece un RNC (9) o cédula (11)?
+  const soloDigitos = busquedaCliente.replace(/\D/g, '')
+  const pareceRnc = soloDigitos.length === 9 || soloDigitos.length === 11
+
+  // Consultar RNC en la DGII
+  const consultarDgii = async () => {
+    if (consultandoDgii || !pareceRnc) return
+    setConsultandoDgii(true)
+    setErrorDgii('')
+    setResultadoDgii(null)
+    try {
+      const res = await API.get(`/pos/consulta-rnc/${soloDigitos}`)
+      if (res.data.data) {
+        setResultadoDgii(res.data.data)
+      } else {
+        setErrorDgii('RNC no encontrado en la DGII')
+      }
+    } catch (err) {
+      console.error('Error consultando DGII:', err)
+      setErrorDgii(err.response?.data?.mensaje || 'No se pudo consultar la DGII')
+    } finally {
+      setConsultandoDgii(false)
+    }
+  }
+
+  // Usar el resultado de la DGII: crear cliente automáticamente y seleccionarlo
+  const usarClienteDgii = async () => {
+    if (!resultadoDgii || consultandoDgii) return
+    setConsultandoDgii(true)
+    setErrorDgii('')
+    try {
+      const res = await API.post('/customers', {
+        nombre: resultadoDgii.nombre || resultadoDgii.nombre_comercial || `RNC ${resultadoDgii.rnc}`,
+        rnc_cedula: resultadoDgii.rnc,
+        tipo: 'empresa'
+      })
+      const nuevo = res.data.data || res.data
+      setClientes(prev => [...prev, nuevo])
+      seleccionarCliente(nuevo)
+      setResultadoDgii(null)
+    } catch (err) {
+      console.error('Error creando cliente desde DGII:', err)
+      const existente = clientes.find(c => String(c.rnc_cedula || '').replace(/\D/g, '') === String(resultadoDgii.rnc).replace(/\D/g, ''))
+      if (existente) {
+        seleccionarCliente(existente)
+        setResultadoDgii(null)
+      } else {
+        setErrorDesc('')
+        setErrorDgii(err.response?.data?.mensaje || 'No se pudo registrar el cliente')
+      }
+    } finally {
+      setConsultandoDgii(false)
+    }
+  }
+
+  // ============ DESCUENTOS ============
+
+  // Abrir modal de descuento para UNA línea
+  const abrirDescuentoLinea = (id) => {
+    setDescuentoLineaId(id)
+    setDescuentoTipo('porcentaje')
+    setDescuentoValor('')
+    setClaveDesc('')
+    setErrorDesc('')
+    setMostrarDescuento(true)
+  }
+
+  // Abrir modal de descuento GLOBAL (todo el ticket)
+  const abrirDescuentoGlobal = () => {
+    if (ticket.length === 0) return
+    setDescuentoLineaId(null)
+    setDescuentoTipo('porcentaje')
+    setDescuentoValor('')
+    setClaveDesc('')
+    setErrorDesc('')
+    setMostrarDescuento(true)
+  }
+
+  // Quitar descuento de una línea (restaurar precio original, sin clave)
+  const quitarDescuentoLinea = (id) => {
+    setTicket(prev => prev.map(l => l.id === id ? { ...l, precio: l.precio_original } : l))
+    if (inputRef.current) inputRef.current.focus()
+  }
+
+  // Aplicar descuento (valida clave si aún no está autorizado)
+  const aplicarDescuento = async () => {
+    if (procesandoDesc) return
+    const valor = parseFloat(descuentoValor)
+    if (isNaN(valor) || valor <= 0) {
+      setErrorDesc('Ingrese un valor válido mayor que 0')
+      return
+    }
+    if (descuentoTipo === 'porcentaje' && valor >= 100) {
+      setErrorDesc('El porcentaje debe ser menor que 100')
+      return
+    }
+
+    // Validar clave (solo la primera vez por ticket)
+    if (!descuentoAutorizado) {
+      if (!claveDesc.trim()) {
+        setErrorDesc('Ingrese la clave de autorización')
+        return
+      }
+      setProcesandoDesc(true)
+      setErrorDesc('')
+      try {
+        const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveDesc })
+        if (!res.data.success) {
+          setErrorDesc('Clave incorrecta')
+          setProcesandoDesc(false)
+          return
+        }
+        setDescuentoAutorizado(true)
+      } catch (err) {
+        setErrorDesc(err.response?.data?.mensaje || 'Clave incorrecta')
+        setProcesandoDesc(false)
+        return
+      }
+      setProcesandoDesc(false)
+    }
+
+    // Aplicar el descuento (siempre sobre el precio ORIGINAL, no se acumula)
+    if (descuentoLineaId) {
+      // Descuento a UNA línea
+      const linea = ticket.find(l => l.id === descuentoLineaId)
+      if (!linea) { setMostrarDescuento(false); return }
+      let nuevoPrecio
+      if (descuentoTipo === 'porcentaje') {
+        nuevoPrecio = linea.precio_original * (1 - valor / 100)
+      } else {
+        // Monto RD$ sobre el total de la línea → se reparte por cantidad
+        const totalLineaOriginal = linea.precio_original * linea.cantidad
+        if (valor >= totalLineaOriginal) {
+          setErrorDesc(`El descuento no puede ser mayor o igual al total de la línea (RD$ ${totalLineaOriginal.toFixed(2)})`)
+          return
+        }
+        nuevoPrecio = (totalLineaOriginal - valor) / linea.cantidad
+      }
+      setTicket(prev => prev.map(l => l.id === descuentoLineaId ? { ...l, precio: nuevoPrecio } : l))
+    } else {
+      // Descuento GLOBAL: se prorratea entre todas las líneas
+      const totalOriginal = ticket.reduce((acc, l) => acc + l.precio_original * l.cantidad, 0)
+      let factor
+      if (descuentoTipo === 'porcentaje') {
+        factor = 1 - valor / 100
+      } else {
+        if (valor >= totalOriginal) {
+          setErrorDesc(`El descuento no puede ser mayor o igual al total (RD$ ${totalOriginal.toFixed(2)})`)
+          return
+        }
+        factor = 1 - valor / totalOriginal
+      }
+      setTicket(prev => prev.map(l => ({ ...l, precio: l.precio_original * factor })))
+    }
+
+    setMostrarDescuento(false)
+    setDescuentoValor('')
+    setClaveDesc('')
+    if (inputRef.current) inputRef.current.focus()
+  }
 
   // Abrir caja
   const abrirCaja = async () => {
@@ -315,6 +568,7 @@ function POS() {
       setMostrarCierre(false)
       setCaja(null)
       setTicket([])
+      setDescuentoAutorizado(false)
     } catch (err) {
       console.error('Error cerrando caja:', err)
     } finally {
@@ -336,6 +590,7 @@ function POS() {
         nombre: producto.nombre,
         codigo: producto.codigo,
         precio: parseFloat(producto.precio),
+        precio_original: parseFloat(producto.precio),
         itbis_rate: parseFloat(producto.itbis_rate || 18),
         cantidad: 1
       }]
@@ -392,6 +647,8 @@ function POS() {
     return acc + lineaTotal / (1 + l.itbis_rate / 100)
   }, 0)
   const itbisGeneral = totalGeneral - baseGeneral
+  const totalOriginalTicket = ticket.reduce((acc, l) => acc + l.precio_original * l.cantidad, 0)
+  const descuentoTotalTicket = totalOriginalTicket - totalGeneral
 
   // Devuelta
   const recibido = parseFloat(montoRecibido) || 0
@@ -418,10 +675,11 @@ function POS() {
     setProcesando(true)
     setErrorCobro('')
     const etiquetaPago = formaPago === 'efectivo' ? 'Efectivo' : formaPago === 'tarjeta' ? 'Tarjeta' : 'Transferencia'
+    const notaDescuento = descuentoTotalTicket > 0.009 ? ` | Descuento: RD$ ${descuentoTotalTicket.toFixed(2)}` : ''
     const payload = {
-      customer_id: '',
-      ncf_tipo: 'B02',
-      notas: `POS - Pago: ${etiquetaPago}`,
+      customer_id: clienteSeleccionado ? clienteSeleccionado.id : '',
+      ncf_tipo: ncfTipo,
+      notas: `POS - Pago: ${etiquetaPago}${notaDescuento}`,
       fecha_vencimiento: '',
       estado: 'emitida',
       items: ticket.map(l => ({
@@ -432,6 +690,7 @@ function POS() {
         itbis_rate: l.itbis_rate
       }))
     }
+    const nombreClienteVenta = clienteSeleccionado ? clienteSeleccionado.nombre : 'CONSUMIDOR FINAL'
     try {
       const res = await API.post('/invoices', payload)
       const factura = res.data.data || res.data
@@ -440,13 +699,17 @@ function POS() {
         id: factura.id,
         ncf: factura.ncf || 'N/D',
         numero: factura.numero_factura || 'N/D',
+        cliente: nombreClienteVenta,
         total: totalGeneral,
+        descuento: descuentoTotalTicket,
         recibido: formaPago === 'efectivo' ? recibido : totalGeneral,
         devuelta: formaPago === 'efectivo' ? devuelta : 0,
         pago: etiquetaPago
       })
       setMostrarCobro(false)
       setTicket([])
+      setClienteSeleccionado(null)
+      setDescuentoAutorizado(false)
     } catch (err) {
       // Error de RED (sin conexión) → guardar venta offline
       if (!err.response) {
@@ -458,19 +721,22 @@ function POS() {
             id: null,
             ncf: 'PENDIENTE',
             numero: 'PENDIENTE',
+            cliente: nombreClienteVenta,
             total: totalGeneral,
+            descuento: descuentoTotalTicket,
             recibido: formaPago === 'efectivo' ? recibido : totalGeneral,
             devuelta: formaPago === 'efectivo' ? devuelta : 0,
             pago: etiquetaPago
           })
           setMostrarCobro(false)
           setTicket([])
+          setClienteSeleccionado(null)
+          setDescuentoAutorizado(false)
         } catch (e2) {
           console.error('Error guardando venta offline:', e2)
           setErrorCobro('Sin conexión y no se pudo guardar localmente. Intente de nuevo.')
         }
       } else {
-        // Error del SERVIDOR (validación, etc.) → mostrar error, NO guardar offline
         console.error('Error creando factura:', err)
         setErrorCobro(err.response?.data?.mensaje || 'Error al crear la factura. Intente de nuevo.')
       }
@@ -486,13 +752,30 @@ function POS() {
     if (inputRef.current) inputRef.current.focus()
   }
 
-  // Enter en el modal de cobro
+  // Enter en el modal de cobro (solo si no está en búsqueda de cliente)
   const teclasCobro = (e) => {
+    if (mostrarBuscarCliente) {
+      if (e.key === 'Escape') {
+        setMostrarBuscarCliente(false)
+        setBusquedaCliente('')
+      }
+      return
+    }
     if (e.key === 'Enter') {
       e.preventDefault()
       confirmarCobro()
     } else if (e.key === 'Escape') {
       setMostrarCobro(false)
+    }
+  }
+
+  // Teclas en el modal de descuento
+  const teclasDescuento = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      aplicarDescuento()
+    } else if (e.key === 'Escape') {
+      setMostrarDescuento(false)
     }
   }
 
@@ -677,11 +960,11 @@ function POS() {
               })}
             </p>
           </div>
-          <button
+     <button
             onClick={abrirCierre}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold text-sm"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm"
           >
-            🔒 CERRAR CAJA
+            🔒 CERRAR CAJA (F3)
           </button>
         </div>
       </div>
@@ -744,6 +1027,28 @@ function POS() {
             <p className="text-xs">{ticket.length} línea(s)</p>
           </div>
 
+          {/* CLIENTE DEL TICKET */}
+          <div className={`px-3 py-2 border-b text-xs flex justify-between items-center ${tieneRnc ? 'bg-blue-50' : 'bg-gray-50'}`}>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-700 truncate">
+                👤 {clienteSeleccionado ? clienteSeleccionado.nombre : 'CONSUMIDOR FINAL'}
+              </p>
+              <p className={`font-bold ${tieneRnc ? 'text-blue-600' : 'text-gray-400'}`}>
+                NCF: {ncfTipo} {tieneRnc ? '(Crédito Fiscal)' : '(Consumo)'}
+                {tieneRnc && ` | RNC: ${clienteSeleccionado.rnc_cedula}`}
+              </p>
+            </div>
+            {clienteSeleccionado && (
+              <button
+                onClick={quitarCliente}
+                className="text-red-500 hover:text-red-700 font-bold ml-2 flex-shrink-0"
+                title="Volver a Consumidor Final"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {/* LÍNEAS DEL TICKET */}
           <div className="flex-1 overflow-auto p-2">
             {ticket.length === 0 ? (
@@ -754,59 +1059,103 @@ function POS() {
                 </div>
               </div>
             ) : (
-              ticket.map((l) => (
-                <div key={l.id} className="border-b py-2 px-1">
-                  <div className="flex justify-between items-start">
-                    <p className="font-semibold text-sm flex-1 pr-2">{l.nombre}</p>
-                    <button
-                      onClick={() => eliminarLinea(l.id)}
-                      className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
-                      title="Eliminar"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <div className="flex items-center gap-1">
+              ticket.map((l) => {
+                const tieneDescuento = l.precio < l.precio_original - 0.001
+                return (
+                  <div key={l.id} className={`border-b py-2 px-1 ${tieneDescuento ? 'bg-orange-50' : ''}`}>
+                    <div className="flex justify-between items-start">
+                      <p className="font-semibold text-sm flex-1 pr-2">{l.nombre}</p>
                       <button
-                        onClick={() => cambiarCantidad(l.id, l.cantidad - 1)}
-                        className="w-7 h-7 bg-gray-200 rounded font-bold hover:bg-gray-300"
+                        onClick={() => eliminarLinea(l.id)}
+                        className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
+                        title="Eliminar"
                       >
-                        −
+                        ✕
                       </button>
-                      <input
-                        type="number"
-                        value={l.cantidad}
-                        onChange={(e) => cambiarCantidad(l.id, e.target.value)}
-                        className="w-14 text-center border rounded py-1 text-sm"
-                        min="1"
-                      />
-                      <button
-                        onClick={() => cambiarCantidad(l.id, l.cantidad + 1)}
-                        className="w-7 h-7 bg-gray-200 rounded font-bold hover:bg-gray-300"
-                      >
-                        +
-                      </button>
-                      <span className="text-xs text-gray-500 ml-1">x RD$ {fmt(l.precio)}</span>
                     </div>
-                    <p className="font-bold text-sm">RD$ {fmt(l.precio * l.cantidad)}</p>
+                    <div className="flex justify-between items-center mt-1">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => cambiarCantidad(l.id, l.cantidad - 1)}
+                          className="w-7 h-7 bg-gray-200 rounded font-bold hover:bg-gray-300"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          value={l.cantidad}
+                          onChange={(e) => cambiarCantidad(l.id, e.target.value)}
+                          className="w-14 text-center border rounded py-1 text-sm"
+                          min="1"
+                        />
+                        <button
+                          onClick={() => cambiarCantidad(l.id, l.cantidad + 1)}
+                          className="w-7 h-7 bg-gray-200 rounded font-bold hover:bg-gray-300"
+                        >
+                          +
+                        </button>
+                        {tieneDescuento ? (
+                          <span className="text-xs ml-1">
+                            <span className="text-gray-400 line-through">RD$ {fmt(l.precio_original)}</span>{' '}
+                            <span className="text-orange-600 font-bold">RD$ {fmt(l.precio)}</span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-500 ml-1">x RD$ {fmt(l.precio)}</span>
+                        )}
+                      </div>
+                      <p className="font-bold text-sm">RD$ {fmt(l.precio * l.cantidad)}</p>
+                    </div>
+             
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
 
-          {/* TOTALES */}
+{/* TOTALES */}
           <div className="border-t p-4">
             <div className="flex justify-between text-sm text-gray-600">
               <span>Subtotal:</span>
               <span>RD$ {fmt(baseGeneral)}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <div className="flex justify-between text-sm text-gray-600 mb-1">
               <span>ITBIS:</span>
               <span>RD$ {fmt(itbisGeneral)}</span>
             </div>
-            <div className="flex justify-between text-xl font-bold mb-3">
+            {/* FILA DE DESCUENTO (entre ITBIS y TOTAL) */}
+            <div className="flex justify-between items-center text-sm mb-1">
+              {descuentoTotalTicket > 0.009 ? (
+                <>
+                  <span className="text-orange-600 font-bold">🏷️ Descuento:</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-orange-600 font-bold">− RD$ {fmt(descuentoTotalTicket)}</span>
+                    <button
+                      onClick={() => setTicket(prev => prev.map(l => ({ ...l, precio: l.precio_original })))}
+                      className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold hover:bg-orange-200"
+                      title="Quitar descuento"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-gray-600">🏷️ Descuento:</span>
+           <button
+                    onClick={abrirDescuentoGlobal}
+                    disabled={ticket.length === 0}
+                    className={`text-xs px-3 py-1 rounded font-bold text-white ${
+                      ticket.length > 0
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-green-600 opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    ➖ Aplicar (F2)
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="flex justify-between text-xl font-bold mb-2">
               <span>TOTAL:</span>
               <span>RD$ {fmt(totalGeneral)}</span>
             </div>
@@ -825,32 +1174,241 @@ function POS() {
         </div>
       </div>
 
-      {/* MODAL DE COBRO */}
-      {mostrarCobro && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4" onKeyDown={teclasCobro}>
-            <div className="bg-green-600 text-white px-5 py-3 rounded-t-xl flex justify-between items-center">
-              <h2 className="text-lg font-bold">💰 COBRAR</h2>
-              <button onClick={() => setMostrarCobro(false)} className="text-white text-2xl leading-none font-bold">✕</button>
+      {/* MODAL DE DESCUENTO */}
+      {mostrarDescuento && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onKeyDown={teclasDescuento}>
+            <div className="bg-orange-500 text-white px-4 py-2 rounded-t-xl flex justify-between items-center">
+              <h2 className="text-base font-bold">
+                🏷️ {descuentoLineaId ? 'DESCUENTO A LÍNEA' : 'DESCUENTO AL TICKET'}
+              </h2>
+              <button onClick={() => setMostrarDescuento(false)} className="text-white text-2xl leading-none font-bold">✕</button>
             </div>
+            <div className="p-4">
+              {descuentoLineaId && (
+                <p className="text-sm text-gray-600 font-semibold mb-2 truncate">
+                  {ticket.find(l => l.id === descuentoLineaId)?.nombre}
+                </p>
+              )}
 
-            <div className="p-5">
-              {/* AVISO OFFLINE */}
-              {!enLinea && (
-                <div className="mb-3 bg-yellow-50 border border-yellow-400 text-yellow-800 px-3 py-2 rounded-lg text-sm text-center">
-                  🔴 Sin conexión: la venta se guardará y se sincronizará automáticamente al volver el internet.
+              {/* TIPO DE DESCUENTO */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  onClick={() => { setDescuentoTipo('porcentaje'); setErrorDesc('') }}
+                  className={`py-2 rounded-lg font-bold text-sm border-2 ${
+                    descuentoTipo === 'porcentaje'
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                  }`}
+                >
+                  % Porcentaje
+                </button>
+                <button
+                  onClick={() => { setDescuentoTipo('monto'); setErrorDesc('') }}
+                  className={`py-2 rounded-lg font-bold text-sm border-2 ${
+                    descuentoTipo === 'monto'
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
+                  }`}
+                >
+                  RD$ Monto
+                </button>
+              </div>
+
+              {/* VALOR */}
+              <label className="block text-sm font-semibold text-gray-600 mb-1">
+                {descuentoTipo === 'porcentaje' ? 'Porcentaje de descuento (%):' : 'Monto de descuento (RD$):'}
+              </label>
+              <input
+                ref={descValorRef}
+                type="number"
+                value={descuentoValor}
+                onChange={(e) => { setDescuentoValor(e.target.value); setErrorDesc('') }}
+                placeholder={descuentoTipo === 'porcentaje' ? 'Ej: 10' : 'Ej: 50.00'}
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-xl text-right font-bold focus:outline-none focus:border-orange-500 mb-3"
+              />
+
+              {/* CLAVE (solo si aún no está autorizado en este ticket) */}
+              {!descuentoAutorizado && (
+                <div className="mb-3">
+                  <label className="block text-sm font-semibold text-gray-600 mb-1">🔑 Clave de autorización:</label>
+                  <input
+                    type="password"
+                    value={claveDesc}
+                    onChange={(e) => { setClaveDesc(e.target.value); setErrorDesc('') }}
+                    placeholder="Clave del administrador"
+                    className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              )}
+              {descuentoAutorizado && (
+                <p className="text-xs text-green-600 font-bold mb-3">✓ Descuentos autorizados para este ticket</p>
+              )}
+
+              {/* ERROR */}
+              {errorDesc && (
+                <div className="mb-3 bg-red-50 border border-red-300 text-red-700 px-3 py-1.5 rounded-lg text-sm text-center">
+                  {errorDesc}
                 </div>
               )}
 
-              {/* TOTAL A PAGAR */}
-              <div className="text-center mb-4">
-                <p className="text-sm text-gray-500">TOTAL A PAGAR</p>
-                <p className="text-4xl font-bold text-gray-800">RD$ {fmt(totalGeneral)}</p>
-                <p className="text-xs text-gray-400 mt-1">Cliente: CONSUMIDOR FINAL (B02)</p>
+              {/* BOTONES */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMostrarDescuento(false)}
+                  disabled={procesandoDesc}
+                  className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+                >
+                  Cancelar (Esc)
+                </button>
+                <button
+                  onClick={aplicarDescuento}
+                  disabled={procesandoDesc}
+                  className={`flex-1 py-2.5 rounded-lg font-bold text-white ${
+                    procesandoDesc ? 'bg-orange-300 cursor-wait' : 'bg-orange-500 hover:bg-orange-600'
+                  }`}
+                >
+                  {procesandoDesc ? 'Validando...' : '✓ APLICAR (Enter)'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE COBRO */}
+      {mostrarCobro && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[96vh] flex flex-col" onKeyDown={teclasCobro}>
+            {/* HEADER FIJO */}
+            <div className="bg-green-600 text-white px-4 py-2 rounded-t-xl flex justify-between items-center flex-shrink-0">
+              <h2 className="text-base font-bold">💰 COBRAR — RD$ {fmt(totalGeneral)}</h2>
+              <button onClick={() => setMostrarCobro(false)} className="text-white text-2xl leading-none font-bold">✕</button>
+            </div>
+
+            {/* CONTENIDO SCROLLEABLE */}
+            <div className="p-3 overflow-y-auto flex-1">
+              {/* AVISO OFFLINE */}
+              {!enLinea && (
+                <div className="mb-2 bg-yellow-50 border border-yellow-400 text-yellow-800 px-3 py-1.5 rounded-lg text-xs text-center">
+                  🔴 Sin conexión: la venta se guardará y sincronizará automáticamente.
+                </div>
+              )}
+
+              {/* DESCUENTO APLICADO */}
+              {descuentoTotalTicket > 0.009 && (
+                <div className="mb-2 bg-orange-50 border border-orange-300 text-orange-700 px-3 py-1.5 rounded-lg text-xs text-center font-bold">
+                  🏷️ Descuento aplicado: − RD$ {fmt(descuentoTotalTicket)}
+                </div>
+              )}
+
+              {/* CLIENTE Y NCF */}
+              <div className={`rounded-lg border-2 p-2.5 mb-3 ${tieneRnc ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex justify-between items-center">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-800 truncate">
+                      👤 {clienteSeleccionado ? clienteSeleccionado.nombre : 'CONSUMIDOR FINAL'}
+                    </p>
+                    <p className={`text-xs font-bold ${tieneRnc ? 'text-blue-600' : 'text-gray-400'}`}>
+                      NCF: {ncfTipo} {tieneRnc ? '(Crédito Fiscal)' : '(Consumo)'}
+                      {tieneRnc && ` | RNC: ${clienteSeleccionado.rnc_cedula}`}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0 ml-2">
+                    {clienteSeleccionado && (
+                      <button
+                        onClick={quitarCliente}
+                        className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold hover:bg-red-200"
+                        title="Volver a Consumidor Final"
+                      >
+                        ✕
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setMostrarBuscarCliente(!mostrarBuscarCliente)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700"
+                    >
+                      {mostrarBuscarCliente ? 'Cerrar' : '👤 CLIENTE'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* BÚSQUEDA DE CLIENTE */}
+                {mostrarBuscarCliente && (
+                  <div className="mt-2">
+                    <input
+                      ref={clienteRef}
+                      type="text"
+                      value={busquedaCliente}
+                      onChange={(e) => setBusquedaCliente(e.target.value)}
+                      placeholder="Buscar por nombre o RNC..."
+                      className="w-full border-2 border-blue-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-600"
+                    />
+                    {clientesFiltrados.length > 0 && (
+                      <div className="mt-1 border-2 border-blue-200 rounded-lg overflow-hidden max-h-36 overflow-y-auto bg-white">
+                        {clientesFiltrados.map(c => (
+                          <button
+                            key={c.id}
+                            onClick={() => seleccionarCliente(c)}
+                            className="w-full text-left px-3 py-1.5 border-b last:border-b-0 hover:bg-blue-50"
+                          >
+                            <p className="font-semibold text-sm text-gray-800">{c.nombre}</p>
+                            <p className="text-xs text-gray-500">
+                              {c.rnc_cedula && String(c.rnc_cedula).trim() !== ''
+                                ? `RNC/Cédula: ${c.rnc_cedula} → B01 Crédito Fiscal`
+                                : 'Sin RNC → B02 Consumo'}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {busquedaCliente.trim() !== '' && clientesFiltrados.length === 0 && !resultadoDgii && (
+                      <div className="text-center mt-2">
+                        <p className="text-xs text-gray-400 mb-1">No se encontraron clientes registrados</p>
+                        {pareceRnc && (
+                          <button
+                            onClick={consultarDgii}
+                            disabled={consultandoDgii}
+                            className={`w-full py-1.5 rounded-lg font-bold text-sm text-white ${
+                              consultandoDgii ? 'bg-purple-400 cursor-wait' : 'bg-purple-600 hover:bg-purple-700'
+                            }`}
+                          >
+                            {consultandoDgii ? '⏳ Consultando DGII...' : '🔍 CONSULTAR EN DGII'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* RESULTADO DE LA DGII */}
+                    {resultadoDgii && (
+                      <div className="mt-2 border-2 border-purple-300 bg-purple-50 rounded-lg p-2">
+                        <p className="text-xs text-purple-600 font-bold">📋 PADRÓN DGII:</p>
+                        <p className="font-bold text-sm text-gray-800">{resultadoDgii.nombre}</p>
+                        <p className="text-xs text-gray-500">
+                          RNC: {resultadoDgii.rnc} | Estado: <span className={resultadoDgii.estado === 'ACTIVO' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>{resultadoDgii.estado || 'N/D'}</span>
+                        </p>
+                        <button
+                          onClick={usarClienteDgii}
+                          disabled={consultandoDgii}
+                          className={`w-full mt-1.5 py-1.5 rounded-lg font-bold text-sm text-white ${
+                            consultandoDgii ? 'bg-green-400 cursor-wait' : 'bg-green-600 hover:bg-green-700'
+                          }`}
+                        >
+                          {consultandoDgii ? '⏳ Registrando...' : '✓ USAR ESTE CLIENTE (B01)'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ERROR DGII */}
+                    {errorDgii && (
+                      <p className="text-xs text-red-500 text-center mt-1 font-semibold">{errorDgii}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* FORMAS DE PAGO */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="grid grid-cols-3 gap-2 mb-3">
                 {[
                   { id: 'efectivo', label: '💵 Efectivo' },
                   { id: 'tarjeta', label: '💳 Tarjeta' },
@@ -859,7 +1417,7 @@ function POS() {
                   <button
                     key={fp.id}
                     onClick={() => { setFormaPago(fp.id); setErrorCobro(''); if (fp.id === 'efectivo' && montoRef.current) setTimeout(() => montoRef.current?.focus(), 50) }}
-                    className={`py-3 rounded-lg font-semibold text-sm border-2 ${
+                    className={`py-2 rounded-lg font-semibold text-sm border-2 ${
                       formaPago === fp.id
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
@@ -872,20 +1430,22 @@ function POS() {
 
               {/* MONTO RECIBIDO (solo efectivo) */}
               {formaPago === 'efectivo' && (
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold text-gray-600 mb-1">Monto recibido:</label>
-                  <input
-                    ref={montoRef}
-                    type="number"
-                    value={montoRecibido}
-                    onChange={(e) => { setMontoRecibido(e.target.value); setErrorCobro('') }}
-                    placeholder="0.00"
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-2xl text-right font-bold focus:outline-none focus:border-green-600"
-                  />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-semibold text-gray-600 flex-shrink-0">Recibido:</label>
+                    <input
+                      ref={montoRef}
+                      type="number"
+                      value={montoRecibido}
+                      onChange={(e) => { setMontoRecibido(e.target.value); setErrorCobro('') }}
+                      placeholder="0.00"
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-xl text-right font-bold focus:outline-none focus:border-green-600"
+                    />
+                  </div>
                   {/* DEVUELTA */}
-                  <div className={`mt-3 rounded-lg p-3 text-center ${devuelta >= 0 && recibido > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
-                    <p className="text-sm text-gray-500">DEVUELTA</p>
-                    <p className={`text-3xl font-bold ${devuelta >= 0 && recibido > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                  <div className={`mt-2 rounded-lg py-1.5 px-3 flex justify-between items-center ${devuelta >= 0 && recibido > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
+                    <p className="text-sm text-gray-500 font-semibold">DEVUELTA:</p>
+                    <p className={`text-2xl font-bold ${devuelta >= 0 && recibido > 0 ? 'text-green-600' : 'text-gray-400'}`}>
                       RD$ {recibido > 0 && devuelta >= 0 ? fmt(devuelta) : '0.00'}
                     </p>
                   </div>
@@ -894,30 +1454,30 @@ function POS() {
 
               {/* ERROR */}
               {errorCobro && (
-                <div className="mb-3 bg-red-50 border border-red-300 text-red-700 px-3 py-2 rounded-lg text-sm text-center">
+                <div className="mt-2 bg-red-50 border border-red-300 text-red-700 px-3 py-1.5 rounded-lg text-sm text-center">
                   {errorCobro}
                 </div>
               )}
+            </div>
 
-              {/* BOTONES */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setMostrarCobro(false)}
-                  disabled={procesando}
-                  className="flex-1 py-3 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
-                >
-                  Cancelar (Esc)
-                </button>
-                <button
-                  onClick={confirmarCobro}
-                  disabled={procesando}
-                  className={`flex-1 py-3 rounded-lg font-bold text-white ${
-                    procesando ? 'bg-green-400 cursor-wait' : 'bg-green-600 hover:bg-green-700'
-                  }`}
-                >
-                  {procesando ? 'Procesando...' : '✓ CONFIRMAR (Enter)'}
-                </button>
-              </div>
+            {/* BOTONES FIJOS ABAJO (siempre visibles) */}
+            <div className="p-3 border-t flex gap-2 flex-shrink-0 bg-white rounded-b-xl">
+              <button
+                onClick={() => setMostrarCobro(false)}
+                disabled={procesando}
+                className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+              >
+                Cancelar (Esc)
+              </button>
+              <button
+                onClick={confirmarCobro}
+                disabled={procesando}
+                className={`flex-1 py-2.5 rounded-lg font-bold text-white ${
+                  procesando ? 'bg-green-400 cursor-wait' : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {procesando ? 'Procesando...' : '✓ CONFIRMAR (Enter)'}
+              </button>
             </div>
           </div>
         </div>
@@ -938,6 +1498,10 @@ function POS() {
 
               <div className="bg-gray-50 rounded-lg p-4 mb-4 mt-3 text-left">
                 <div className="flex justify-between py-1 text-sm">
+                  <span className="text-gray-500">Cliente:</span>
+                  <span className="font-bold">{ventaExitosa.cliente}</span>
+                </div>
+                <div className="flex justify-between py-1 text-sm">
                   <span className="text-gray-500">Factura No.:</span>
                   <span className="font-bold">{ventaExitosa.numero}</span>
                 </div>
@@ -949,6 +1513,12 @@ function POS() {
                   <span className="text-gray-500">Forma de pago:</span>
                   <span className="font-bold">{ventaExitosa.pago}</span>
                 </div>
+                {ventaExitosa.descuento > 0.009 && (
+                  <div className="flex justify-between py-1 text-sm text-orange-600">
+                    <span className="font-semibold">🏷️ Descuento:</span>
+                    <span className="font-bold">− RD$ {fmt(ventaExitosa.descuento)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between py-1 text-sm border-t mt-2 pt-2">
                   <span className="text-gray-500">Total:</span>
                   <span className="font-bold">RD$ {fmt(ventaExitosa.total)}</span>
