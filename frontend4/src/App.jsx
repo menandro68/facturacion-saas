@@ -16,6 +16,7 @@ import Mantenimiento from './pages/Mantenimiento'
 import SuperAdmin from './pages/SuperAdmin'
 import SelectorEmpresas from './pages/SelectorEmpresas'
 import POS from './pages/POS'
+import OrdenCompra from './components/OrdenCompra'
 
 function App() {
   // Detectar si la URL es /super-admin para mostrar el panel super-admin
@@ -34,7 +35,7 @@ function App() {
     return sessionStorage.getItem('empresaSeleccionada') !== 'true' && !!sessionStorage.getItem('usuario')
   })
 
-  // Feature Flag: modo responsive por tenant (solo empresas con features.responsive = true)
+// Feature Flag: modo responsive por tenant (solo empresas con features.responsive = true)
   useEffect(() => {
     if (usuario?.features?.responsive === true) {
       document.body.classList.add('tenant-responsive')
@@ -42,6 +43,24 @@ function App() {
       document.body.classList.remove('tenant-responsive')
     }
   }, [usuario])
+
+  // Cargar features frescas del tenant desde el backend (sin depender de la sesión guardada)
+  useEffect(() => {
+    const token = sessionStorage.getItem('token')
+    if (!usuario || !token) return
+    fetch('/auth/features', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.features) {
+          setUsuario(prev => {
+            const actualizado = { ...prev, features: d.features }
+            sessionStorage.setItem('usuario', JSON.stringify(actualizado))
+            return actualizado
+          })
+        }
+      })
+      .catch(() => {})
+  }, [usuario?.id])
 
  const entrarAlSistema = (user) => {
     if (user.features?.responsive === true) {
@@ -109,7 +128,8 @@ const handleEntrarEmpresa = (user) => {
     { id: 'clientes', label: '👥 Clientes', modulo: 'clientes' },
     { id: 'productos', label: '📦 Articulos', modulo: 'productos' },
     { id: 'facturas', label: '🧾 Facturas', modulo: 'facturas' },
-    { id: 'pos', label: '🛒 Punto de Venta', modulo: 'facturas' },
+   ...(usuario?.features?.orden_compra_menu === true ? [{ id: 'orden_compra_menu', label: '🛍️ Factura Suplidor', modulo: 'inventario' }] : []),
+   ...(usuario?.features?.ocultar_pos === true ? [] : [{ id: 'pos', label: '🛒 Punto de Venta', modulo: 'facturas' }]),
     { id: 'conduces', label: '🚚 Conduce', modulo: 'conduces' },
     { id: 'pagos', label: '💰 Pagos', modulo: 'pagos' },
     { id: 'reportes', label: '📈 Reportes', modulo: 'reportes' },
@@ -258,6 +278,9 @@ const handleEntrarEmpresa = (user) => {
                 {pagina === 'clientes' && !esVendedor && puedeVer('clientes') && <Clientes />}
                 {pagina === 'productos' && !esVendedor && puedeVer('productos') && <Productos />}
                 {pagina === 'facturas' && (esVendedor || puedeVer('facturas')) && <Facturas vendedor_id={esVendedor ? usuario.id : null} modulos_permitidos={esOperador ? permitidos : null} />}
+                {pagina === 'orden_compra_menu' && !esVendedor && puedeVer('inventario') && usuario?.features?.orden_compra_menu === true && (
+                  <div className="p-6"><OrdenCompra onInventarioUpdate={() => {}} /></div>
+                )}
                 {pagina === 'pos' && !esVendedor && puedeVer('facturas') && <POS />}
                 {pagina === 'conduces' && !esVendedor && puedeVer('conduces') && <Conduces />}
                 {pagina === 'pagos' && (esVendedor || puedeVer('pagos')) && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
