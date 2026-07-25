@@ -114,6 +114,7 @@ export default function Mantenimiento() {
   const [vendedores, setVendedores] = useState([])
   const [zonas, setZonas] = useState([])
   const [choferes, setChoferes] = useState([])
+  const [cajeros, setCajeros] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -122,6 +123,7 @@ export default function Mantenimiento() {
   const [formVendedor, setFormVendedor] = useState({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '', usuario: '', password: '' })
   const [formZona, setFormZona] = useState({ nombre: '', descripcion: '' })
   const [formChofer, setFormChofer] = useState({ nombre: '', cedula: '', licencia: '', telefono: '', email: '', vehiculo: '', placa: '' })
+  const [formCajero, setFormCajero] = useState({ nombre: '', cedula: '', pin: '', usuario: '', password: '' })
   const [operadores, setOperadores] = useState([])
   const [formOperador, setFormOperador] = useState({ nombre: '', username: '', password: '', modulos_permitidos: [] })
   const [claveDescuento, setClaveDescuento] = useState('')
@@ -157,6 +159,7 @@ export default function Mantenimiento() {
       setZonas(z.data.data)
       setChoferes(c.data.data)
       setOperadores(o.data.data)
+      API.get('/mantenimiento/cajeros').then(r => setCajeros(r.data.data || [])).catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -254,6 +257,7 @@ const crearEmpresa = async () => {
     if (tab === 'vendedores') setFormVendedor({ nombre: '', cedula: '', email: '', telefono: '', zona_id: '', comision_pct: '', usuario: '', password: '' })
     if (tab === 'zonas') setFormZona({ nombre: '', descripcion: '' })
     if (tab === 'choferes') setFormChofer({ nombre: '', cedula: '', licencia: '', telefono: '', email: '', vehiculo: '', placa: '' })
+    if (tab === 'cajeros') setFormCajero({ nombre: '', cedula: '', pin: '', usuario: '', password: '' })
     if (tab === 'usuarios') setFormOperador({ nombre: '', username: '', password: '', modulos_permitidos: [] })
     if (tab === 'ncf_electronicas') setFormNcfElec({ tipo_ncf: 'E31', secuencia_desde: 1, secuencia_hasta: 1000, fecha_vencimiento: '' })
     setShowForm(true)
@@ -265,6 +269,7 @@ const crearEmpresa = async () => {
     if (tab === 'vendedores') setFormVendedor({ nombre: item.nombre, cedula: item.cedula || '', email: item.email || '', telefono: item.telefono || '', zona_id: item.zona_id || '', comision_pct: item.comision_pct || '' })
     if (tab === 'zonas') setFormZona({ nombre: item.nombre, descripcion: item.descripcion || '' })
     if (tab === 'choferes') setFormChofer({ nombre: item.nombre, cedula: item.cedula || '', licencia: item.licencia || '', telefono: item.telefono || '', email: item.email || '', vehiculo: item.vehiculo || '', placa: item.placa || '' })
+    if (tab === 'cajeros') setFormCajero({ nombre: item.nombre, cedula: item.cedula || '', pin: item.pin || '', usuario: item.usuario || '', password: '' })
     if (tab === 'usuarios') setFormOperador({ nombre: item.nombre, username: item.username, password: '', modulos_permitidos: item.modulos_permitidos || [] })
     if (tab === 'ncf_electronicas') setFormNcfElec({
       tipo_ncf: item.tipo_ncf,
@@ -317,6 +322,14 @@ const crearEmpresa = async () => {
         }
         setShowForm(false)
         fetchNcfElectronicas()
+      } else if (tab === 'cajeros') {
+        if (editando) {
+          await API.put(`/mantenimiento/cajeros/${editando}`, formCajero)
+        } else {
+          await API.post('/mantenimiento/cajeros', formCajero)
+        }
+        setShowForm(false)
+        fetchData()
       } else {
         const form = tab === 'vendedores' ? formVendedor : tab === 'zonas' ? formZona : formChofer
         if (editando) {
@@ -336,6 +349,7 @@ const crearEmpresa = async () => {
     { id: 'vendedores', label: '🧑‍💼 Vendedores' },
     { id: 'zonas', label: '🗺️ Zonas' },
     { id: 'choferes', label: '🚗 Choferes' },
+    { id: 'cajeros', label: '💵 Cajeros' },
     { id: 'usuarios', label: '👥 Usuarios' },
 { id: 'clave', label: '🔐 Clave Descuento' },
   { id: 'ncf_electronicas', label: '🧾 Secuencias NCF' },
@@ -500,6 +514,83 @@ const crearEmpresa = async () => {
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2 flex gap-3 justify-end">
+              <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">{editando ? 'Actualizar' : 'Guardar'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Formulario Cajero */}
+      {showForm && tab === 'cajeros' && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">{editando ? 'Editar Cajero' : 'Nuevo Cajero'}</h3>
+          {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">{error}</div>}
+          <form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={formCajero.nombre}
+                  onChange={(e) => setFormCajero({ ...formCajero, nombre: e.target.value })}
+                  required
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nombre del cajero"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
+                <input
+                  type="text"
+                  value={formCajero.cedula}
+                  onChange={(e) => setFormCajero({ ...formCajero, cedula: e.target.value })}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="000-0000000-0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">PIN (4 dígitos) *</label>
+                <input
+                  type="password"
+                  value={formCajero.pin}
+                  maxLength="4"
+                  onChange={(e) => setFormCajero({ ...formCajero, pin: e.target.value.replace(/\D/g, '') })}
+                  required
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-lg tracking-widest"
+                  placeholder="••••"
+                />
+            <p className="text-xs text-gray-400 mt-1">El cajero usará este PIN para identificarse en el Punto de Venta</p>
+              </div>
+              <div className="border-t pt-3 mt-1">
+                <p className="text-sm font-semibold text-gray-700 mb-2">🔑 Credenciales de acceso al sistema</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
+                <input
+                  type="text"
+                  value={formCajero.usuario}
+                  onChange={(e) => setFormCajero({ ...formCajero, usuario: e.target.value })}
+                  required
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nombre de usuario para login"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña {!editando && '*'}</label>
+                <input
+                  type="password"
+                  value={formCajero.password}
+                  onChange={(e) => setFormCajero({ ...formCajero, password: e.target.value })}
+                  required={!editando}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={editando ? 'Dejar vacío para no cambiar' : 'Mínimo 4 caracteres'}
+                />
+                <p className="text-xs text-gray-400 mt-1">Al entrar con estas credenciales va directo al Punto de Venta</p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
               <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
               <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">{editando ? 'Actualizar' : 'Guardar'}</button>
             </div>
@@ -785,6 +876,38 @@ const crearEmpresa = async () => {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Tabla Cajeros */}
+      {tab === 'cajeros' && (
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100 text-gray-600">
+              <tr>
+                <th className="px-4 py-2 text-left">Nombre</th>
+                <th className="px-4 py-2 text-left">Cédula</th>
+                <th className="px-4 py-2 text-left">PIN</th>
+                <th className="px-4 py-2 text-left">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cajeros.map((c, i) => (
+                <tr key={c.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                  <td className="px-4 py-2 font-semibold">{c.nombre}</td>
+                  <td className="px-4 py-2">{c.cedula || '—'}</td>
+                  <td className="px-4 py-2 font-mono">••••</td>
+                  <td className="px-4 py-2">
+                    <button onClick={() => handleEditar(c)} className="text-blue-600 hover:underline text-sm mr-2">Editar</button>
+                    <button onClick={() => handleEliminar(c.id)} className="text-red-500 hover:underline text-sm">Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+              {cajeros.length === 0 && (
+                <tr><td colSpan="4" className="px-4 py-6 text-center text-gray-400">No hay cajeros registrados</td></tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -1109,7 +1109,7 @@ function POS() {
         </div>
 
         {/* COLUMNA DERECHA: TICKET EN VIVO */}
-        <div className="w-96 bg-white rounded-lg shadow flex flex-col">
+        <div className="w-[60%] bg-white rounded-lg shadow flex flex-col">
           <div className="bg-gray-800 text-white text-center py-2 rounded-t-lg flex justify-between items-center px-4">
             <p className="font-bold">🧾 TICKET</p>
             <p className="text-xs">{ticket.length} línea(s)</p>
@@ -1196,11 +1196,11 @@ function POS() {
 
 {/* TOTALES */}
           <div className="border-t p-4">
-            <div className="flex justify-between text-sm text-gray-600">
+            <div className="flex justify-between text-3xl font-bold text-gray-700 mb-1">
               <span>Subtotal:</span>
               <span>RD$ {fmt(baseGeneral)}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-600 mb-1">
+         <div className="flex justify-between text-3xl font-bold text-gray-700 mb-1">
               <span>ITBIS:</span>
               <span>RD$ {fmt(itbisGeneral)}</span>
             </div>
@@ -1237,7 +1237,7 @@ function POS() {
                 </>
               )}
             </div>
-            <div className="flex justify-between text-xl font-bold mb-2">
+            <div className="flex justify-between text-5xl font-bold mb-2">
               <span>TOTAL:</span>
               <span>RD$ {fmt(totalGeneral)}</span>
             </div>

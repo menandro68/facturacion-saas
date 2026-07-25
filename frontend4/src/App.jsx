@@ -62,6 +62,24 @@ function App() {
       .catch(() => {})
   }, [usuario?.id])
 
+  // Atajo F5 = SALIR (solo para cajeros en modo POS)
+  useEffect(() => {
+    if (usuario?.solo_pos !== true) return
+    const onKey = (e) => {
+      if (e.key === 'F5') {
+        e.preventDefault()
+        if (window.confirm('¿Cerrar sesión?')) {
+          sessionStorage.removeItem('token')
+          sessionStorage.removeItem('usuario')
+          sessionStorage.removeItem('es_matriz')
+          setUsuario(null)
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [usuario?.solo_pos])
+
  const entrarAlSistema = (user) => {
     if (user.features?.responsive === true) {
       setPagina('facturas')
@@ -77,8 +95,15 @@ function App() {
     }
   }
 
-  const handleLoginInicial = (user) => {
+const handleLoginInicial = (user) => {
     setUsuario(user)
+    // Cajero: no pasa por el selector de empresas, va directo al POS
+    if (user.solo_pos === true) {
+      sessionStorage.setItem('empresaSeleccionada', 'true')
+      setMostrarSelector(false)
+      setPagina('pos')
+      return
+    }
     setMostrarSelector(true)
   }
 const handleEntrarEmpresa = (user) => {
@@ -118,8 +143,22 @@ const handleEntrarEmpresa = (user) => {
 
   if (!usuario) return <Login onLogin={handleLoginInicial} />
 
-  if (mostrarSelector) return <SelectorEmpresas onEntrar={handleEntrarEmpresa} onSalir={handleSalirSelector} />
+ if (mostrarSelector) return <SelectorEmpresas onEntrar={handleEntrarEmpresa} onSalir={handleSalirSelector} />
 
+  // Cajero (solo_pos): pantalla completa del Punto de Venta, SIN menú lateral
+  if (usuario.solo_pos === true) {
+    return (
+      <div className="min-h-screen bg-gray-100 relative">
+        <POS />
+     <button
+          onClick={() => { if (window.confirm('¿Cerrar sesión?')) handleLogout() }}
+          title="Cerrar Sesión (F5)"
+          className="fixed bottom-4 left-4 z-50 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-bold text-lg shadow-lg">
+          🚪 SALIR (F5)
+        </button>
+      </div>
+    )
+  }
   const esVendedor = usuario.rol === 'vendedor'
   const esOperador = usuario.rol === 'operador'
 
