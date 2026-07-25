@@ -116,6 +116,9 @@ function POS() {
   const [mostrarCierre, setMostrarCierre] = useState(false)
   const [resumenCaja, setResumenCaja] = useState(null)
   const [cierreExitoso, setCierreExitoso] = useState(null)
+  const [mostrarHistorial, setMostrarHistorial] = useState(false)
+  const [historialCajas, setHistorialCajas] = useState([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
 
   // Estados del cobro
   const [mostrarCobro, setMostrarCobro] = useState(false)
@@ -134,6 +137,11 @@ function POS() {
   const [claveDesc, setClaveDesc] = useState('')
   const [errorDesc, setErrorDesc] = useState('')
   const [procesandoDesc, setProcesandoDesc] = useState(false)
+  const [mostrarEliminar, setMostrarEliminar] = useState(false)
+  const [codigoEliminar, setCodigoEliminar] = useState('')
+  const [claveEliminar, setClaveEliminar] = useState('')
+  const [errorEliminar, setErrorEliminar] = useState('')
+  const [procesandoEliminar, setProcesandoEliminar] = useState(false)
 
   // Estados de modo offline
   const [enLinea, setEnLinea] = useState(navigator.onLine)
@@ -145,6 +153,7 @@ function POS() {
   const aperturaRef = useRef(null)
   const clienteRef = useRef(null)
   const descValorRef = useRef(null)
+  const codigoEliminarRef = useRef(null)
   const sincronizandoRef = useRef(false)
 
   const usuario = JSON.parse(sessionStorage.getItem('usuario') || '{}')
@@ -285,10 +294,15 @@ function POS() {
     if (mostrarDescuento && descValorRef.current) descValorRef.current.focus()
   }, [mostrarDescuento])
 
-// TECLAS F1 = COBRAR / F2 = DESCUENTO (globales en el POS)
+  // Foco en código de eliminar
+  useEffect(() => {
+    if (mostrarEliminar && codigoEliminarRef.current) codigoEliminarRef.current.focus()
+  }, [mostrarEliminar])
+
+// TECLAS F1 = COBRAR / F2 = DESCUENTO / F3 = CERRAR CAJA / F4 = ELIMINAR (globales en el POS)
   useEffect(() => {
     const manejarTeclasGlobales = (e) => {
-      const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento
+      const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento || mostrarEliminar
       if (e.key === 'F1') {
         e.preventDefault()
         if (caja && !modalAbierto && ticket.length > 0) {
@@ -297,7 +311,7 @@ function POS() {
           setErrorCobro('')
           setMostrarCobro(true)
         }
-} else if (e.key === 'F2') {
+      } else if (e.key === 'F2') {
         e.preventDefault()
         if (caja && !modalAbierto && ticket.length > 0) {
           abrirDescuentoGlobal()
@@ -307,12 +321,17 @@ function POS() {
         if (caja && !modalAbierto) {
           abrirCierre()
         }
+      } else if (e.key === 'F4') {
+        e.preventDefault()
+        if (caja && !modalAbierto && ticket.length > 0) {
+          abrirEliminar()
+        }
       }
     }
     window.addEventListener('keydown', manejarTeclasGlobales)
     return () => window.removeEventListener('keydown', manejarTeclasGlobales)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caja, mostrarCobro, ventaExitosa, mostrarCierre, mostrarDescuento, ticket])
+  }, [caja, mostrarCobro, ventaExitosa, mostrarCierre, mostrarDescuento, mostrarEliminar, ticket])
 
   // Buscar productos mientras escribe
   useEffect(() => {
@@ -518,6 +537,50 @@ function POS() {
     if (inputRef.current) inputRef.current.focus()
   }
 
+  // Abrir modal de eliminar artículo (F4)
+  const abrirEliminar = () => {
+    if (ticket.length === 0) return
+    setCodigoEliminar('')
+    setClaveEliminar('')
+    setErrorEliminar('')
+    setMostrarEliminar(true)
+  }
+
+  // Línea encontrada por el código escaneado
+  const lineaAEliminar = codigoEliminar.trim()
+    ? ticket.find(l => (l.codigo || '').toLowerCase() === codigoEliminar.trim().toLowerCase())
+    : null
+
+  // Confirmar eliminación (valida clave)
+  const confirmarEliminar = async () => {
+    if (procesandoEliminar) return
+    if (!lineaAEliminar) {
+      setErrorEliminar('Escanee o escriba el código de un artículo que esté en el ticket')
+      return
+    }
+    if (!claveEliminar.trim()) {
+      setErrorEliminar('Ingrese la clave de autorización')
+      return
+    }
+    setProcesandoEliminar(true)
+    setErrorEliminar('')
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveEliminar })
+      if (!res.data.success) {
+        setErrorEliminar('Clave incorrecta')
+        setProcesandoEliminar(false)
+        return
+      }
+      setTicket(prev => prev.filter(l => l.id !== lineaAEliminar.id))
+      setMostrarEliminar(false)
+      if (inputRef.current) inputRef.current.focus()
+    } catch (err) {
+      setErrorEliminar(err.response?.data?.mensaje || 'Clave incorrecta')
+    } finally {
+      setProcesandoEliminar(false)
+    }
+  }
+
   // Abrir caja
   const abrirCaja = async () => {
     if (procesandoCaja) return
@@ -541,6 +604,30 @@ function POS() {
     } finally {
       setProcesandoCaja(false)
     }
+  }
+
+  // Abrir historial de cajas cerradas
+  const abrirHistorial = async () => {
+    setCargandoHistorial(true)
+    setMostrarHistorial(true)
+    try {
+      const res = await API.get('/pos/caja/historial')
+      setHistorialCajas(res.data.data || [])
+    } catch (err) {
+      console.error('Error cargando historial de cajas:', err)
+      setHistorialCajas([])
+    } finally {
+      setCargandoHistorial(false)
+    }
+  }
+
+  const fmtFecha = (f) => {
+    if (!f) return 'N/D'
+    return new Date(f).toLocaleString('es-DO', {
+      timeZone: 'America/Santo_Domingo',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    })
   }
 
   // Abrir pantalla de cierre (cargar resumen)
@@ -960,7 +1047,8 @@ function POS() {
               })}
             </p>
           </div>
-     <button
+ 
+          <button
             onClick={abrirCierre}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm"
           >
@@ -1065,13 +1153,7 @@ function POS() {
                   <div key={l.id} className={`border-b py-2 px-1 ${tieneDescuento ? 'bg-orange-50' : ''}`}>
                     <div className="flex justify-between items-start">
                       <p className="font-semibold text-sm flex-1 pr-2">{l.nombre}</p>
-                      <button
-                        onClick={() => eliminarLinea(l.id)}
-                        className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
-                        title="Eliminar"
-                      >
-                        ✕
-                      </button>
+                  
                     </div>
                     <div className="flex justify-between items-center mt-1">
                       <div className="flex items-center gap-1">
@@ -1159,17 +1241,31 @@ function POS() {
               <span>TOTAL:</span>
               <span>RD$ {fmt(totalGeneral)}</span>
             </div>
-            <button
-              onClick={abrirCobro}
-              disabled={ticket.length === 0}
-              className={`w-full py-3 rounded-lg font-bold text-lg text-white ${
-                ticket.length > 0
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-green-600 opacity-50 cursor-not-allowed'
-              }`}
-            >
-              💰 COBRAR (F1)
-            </button>
+      <div className="flex gap-2">
+     <button
+                onClick={abrirEliminar}
+                disabled={ticket.length === 0}
+                className={`px-4 py-1 rounded-lg font-bold text-white flex flex-col items-center justify-center leading-tight ${
+                  ticket.length > 0
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-green-600 opacity-50 cursor-not-allowed'
+                }`}
+              >
+                <span className="text-sm">ELIMINAR</span>
+                <span className="text-xs">(F4)</span>
+              </button>
+              <button
+                onClick={abrirCobro}
+                disabled={ticket.length === 0}
+                className={`flex-1 py-3 rounded-lg font-bold text-lg text-white ${
+                  ticket.length > 0
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-green-600 opacity-50 cursor-not-allowed'
+                }`}
+              >
+                💰 COBRAR (F1)
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1269,6 +1365,84 @@ function POS() {
                   }`}
                 >
                   {procesandoDesc ? 'Validando...' : '✓ APLICAR (Enter)'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+     {/* MODAL DE ELIMINAR ARTÍCULO */}
+      {mostrarEliminar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); confirmarEliminar() }
+            else if (e.key === 'Escape') { setMostrarEliminar(false) }
+          }}>
+            <div className="bg-red-600 text-white px-4 py-2 rounded-t-xl flex justify-between items-center">
+              <h2 className="text-base font-bold">🗑️ ELIMINAR ARTÍCULO</h2>
+              <button onClick={() => setMostrarEliminar(false)} className="text-white text-2xl leading-none font-bold">✕</button>
+            </div>
+            <div className="p-4">
+              <label className="block text-sm font-semibold text-gray-600 mb-1">Escanee el código del artículo:</label>
+              <input
+                ref={codigoEliminarRef}
+                type="text"
+                value={codigoEliminar}
+                onChange={(e) => { setCodigoEliminar(e.target.value); setErrorEliminar('') }}
+                placeholder="🔍 Código del artículo a eliminar..."
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-lg focus:outline-none focus:border-red-500 mb-2"
+              />
+
+              {/* ARTÍCULO ENCONTRADO */}
+              {codigoEliminar.trim() && (
+                lineaAEliminar ? (
+                  <div className="mb-3 border-2 border-red-300 bg-red-50 rounded-lg p-2">
+                    <p className="text-xs text-red-600 font-bold">SE VA A ELIMINAR:</p>
+                    <p className="font-bold text-sm text-gray-800">{lineaAEliminar.nombre}</p>
+                    <p className="text-xs text-gray-500">
+                      Cantidad: {lineaAEliminar.cantidad} | RD$ {fmt(lineaAEliminar.precio * lineaAEliminar.cantidad)}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 text-center mb-3">Ese código no está en el ticket</p>
+                )
+              )}
+
+              {/* CLAVE */}
+              <label className="block text-sm font-semibold text-gray-600 mb-1">🔑 Clave de autorización:</label>
+              <input
+                type="password"
+                value={claveEliminar}
+                onChange={(e) => { setClaveEliminar(e.target.value); setErrorEliminar('') }}
+                placeholder="Clave del administrador"
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500 mb-3"
+              />
+
+              {/* ERROR */}
+              {errorEliminar && (
+                <div className="mb-3 bg-red-50 border border-red-300 text-red-700 px-3 py-1.5 rounded-lg text-sm text-center">
+                  {errorEliminar}
+                </div>
+              )}
+
+              {/* BOTONES */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMostrarEliminar(false)}
+                  disabled={procesandoEliminar}
+                  className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+                >
+                  Cancelar (Esc)
+                </button>
+                <button
+                  onClick={confirmarEliminar}
+                  disabled={procesandoEliminar}
+                  className={`flex-1 py-2.5 rounded-lg font-bold text-white ${
+                    procesandoEliminar ? 'bg-red-400 cursor-wait' : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {procesandoEliminar ? 'Validando...' : '🗑️ ELIMINAR (Enter)'}
                 </button>
               </div>
             </div>
@@ -1560,6 +1734,7 @@ function POS() {
           </div>
         </div>
       )}
+   
 
       {/* MODAL DE CIERRE DE CAJA */}
       {mostrarCierre && resumenCaja && (

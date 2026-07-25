@@ -25,6 +25,10 @@ export default function Reportes() {
   const [anio607, setAnio607] = useState(new Date().getFullYear())
   const [data607, setData607] = useState(null)
   const [loading607, setLoading607] = useState(false)
+  const [showCajas, setShowCajas] = useState(false)
+  const [dataCajas, setDataCajas] = useState([])
+  const [loadingCajas, setLoadingCajas] = useState(false)
+  const [buscarCajero, setBuscarCajero] = useState('')
   const [rncEmpresa, setRncEmpresa] = useState('')
 
   const fetchReportes = async () => {
@@ -54,6 +58,95 @@ useEffect(() => {
     API.get('/operadores').then(r => setOperadores(r.data.data || [])).catch(() => {})
     API.get('/tenant/profile').then(t => setRncEmpresa(((t.data.data?.rnc) || '').replace(/\D/g, ''))).catch(() => {})
   }, [])
+
+  const cargarCajas = async () => {
+    setLoadingCajas(true)
+    try {
+      const res = await API.get('/pos/caja/historial')
+      setDataCajas(res.data.data || [])
+    } catch (e) {
+      console.error('Error cargando historial de cajas:', e)
+      setDataCajas([])
+    } finally {
+      setLoadingCajas(false)
+    }
+  }
+
+  const fmtFechaCaja = (f) => {
+    if (!f) return 'N/D'
+    return new Date(f).toLocaleString('es-DO', {
+      timeZone: 'America/Santo_Domingo',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    })
+  }
+
+  const fmtCaja = (n) => (parseFloat(n) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  const imprimirCajas = () => {
+    const w = window.open('', '_blank')
+    if (!w) { alert('⚠️ Habilite las ventanas emergentes para imprimir.'); return }
+    const filas = cajasFiltradas.map(c => `
+      <tr>
+        <td>${c.usuario_nombre || 'N/D'}</td>
+        <td>${fmtFechaCaja(c.fecha_apertura)}</td>
+        <td>${fmtFechaCaja(c.fecha_cierre)}</td>
+        <td style="text-align:center">${c.cantidad_facturas || 0}</td>
+        <td style="text-align:right">RD$ ${fmtCaja(c.monto_apertura)}</td>
+        <td style="text-align:right">RD$ ${fmtCaja(c.total_efectivo)}</td>
+        <td style="text-align:right">RD$ ${fmtCaja(c.total_tarjeta)}</td>
+        <td style="text-align:right">RD$ ${fmtCaja(c.total_transferencia)}</td>
+        <td style="text-align:right"><b>RD$ ${fmtCaja(c.total_ventas)}</b></td>
+        <td style="text-align:right; color:green"><b>RD$ ${fmtCaja(c.efectivo_esperado)}</b></td>
+      </tr>`).join('')
+    const filtros = []
+    if (buscarCajero.trim()) filtros.push(`Cajero: ${buscarCajero.trim()}`)
+    if (desde) filtros.push(`Desde: ${desde}`)
+    if (hasta) filtros.push(`Hasta: ${hasta}`)
+    w.document.write(`
+      <html><head><title>Historial de Cajas</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+        h2 { margin-bottom: 4px; }
+        .filtros { color: #555; margin-bottom: 12px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 5px 7px; }
+        th { background: #f0f0f0; text-align: left; }
+        @media print { body { margin: 8px; } }
+      </style></head><body>
+      <h2>🗄️ Historial de Cajas — Punto de Venta</h2>
+      <div class="filtros">${filtros.length ? filtros.join(' | ') : 'Todos los cierres'} — ${cajasFiltradas.length} cierre(s) — Generado: ${new Date().toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' })}</div>
+      <table>
+        <thead><tr>
+          <th>Operador</th><th>Apertura</th><th>Cierre</th><th>Facturas</th>
+          <th>Monto Apertura</th><th>Efectivo</th><th>Tarjeta</th><th>Transf.</th>
+          <th>Total Ventas</th><th>Gaveta</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+      <script>window.onload=()=>setTimeout(()=>window.print(),400)</script>
+      </body></html>`)
+    w.document.close()
+  }
+
+  const cajasFiltradas = dataCajas.filter(c => {
+    // Filtro por nombre de operador/cajero
+    if (buscarCajero.trim()) {
+      const nombre = (c.usuario_nombre || '').toLowerCase()
+      if (!nombre.includes(buscarCajero.trim().toLowerCase())) return false
+    }
+    // Filtro por rango de fechas (usa los campos Desde/Hasta de arriba)
+    const fechaCierre = c.fecha_cierre ? new Date(c.fecha_cierre) : null
+    if (desde && fechaCierre) {
+      const fDesde = new Date(desde + 'T00:00:00')
+      if (fechaCierre < fDesde) return false
+    }
+    if (hasta && fechaCierre) {
+      const fHasta = new Date(hasta + 'T23:59:59')
+      if (fechaCierre > fHasta) return false
+    }
+    return true
+  })
 
   if (loading) return <p className="text-gray-500 p-6">Cargando reportes...</p>
 
@@ -94,6 +187,10 @@ useEffect(() => {
         <button onClick={() => setShow607(!show607)}
           className={`px-4 py-2 rounded text-sm ${show607 ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}>
           📄 Reporte 607
+        </button>
+        <button onClick={() => { setShowCajas(!showCajas); if (!showCajas && dataCajas.length === 0) cargarCajas() }}
+          className={`px-4 py-2 rounded text-sm ${showCajas ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-orange-600 text-white hover:bg-orange-700'}`}>
+          🗄️ Cajas
         </button>
       </div>
 
@@ -606,6 +703,77 @@ useEffect(() => {
                   )}
                 </table>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Historial de Cajas POS */}
+      {showCajas && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">🗄️ Historial de Cajas — Punto de Venta</h3>
+          <div className="bg-white rounded-lg shadow p-4 mb-4 flex gap-4 items-center">
+            <input
+              type="text"
+              value={buscarCajero}
+              onChange={(e) => setBuscarCajero(e.target.value)}
+              placeholder="🔍 Buscar operador o cajero..."
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-72"
+            />
+           <p className="text-xs text-gray-400">
+                {cajasFiltradas.length} cierre(s) — Usa los campos Desde/Hasta de arriba para filtrar por fecha
+              </p>
+              <button
+                onClick={imprimirCajas}
+                disabled={cajasFiltradas.length === 0}
+                className={`ml-auto px-4 py-2 rounded text-sm font-bold text-white ${
+                  cajasFiltradas.length > 0 ? 'bg-gray-700 hover:bg-gray-800' : 'bg-gray-300 cursor-not-allowed'
+                }`}
+              >
+                🖨️ Imprimir
+              </button>
+          </div>
+          {loadingCajas ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">Cargando historial...</div>
+          ) : cajasFiltradas.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+              <p className="text-4xl mb-2">🗄️</p>
+              <p className="text-sm">No hay cierres de caja registrados todavía</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 text-gray-600">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Operador</th>
+                    <th className="px-3 py-2 text-left">Apertura</th>
+                    <th className="px-3 py-2 text-left">Cierre</th>
+                    <th className="px-3 py-2 text-center">Facturas</th>
+                    <th className="px-3 py-2 text-right">Monto Apertura</th>
+                    <th className="px-3 py-2 text-right">💵 Efectivo</th>
+                    <th className="px-3 py-2 text-right">💳 Tarjeta</th>
+                    <th className="px-3 py-2 text-right">🏦 Transf.</th>
+                    <th className="px-3 py-2 text-right">Total Ventas</th>
+                    <th className="px-3 py-2 text-right">Gaveta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cajasFiltradas.map((c, i) => (
+                    <tr key={c.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                      <td className="px-3 py-2 font-semibold">{c.usuario_nombre || 'N/D'}</td>
+                      <td className="px-3 py-2 text-xs">{fmtFechaCaja(c.fecha_apertura)}</td>
+                      <td className="px-3 py-2 text-xs">{fmtFechaCaja(c.fecha_cierre)}</td>
+                      <td className="px-3 py-2 text-center">{c.cantidad_facturas || 0}</td>
+                      <td className="px-3 py-2 text-right">RD$ {fmtCaja(c.monto_apertura)}</td>
+                      <td className="px-3 py-2 text-right">RD$ {fmtCaja(c.total_efectivo)}</td>
+                      <td className="px-3 py-2 text-right">RD$ {fmtCaja(c.total_tarjeta)}</td>
+                      <td className="px-3 py-2 text-right">RD$ {fmtCaja(c.total_transferencia)}</td>
+                      <td className="px-3 py-2 text-right font-bold">RD$ {fmtCaja(c.total_ventas)}</td>
+                      <td className="px-3 py-2 text-right font-bold text-green-600">RD$ {fmtCaja(c.efectivo_esperado)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
