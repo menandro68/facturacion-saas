@@ -815,6 +815,34 @@ useEffect(() => {
   const efectivoEsperadoCaja = resumenCaja ? parseFloat(resumenCaja.efectivo_esperado) || 0 : 0
   const diferenciaCaja = totalContado - efectivoEsperadoCaja
 
+  // Abrir la gaveta de dinero (comando ESC/POS enviado a la impresora térmica)
+  const abrirGaveta = () => {
+    try {
+      const viejo = document.getElementById('iframe-gaveta')
+      if (viejo) viejo.remove()
+      const ifr = document.createElement('iframe')
+      ifr.id = 'iframe-gaveta'
+      ifr.style.position = 'fixed'
+      ifr.style.width = '0'
+      ifr.style.height = '0'
+      ifr.style.border = '0'
+      ifr.style.visibility = 'hidden'
+      document.body.appendChild(ifr)
+      const w = ifr.contentWindow
+      // ESC p 0 25 250 = pulso al conector RJ11 de la gaveta
+      const pulso = '\x1B\x70\x00\x19\xFA'
+      w.document.write(
+        `<!DOCTYPE html><html><head><meta charset="utf-8">
+        <style>@page{size:auto;margin:0}body{margin:0;font-size:1px;line-height:0}</style>
+        </head><body>${pulso}</body></html>`
+      )
+      w.document.close()
+      setTimeout(() => { try { w.focus(); w.print() } catch (e) { console.error('Error abriendo gaveta:', e) } }, 300)
+    } catch (e) {
+      console.error('Error abriendo gaveta:', e)
+    }
+  }
+
   // Imprimir el cuadre de caja
   const imprimirCuadre = (c) => {
     if (!c) return
@@ -868,8 +896,7 @@ useEffect(() => {
       <div class="row tot"><span>TOTAL CONTADO:</span><span>RD$ ${fmt(c.efectivo_contado || 0)}</span></div>
       <div class="dif"><span>${etiqueta}</span><span>${dif !== null && dif > 0 ? '+' : ''}RD$ ${fmt(dif || 0)}</span></div>
       <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:24px">_______________________<br>Firma del cajero</p>
-      <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script>
-    </body></html>`)
+   </body></html>`)
     w.document.close()
     setTimeout(() => { try { w.focus(); w.print() } catch (e) { console.error('Error imprimiendo cuadre:', e) } }, 500)
   }
@@ -885,10 +912,13 @@ const abrirCierre = async () => {
       return
     }
     try {
-      const res = await API.get('/pos/caja/resumen')
-     setResumenCaja(res.data.data)
+  const res = await API.get('/pos/caja/resumen')
+      setResumenCaja(res.data.data)
       setConteoBilletes({})
-      setMostrarCierre(true)
+   setMostrarCierre(true)
+      abrirGaveta()
+      setTimeout(() => document.getElementById('billete-2000')?.focus(), 700)
+      setTimeout(() => document.getElementById('billete-2000')?.focus(), 1400)
     } catch (err) {
       console.error('Error cargando resumen:', err)
     }
