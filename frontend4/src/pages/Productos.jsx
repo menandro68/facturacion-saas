@@ -8,7 +8,8 @@ export default function Productos() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: ''
+    codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '',
+    articulo_padre_id: '', factor_empaque: '1', nivel_empaque: ''
   })
   const [error, setError] = useState('')
   const [proveedoresList, setProveedoresList] = useState([])
@@ -72,7 +73,7 @@ const handleChange = (e) => {
   }
 
   const handleNuevo = () => {
-    setForm({ codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '' })
+    setForm({ codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '', articulo_padre_id: '', factor_empaque: '1', nivel_empaque: '' })
     setEditando(null)
     setShowForm(true)
     setError('')
@@ -91,7 +92,10 @@ const handleChange = (e) => {
       beneficio: producto.beneficio || '',
       suplidor: producto.suplidor || '',
       stock_minimo: producto.stock_minimo || '',
-      stock_maximo: producto.stock_maximo || ''
+      stock_maximo: producto.stock_maximo || '',
+      articulo_padre_id: producto.articulo_padre_id || '',
+      factor_empaque: producto.factor_empaque || '1',
+      nivel_empaque: producto.nivel_empaque || ''
     })
     setEditando(producto.id)
     setShowForm(true)
@@ -187,6 +191,46 @@ const handleSubmit = async (e) => {
               <input name="nombre" value={form.nombre} onChange={handleChange} required
                 placeholder="Descripción"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            {/* EMPAQUE: enlazar este artículo al inventario de otro */}
+            <div className="md:col-span-2 border-2 border-purple-200 bg-purple-50 rounded-lg p-3">
+              <p className="text-sm font-bold text-purple-700 mb-2">📦 Empaque (opcional)</p>
+              <p className="text-xs text-gray-600 mb-3">
+                Si este artículo es una presentación de otro (ej: <b>Tarro</b> de una <b>Caja</b>), enlácelo aquí.
+                El inventario se descuenta del artículo principal.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Artículo principal</label>
+                  <select name="articulo_padre_id" value={form.articulo_padre_id || ''} onChange={handleChange}
+                    className="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <option value="">— Es artículo principal —</option>
+                    {productos.filter(p => p.id !== editando && !p.articulo_padre_id).map(p => (
+                      <option key={p.id} value={p.id}>{p.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Nombre del nivel</label>
+                  <input name="nivel_empaque" value={form.nivel_empaque || ''} onChange={handleChange}
+                    placeholder="Ej: Tarro, Unidad"
+                    disabled={!form.articulo_padre_id}
+                    className="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Equivale a (unidades base)</label>
+                  <input name="factor_empaque" type="number" step="0.0001" min="0.0001"
+                    value={form.factor_empaque || '1'} onChange={handleChange}
+                    disabled={!form.articulo_padre_id}
+                    className="w-full border rounded px-2 py-2 text-sm text-right font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-100" />
+                </div>
+              </div>
+              {form.articulo_padre_id && (
+                <p className="text-xs text-purple-700 font-semibold mt-2">
+                  ✓ Al vender 1 {form.nivel_empaque || 'de este artículo'} se descontarán {form.factor_empaque || 1} unidad(es) del inventario principal.
+                </p>
+              )}
             </div>
       <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta *</label>
