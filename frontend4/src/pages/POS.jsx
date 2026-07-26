@@ -114,6 +114,13 @@ function POS() {
   const [errorCaja, setErrorCaja] = useState('')
   const [procesandoCaja, setProcesandoCaja] = useState(false)
   const [mostrarCierre, setMostrarCierre] = useState(false)
+  // Desglose de billetes para el cuadre de caja (F3)
+  const DENOMINACIONES = [2000, 1000, 500, 200, 100, 50, 25, 20, 10, 5, 1]
+  const [conteoBilletes, setConteoBilletes] = useState({})
+ const [cierreImpresion, setCierreImpresion] = useState(null)
+  // Pago mixto (combinación de métodos en una misma factura)
+  const [modoMixto, setModoMixto] = useState(false)
+  const [pagosMixto, setPagosMixto] = useState({ efectivo: '', tarjeta: '', transferencia: '' })
   const [resumenCaja, setResumenCaja] = useState(null)
   const [cierreExitoso, setCierreExitoso] = useState(null)
   const [mostrarHistorial, setMostrarHistorial] = useState(false)
@@ -156,7 +163,9 @@ function POS() {
   const codigoEliminarRef = useRef(null)
   const sincronizandoRef = useRef(false)
 
-  const usuario = JSON.parse(sessionStorage.getItem('usuario') || '{}')
+ const usuario = JSON.parse(sessionStorage.getItem('usuario') || '{}')
+  // Cajero (solo_pos): no ve montos del turno, solo cuenta el efectivo e imprime
+  const esSoloPos = usuario?.solo_pos === true
 
   // NCF según cliente: con RNC → B01, sin cliente o sin RNC → B02
   const tieneRnc = clienteSeleccionado && clienteSeleccionado.rnc_cedula && String(clienteSeleccionado.rnc_cedula).trim() !== ''
@@ -279,10 +288,55 @@ function POS() {
     }
   }, [caja, cargando, mostrarCobro, ventaExitosa, mostrarCierre, mostrarDescuento])
 
-  // Foco en el monto al abrir cobro (si no está buscando cliente)
+// Foco en el monto al abrir cobro (si no está buscando cliente)
   useEffect(() => {
     if (mostrarCobro && !mostrarBuscarCliente && montoRef.current) montoRef.current.focus()
   }, [mostrarCobro, mostrarBuscarCliente])
+  // Flechas ← → para cambiar la forma de pago en el modal de cobro
+useEffect(() => {
+if (!mostrarCobro || mostrarBuscarCliente) return
+    const filas = modoMixto
+      ? [
+          ['cobro-cliente'],
+          ['cobro-mixto'],
+          ['mixto-efectivo'],
+          ['mixto-tarjeta'],
+          ['mixto-transferencia'],
+          ['cobro-cancelar', 'cobro-confirmar']
+        ]
+      : [
+          ['cobro-cliente'],
+          ['cobro-mixto'],
+          ['metodo-efectivo', 'metodo-tarjeta', 'metodo-transferencia'],
+          ...(formaPago === 'efectivo' ? [['cobro-recibido']] : []),
+          ['cobro-cancelar', 'cobro-confirmar']
+        ]
+    const posicion = () => {
+      const id = document.activeElement?.id
+      for (let f = 0; f < filas.length; f++) {
+        const c = filas[f].indexOf(id)
+        if (c >= 0) return [f, c]
+      }
+      return [-1, -1]
+    }
+    const ir = (f, c) => {
+      const fila = filas[f]
+      if (!fila) return
+      document.getElementById(fila[Math.min(c, fila.length - 1)])?.focus()
+    }
+    const onKey = (e) => {
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      e.preventDefault()
+      const [f, c] = posicion()
+      if (f === -1) { ir(filas.length - 1, 1); return }
+      if (e.key === 'ArrowDown') ir(Math.min(f + 1, filas.length - 1), c)
+      else if (e.key === 'ArrowUp') ir(Math.max(f - 1, 0), c)
+      else if (e.key === 'ArrowRight') ir(f, Math.min(c + 1, filas[f].length - 1))
+      else if (e.key === 'ArrowLeft') ir(f, Math.max(c - 1, 0))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+}, [mostrarCobro, mostrarBuscarCliente, modoMixto, formaPago])
 
   // Foco en búsqueda de cliente
   useEffect(() => {
@@ -291,13 +345,104 @@ function POS() {
 
   // Foco en valor de descuento
   useEffect(() => {
-    if (mostrarDescuento && descValorRef.current) descValorRef.current.focus()
+  if (mostrarDescuento && descValorRef.current) descValorRef.current.focus()
   }, [mostrarDescuento])
-
-  // Foco en código de eliminar
+  // NAVEGACIÓN POR TECLADO EN EL MODAL DE DESCUENTO (sin mouse)
   useEffect(() => {
-    if (mostrarEliminar && codigoEliminarRef.current) codigoEliminarRef.current.focus()
+    if (!mostrarDescuento) return
+    const filas = [
+      ['desc-porcentaje', 'desc-monto'],
+      ['desc-valor'],
+      ...(!descuentoAutorizado ? [['desc-clave']] : []),
+      ['desc-cancelar', 'desc-aplicar']
+    ]
+    const posicion = () => {
+      const id = document.activeElement?.id
+      for (let f = 0; f < filas.length; f++) {
+        const c = filas[f].indexOf(id)
+        if (c >= 0) return [f, c]
+      }
+      return [-1, -1]
+    }
+    const ir = (f, c) => {
+      const fila = filas[f]
+      if (!fila) return
+      document.getElementById(fila[Math.min(c, fila.length - 1)])?.focus()
+    }
+    const onKey = (e) => {
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      e.preventDefault()
+      const [f, c] = posicion()
+      if (f === -1) { ir(filas.length - 1, 1); return }
+      if (e.key === 'ArrowDown') ir(Math.min(f + 1, filas.length - 1), c)
+      else if (e.key === 'ArrowUp') ir(Math.max(f - 1, 0), c)
+      else if (e.key === 'ArrowRight') ir(f, Math.min(c + 1, filas[f].length - 1))
+      else if (e.key === 'ArrowLeft') ir(f, Math.max(c - 1, 0))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mostrarDescuento, descuentoAutorizado])
+
+// Foco en código de eliminar
+  useEffect(() => {
+if (mostrarEliminar && codigoEliminarRef.current) codigoEliminarRef.current.focus()
   }, [mostrarEliminar])
+  // NAVEGACIÓN POR TECLADO EN EL MODAL DE ELIMINAR (sin mouse)
+  useEffect(() => {
+    if (!mostrarEliminar) return
+    const filas = [
+      ['elim-codigo'],
+      ['elim-clave'],
+      ['elim-cancelar', 'elim-confirmar']
+    ]
+    const posicion = () => {
+      const id = document.activeElement?.id
+      for (let f = 0; f < filas.length; f++) {
+        const c = filas[f].indexOf(id)
+        if (c >= 0) return [f, c]
+      }
+      return [-1, -1]
+    }
+    const ir = (f, c) => {
+      const fila = filas[f]
+      if (!fila) return
+      document.getElementById(fila[Math.min(c, fila.length - 1)])?.focus()
+    }
+    const onKey = (e) => {
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      e.preventDefault()
+      const [f, c] = posicion()
+      if (f === -1) { ir(filas.length - 1, 1); return }
+      if (e.key === 'ArrowDown') ir(Math.min(f + 1, filas.length - 1), c)
+      else if (e.key === 'ArrowUp') ir(Math.max(f - 1, 0), c)
+      else if (e.key === 'ArrowRight') ir(f, Math.min(c + 1, filas[f].length - 1))
+      else if (e.key === 'ArrowLeft') ir(f, Math.max(c - 1, 0))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mostrarEliminar])
+// Foco en el primer billete al abrir el cierre de caja (F3)
+  useEffect(() => {
+    if (mostrarCierre) {
+      setTimeout(() => document.getElementById('billete-2000')?.focus(), 120)
+    }
+  }, [mostrarCierre])
+  // Pantalla CAJA CERRADA: foco en IMPRIMIR y navegación con flechas
+  useEffect(() => {
+    if (!cierreExitoso) return
+    setTimeout(() => document.getElementById('btn-imprimir-cuadre')?.focus(), 150)
+    const onKey = (e) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        document.getElementById('btn-aceptar-cierre')?.focus()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        document.getElementById('btn-imprimir-cuadre')?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [cierreExitoso])
 
 // TECLAS F1 = COBRAR / F2 = DESCUENTO / F3 = CERRAR CAJA / F4 = ELIMINAR (globales en el POS)
   useEffect(() => {
@@ -321,10 +466,22 @@ function POS() {
         if (caja && !modalAbierto) {
           abrirCierre()
         }
-      } else if (e.key === 'F4') {
+  } else if (e.key === 'F4') {
         e.preventDefault()
         if (caja && !modalAbierto && ticket.length > 0) {
           abrirEliminar()
+        }
+      } else if (e.key === '+' || e.key === 'Add') {
+        e.preventDefault()
+        if (caja && !modalAbierto && ticket.length > 0) {
+          const ultima = ticket[ticket.length - 1]
+          cambiarCantidad(ultima.id, ultima.cantidad + 1)
+        }
+      } else if (e.key === '-' || e.key === 'Subtract') {
+        e.preventDefault()
+        if (caja && !modalAbierto && ticket.length > 0) {
+          const ultima = ticket[ticket.length - 1]
+          if (ultima.cantidad > 1) cambiarCantidad(ultima.id, ultima.cantidad - 1)
         }
       }
     }
@@ -630,6 +787,61 @@ function POS() {
     })
   }
 
+// Cuadre de efectivo (desglose de billetes)
+  const totalContado = DENOMINACIONES.reduce(
+    (acc, d) => acc + (parseInt(conteoBilletes[d], 10) || 0) * d, 0
+  )
+  const efectivoEsperadoCaja = resumenCaja ? parseFloat(resumenCaja.efectivo_esperado) || 0 : 0
+  const diferenciaCaja = totalContado - efectivoEsperadoCaja
+
+  // Imprimir el cuadre de caja
+  const imprimirCuadre = (c) => {
+    if (!c) return
+    const w = window.open('', '_blank')
+    if (!w) { alert('⚠️ Habilite las ventanas emergentes para imprimir.'); return }
+    const desg = c.desglose_efectivo || {}
+    const filasDesg = DENOMINACIONES
+      .filter(d => (parseInt(desg[d], 10) || 0) > 0)
+      .map(d => {
+        const cant = parseInt(desg[d], 10) || 0
+        return `<tr><td style="text-align:center">${cant}</td><td style="text-align:center">x ${fmt(d)}</td><td style="text-align:right">${fmt(cant * d)}</td></tr>`
+      }).join('')
+    const dif = c.diferencia === null || c.diferencia === undefined ? null : parseFloat(c.diferencia)
+    const etiqueta = dif === null ? 'SIN CONTEO' : (Math.abs(dif) < 0.01 ? 'CUADRADO' : (dif > 0 ? 'SOBRANTE' : 'FALTANTE'))
+    const colorDif = dif === null ? '#64748b' : (Math.abs(dif) < 0.01 ? '#16a34a' : (dif > 0 ? '#2563eb' : '#dc2626'))
+    w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Cuadre de Caja</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;max-width:480px;margin:0 auto}
+      h2{text-align:center;margin:0 0 4px}
+      p.sub{text-align:center;color:#64748b;font-size:12px;margin:0 0 16px}
+      table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px}
+      th{background:#374151;color:#fff;padding:6px;text-align:left}
+      td{padding:5px 6px;border-bottom:1px solid #e2e8f0}
+      .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+      .tot{border-top:2px solid #334155;margin-top:6px;padding-top:6px;font-weight:bold;font-size:15px}
+      .dif{margin-top:12px;padding:10px;border-radius:6px;color:#fff;display:flex;justify-content:space-between;font-weight:bold;font-size:16px;background:${colorDif}}
+    </style></head><body>
+      <h2>CUADRE DE CAJA</h2>
+      <p class="sub">Operador: ${c.usuario_nombre || 'N/D'}<br>
+      Apertura: ${fmtFecha(c.fecha_apertura)} &nbsp;|&nbsp; Cierre: ${fmtFecha(c.fecha_cierre)}</p>
+      <div class="row"><span>Monto de apertura:</span><b>RD$ ${fmt(c.monto_apertura)}</b></div>
+      <div class="row"><span>Facturas del turno:</span><b>${c.cantidad_facturas || 0}</b></div>
+      <div class="row"><span>Ventas en efectivo:</span><b>RD$ ${fmt(c.total_efectivo)}</b></div>
+      <div class="row"><span>Ventas con tarjeta:</span><b>RD$ ${fmt(c.total_tarjeta)}</b></div>
+      <div class="row"><span>Transferencias:</span><b>RD$ ${fmt(c.total_transferencia)}</b></div>
+      <div class="row"><span>Total de ventas:</span><b>RD$ ${fmt(c.total_ventas)}</b></div>
+      <div class="row tot"><span>EFECTIVO ESPERADO:</span><span>RD$ ${fmt(c.efectivo_esperado)}</span></div>
+      ${filasDesg ? `<h4 style="margin:16px 0 6px">Detalle de Efectivo</h4>
+      <table><thead><tr><th style="text-align:center">Cant.</th><th style="text-align:center">Billete</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody>${filasDesg}</tbody></table>` : ''}
+      <div class="row tot"><span>TOTAL CONTADO:</span><span>RD$ ${fmt(c.efectivo_contado || 0)}</span></div>
+      <div class="dif"><span>${etiqueta}</span><span>${dif !== null && dif > 0 ? '+' : ''}RD$ ${fmt(dif || 0)}</span></div>
+      <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:24px">_______________________<br>Firma del cajero</p>
+      <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script>
+    </body></html>`)
+    w.document.close()
+  }
+
   // Abrir pantalla de cierre (cargar resumen)
   const abrirCierre = async () => {
     if (pendientes > 0) {
@@ -638,7 +850,8 @@ function POS() {
     }
     try {
       const res = await API.get('/pos/caja/resumen')
-      setResumenCaja(res.data.data)
+     setResumenCaja(res.data.data)
+      setConteoBilletes({})
       setMostrarCierre(true)
     } catch (err) {
       console.error('Error cargando resumen:', err)
@@ -650,8 +863,17 @@ function POS() {
     if (procesandoCaja) return
     setProcesandoCaja(true)
     try {
-      const res = await API.post('/pos/caja/cerrar')
+     const desglose = {}
+      DENOMINACIONES.forEach(d => {
+        const c = parseInt(conteoBilletes[d], 10) || 0
+        if (c > 0) desglose[d] = c
+      })
+      const res = await API.post('/pos/caja/cerrar', {
+        desglose_efectivo: desglose,
+        efectivo_contado: totalContado
+      })
       setCierreExitoso(res.data.data)
+      setConteoBilletes({})
       setMostrarCierre(false)
       setCaja(null)
       setTicket([])
@@ -736,32 +958,60 @@ function POS() {
   const itbisGeneral = totalGeneral - baseGeneral
   const totalOriginalTicket = ticket.reduce((acc, l) => acc + l.precio_original * l.cantidad, 0)
   const descuentoTotalTicket = totalOriginalTicket - totalGeneral
-
-  // Devuelta
+// Devuelta
   const recibido = parseFloat(montoRecibido) || 0
   const devuelta = recibido - totalGeneral
+
+  // Pago mixto: suma de los métodos y lo que falta por cubrir
+  const totalMixto = ['efectivo', 'tarjeta', 'transferencia']
+    .reduce((acc, m) => acc + (parseFloat(pagosMixto[m]) || 0), 0)
+  const faltaMixto = totalGeneral - totalMixto
 
   const fmt = (n) => (parseFloat(n) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   // Abrir ventana de cobro
   const abrirCobro = () => {
     if (ticket.length === 0) return
-    setFormaPago('efectivo')
+setFormaPago('efectivo')
     setMontoRecibido('')
+    setModoMixto(false)
+    setPagosMixto({ efectivo: '', tarjeta: '', transferencia: '' })
     setErrorCobro('')
     setMostrarCobro(true)
   }
 
   // Confirmar cobro → crear FACTURA REAL (o guardar offline)
   const confirmarCobro = async () => {
-    if (procesando) return
-    if (formaPago === 'efectivo' && recibido < totalGeneral) {
+if (procesando) return
+    if (modoMixto) {
+      if (totalMixto <= 0) {
+        setErrorCobro('Debe ingresar al menos un monto')
+        return
+      }
+      if (Math.abs(faltaMixto) > 0.009) {
+        setErrorCobro(faltaMixto > 0
+          ? `Faltan RD$ ${fmt(faltaMixto)} por cubrir`
+          : `El monto excede el total en RD$ ${fmt(Math.abs(faltaMixto))}`)
+        return
+      }
+      if (!enLinea) {
+        setErrorCobro('El pago mixto requiere conexión a internet')
+        return
+      }
+    } else if (formaPago === 'efectivo' && recibido < totalGeneral) {
       setErrorCobro('El monto recibido es menor que el total')
       return
     }
     setProcesando(true)
     setErrorCobro('')
-    const etiquetaPago = formaPago === 'efectivo' ? 'Efectivo' : formaPago === 'tarjeta' ? 'Tarjeta' : 'Transferencia'
+    const METODOS_MIX = ['efectivo', 'tarjeta', 'transferencia']
+    const detallePagos = modoMixto
+      ? METODOS_MIX.filter(m => (parseFloat(pagosMixto[m]) || 0) > 0)
+          .map(m => ({ metodo: m, monto: parseFloat(pagosMixto[m]) }))
+      : [{ metodo: formaPago, monto: totalGeneral }]
+    const etiquetaPago = modoMixto
+      ? 'Mixto (' + detallePagos.map(p => `${p.metodo === 'efectivo' ? 'Efectivo' : p.metodo === 'tarjeta' ? 'Tarjeta' : 'Transferencia'} RD$ ${p.monto.toFixed(2)}`).join(' + ') + ')'
+      : (formaPago === 'efectivo' ? 'Efectivo' : formaPago === 'tarjeta' ? 'Tarjeta' : 'Transferencia')
     const notaDescuento = descuentoTotalTicket > 0.009 ? ` | Descuento: RD$ ${descuentoTotalTicket.toFixed(2)}` : ''
     const payload = {
       customer_id: clienteSeleccionado ? clienteSeleccionado.id : '',
@@ -779,8 +1029,14 @@ function POS() {
     }
     const nombreClienteVenta = clienteSeleccionado ? clienteSeleccionado.nombre : 'CONSUMIDOR FINAL'
     try {
-      const res = await API.post('/invoices', payload)
+const res = await API.post('/invoices', payload)
       const factura = res.data.data || res.data
+      // Registrar el desglose real de pago (soporta mixto y simple)
+      try {
+        await API.post('/pos/pagos', { invoice_id: factura.id, pagos: detallePagos })
+      } catch (e) {
+        console.error('Error registrando desglose de pago:', e)
+      }
       setVentaExitosa({
         offline: false,
         id: factura.id,
@@ -789,14 +1045,17 @@ function POS() {
         cliente: nombreClienteVenta,
         total: totalGeneral,
         descuento: descuentoTotalTicket,
-        recibido: formaPago === 'efectivo' ? recibido : totalGeneral,
-        devuelta: formaPago === 'efectivo' ? devuelta : 0,
+        recibido: modoMixto ? totalGeneral : (formaPago === 'efectivo' ? recibido : totalGeneral),
+        devuelta: modoMixto ? 0 : (formaPago === 'efectivo' ? devuelta : 0),
         pago: etiquetaPago
       })
-      setMostrarCobro(false)
+ setMostrarCobro(false)
       setTicket([])
       setClienteSeleccionado(null)
       setDescuentoAutorizado(false)
+      setModoMixto(false)
+      setPagosMixto({ efectivo: '', tarjeta: '', transferencia: '' })
+      setMontoRecibido('')
     } catch (err) {
       // Error de RED (sin conexión) → guardar venta offline
       if (!err.response) {
@@ -834,7 +1093,10 @@ function POS() {
 
   // Nueva venta después del éxito
   const nuevaVenta = () => {
-    setVentaExitosa(null)
+   setVentaExitosa(null)
+    setModoMixto(false)
+    setPagosMixto({ efectivo: '', tarjeta: '', transferencia: '' })
+    setMontoRecibido('')
     setBusqueda('')
     if (inputRef.current) inputRef.current.focus()
   }
@@ -848,22 +1110,42 @@ function POS() {
       }
       return
     }
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      confirmarCobro()
-    } else if (e.key === 'Escape') {
+if (e.key === 'Escape') {
       setMostrarCobro(false)
+      return
     }
+    if (e.key !== 'Enter') return
+    const el = document.activeElement
+    if (el && el.tagName === 'BUTTON') return
+    e.preventDefault()
+    if (el && el.id && el.id.startsWith('mixto-')) {
+      const orden = ['mixto-efectivo', 'mixto-tarjeta', 'mixto-transferencia']
+      const i = orden.indexOf(el.id)
+      if (i >= 0 && i < orden.length - 1) {
+        document.getElementById(orden[i + 1])?.focus()
+        return
+      }
+      document.getElementById('cobro-confirmar')?.focus()
+      return
+    }
+    confirmarCobro()
   }
 
   // Teclas en el modal de descuento
-  const teclasDescuento = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      aplicarDescuento()
-    } else if (e.key === 'Escape') {
+const teclasDescuento = (e) => {
+    if (e.key === 'Escape') {
       setMostrarDescuento(false)
+      return
     }
+    if (e.key !== 'Enter') return
+    const el = document.activeElement
+    if (el && el.tagName === 'BUTTON') return
+    e.preventDefault()
+    if (el && el.id === 'desc-valor' && !descuentoAutorizado) {
+      document.getElementById('desc-clave')?.focus()
+      return
+    }
+    aplicarDescuento()
   }
 
   // Indicador de conexión (componente inline)
@@ -976,8 +1258,13 @@ function POS() {
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
               <div className="p-6 text-center">
                 <p className="text-6xl mb-3">🔒</p>
-                <h2 className="text-2xl font-bold text-blue-600 mb-4">CAJA CERRADA</h2>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 text-left">
+              <h2 className="text-2xl font-bold text-blue-600 mb-4">CAJA CERRADA</h2>
+                {esSoloPos && (
+                  <p className="text-sm text-gray-500 mb-4">
+                    Presione <b>IMPRIMIR</b> para obtener el cuadre del turno.
+                  </p>
+                )}
+                <div className={`bg-gray-50 rounded-lg p-4 mb-4 text-left ${esSoloPos ? 'hidden' : ''}`}>
                   <div className="flex justify-between py-1 text-sm">
                     <span className="text-gray-500">Facturas del turno:</span>
                     <span className="font-bold">{cierreExitoso.cantidad_facturas}</span>
@@ -998,17 +1285,52 @@ function POS() {
                     <span className="text-gray-500">Total ventas:</span>
                     <span className="font-bold">RD$ {fmt(cierreExitoso.total_ventas)}</span>
                   </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-gray-600 font-semibold">EFECTIVO EN GAVETA:</span>
+            <div className="flex justify-between py-1">
+                    <span className="text-gray-600 font-semibold">EFECTIVO ESPERADO:</span>
                     <span className="font-bold text-green-600 text-xl">RD$ {fmt(cierreExitoso.efectivo_esperado)}</span>
                   </div>
+                  <div className="flex justify-between py-1 border-t mt-2 pt-2 text-sm">
+                    <span className="text-gray-500">Total contado:</span>
+                    <span className="font-bold">RD$ {fmt(cierreExitoso.efectivo_contado || 0)}</span>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setCierreExitoso(null)}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700"
-                >
-                  ACEPTAR
-                </button>
+               {!esSoloPos && cierreExitoso.diferencia !== null && cierreExitoso.diferencia !== undefined && (
+                  <div className={`rounded-lg p-3 mb-4 text-white flex justify-between items-center ${
+                    Math.abs(parseFloat(cierreExitoso.diferencia)) < 0.01 ? 'bg-green-600'
+                      : parseFloat(cierreExitoso.diferencia) > 0 ? 'bg-blue-600' : 'bg-red-600'
+                  }`}>
+                    <span className="font-bold">
+                      {Math.abs(parseFloat(cierreExitoso.diferencia)) < 0.01 ? '✅ CUADRADO'
+                        : parseFloat(cierreExitoso.diferencia) > 0 ? '🔵 SOBRANTE' : '🔴 FALTANTE'}
+                    </span>
+                    <span className="font-bold text-2xl">
+                      {parseFloat(cierreExitoso.diferencia) > 0 ? '+' : ''}RD$ {fmt(cierreExitoso.diferencia)}
+                    </span>
+                  </div>
+                )}
+     <div className="flex gap-2">
+                  <button
+                    id="btn-imprimir-cuadre"
+                    autoFocus
+                    onClick={() => imprimirCuadre(cierreExitoso)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-aceptar-cierre')?.focus() }
+                    }}
+                    className="flex-1 bg-gray-700 text-white py-3 rounded-lg font-bold text-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-400"
+                  >
+                    🖨️ IMPRIMIR
+                  </button>
+                  <button
+                    id="btn-aceptar-cierre"
+                    onClick={() => setCierreExitoso(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-imprimir-cuadre')?.focus() }
+                    }}
+              className={`flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 ${esSoloPos ? 'hidden' : ''}`}
+                  >
+                    ACEPTAR
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1289,9 +1611,11 @@ function POS() {
 
               {/* TIPO DE DESCUENTO */}
               <div className="grid grid-cols-2 gap-2 mb-3">
-                <button
+              <button
+                  id="desc-porcentaje"
+                  onFocus={() => { setDescuentoTipo('porcentaje'); setErrorDesc('') }}
                   onClick={() => { setDescuentoTipo('porcentaje'); setErrorDesc('') }}
-                  className={`py-2 rounded-lg font-bold text-sm border-2 ${
+                  className={`py-2 rounded-lg font-bold text-sm border-2 focus:outline-none focus:ring-4 focus:ring-orange-300 ${
                     descuentoTipo === 'porcentaje'
                       ? 'bg-orange-500 text-white border-orange-500'
                       : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
@@ -1299,9 +1623,11 @@ function POS() {
                 >
                   % Porcentaje
                 </button>
-                <button
+              <button
+                  id="desc-monto"
+                  onFocus={() => { setDescuentoTipo('monto'); setErrorDesc('') }}
                   onClick={() => { setDescuentoTipo('monto'); setErrorDesc('') }}
-                  className={`py-2 rounded-lg font-bold text-sm border-2 ${
+                  className={`py-2 rounded-lg font-bold text-sm border-2 focus:outline-none focus:ring-4 focus:ring-orange-300 ${
                     descuentoTipo === 'monto'
                       ? 'bg-orange-500 text-white border-orange-500'
                       : 'bg-white text-gray-700 border-gray-300 hover:border-orange-400'
@@ -1315,7 +1641,8 @@ function POS() {
               <label className="block text-sm font-semibold text-gray-600 mb-1">
                 {descuentoTipo === 'porcentaje' ? 'Porcentaje de descuento (%):' : 'Monto de descuento (RD$):'}
               </label>
-              <input
+             <input
+                id="desc-valor"
                 ref={descValorRef}
                 type="number"
                 value={descuentoValor}
@@ -1328,7 +1655,8 @@ function POS() {
               {!descuentoAutorizado && (
                 <div className="mb-3">
                   <label className="block text-sm font-semibold text-gray-600 mb-1">🔑 Clave de autorización:</label>
-                  <input
+              <input
+                    id="desc-clave"
                     type="password"
                     value={claveDesc}
                     onChange={(e) => { setClaveDesc(e.target.value); setErrorDesc('') }}
@@ -1350,17 +1678,19 @@ function POS() {
 
               {/* BOTONES */}
               <div className="flex gap-2">
-                <button
+      <button
+                  id="desc-cancelar"
                   onClick={() => setMostrarDescuento(false)}
                   disabled={procesandoDesc}
-                  className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-400"
                 >
                   Cancelar (Esc)
                 </button>
                 <button
+                  id="desc-aplicar"
                   onClick={aplicarDescuento}
                   disabled={procesandoDesc}
-                  className={`flex-1 py-2.5 rounded-lg font-bold text-white ${
+                  className={`flex-1 py-2.5 rounded-lg font-bold text-white focus:outline-none focus:ring-4 focus:ring-orange-300 ${
                     procesandoDesc ? 'bg-orange-300 cursor-wait' : 'bg-orange-500 hover:bg-orange-600'
                   }`}
                 >
@@ -1375,9 +1705,14 @@ function POS() {
      {/* MODAL DE ELIMINAR ARTÍCULO */}
       {mostrarEliminar && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.preventDefault(); confirmarEliminar() }
-            else if (e.key === 'Escape') { setMostrarEliminar(false) }
+       <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onKeyDown={(e) => {
+            if (e.key === 'Escape') { setMostrarEliminar(false); return }
+            if (e.key !== 'Enter') return
+            const el = document.activeElement
+            if (el && el.tagName === 'BUTTON') return
+            e.preventDefault()
+            if (el && el.id === 'elim-codigo') { document.getElementById('elim-clave')?.focus(); return }
+            confirmarEliminar()
           }}>
             <div className="bg-red-600 text-white px-4 py-2 rounded-t-xl flex justify-between items-center">
               <h2 className="text-base font-bold">🗑️ ELIMINAR ARTÍCULO</h2>
@@ -1385,7 +1720,8 @@ function POS() {
             </div>
             <div className="p-4">
               <label className="block text-sm font-semibold text-gray-600 mb-1">Escanee el código del artículo:</label>
-              <input
+             <input
+                id="elim-codigo"
                 ref={codigoEliminarRef}
                 type="text"
                 value={codigoEliminar}
@@ -1411,7 +1747,8 @@ function POS() {
 
               {/* CLAVE */}
               <label className="block text-sm font-semibold text-gray-600 mb-1">🔑 Clave de autorización:</label>
-              <input
+          <input
+                id="elim-clave"
                 type="password"
                 value={claveEliminar}
                 onChange={(e) => { setClaveEliminar(e.target.value); setErrorEliminar('') }}
@@ -1428,17 +1765,19 @@ function POS() {
 
               {/* BOTONES */}
               <div className="flex gap-2">
-                <button
+       <button
+                  id="elim-cancelar"
                   onClick={() => setMostrarEliminar(false)}
                   disabled={procesandoEliminar}
-                  className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-400"
                 >
                   Cancelar (Esc)
                 </button>
                 <button
+                  id="elim-confirmar"
                   onClick={confirmarEliminar}
                   disabled={procesandoEliminar}
-                  className={`flex-1 py-2.5 rounded-lg font-bold text-white ${
+                  className={`flex-1 py-2.5 rounded-lg font-bold text-white focus:outline-none focus:ring-4 focus:ring-red-300 ${
                     procesandoEliminar ? 'bg-red-400 cursor-wait' : 'bg-red-600 hover:bg-red-700'
                   }`}
                 >
@@ -1499,8 +1838,9 @@ function POS() {
                       </button>
                     )}
                     <button
+                     id="cobro-cliente"
                       onClick={() => setMostrarBuscarCliente(!mostrarBuscarCliente)}
-                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700"
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
                     >
                       {mostrarBuscarCliente ? 'Cerrar' : '👤 CLIENTE'}
                     </button>
@@ -1581,16 +1921,67 @@ function POS() {
                 )}
               </div>
 
+           {/* BOTÓN PAGO MIXTO */}
+            <button
+                id="cobro-mixto"
+                onClick={() => { setModoMixto(!modoMixto); setErrorCobro(''); setPagosMixto({ efectivo: '', tarjeta: '', transferencia: '' }) }}
+             className={`w-full mb-2 py-2 rounded-lg font-bold text-sm border-2 focus:outline-none focus:ring-4 focus:ring-purple-300 ${
+                  modoMixto ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-700 border-purple-400 hover:bg-purple-50'
+                }`}
+              >
+                {modoMixto ? '✕ Cancelar pago mixto' : '🔀 PAGO MIXTO (combinar métodos)'}
+              </button>
+
+              {/* PAGO MIXTO: MONTO POR MÉTODO */}
+              {modoMixto && (
+                <div className="border-2 border-purple-300 rounded-lg p-3 mb-3 bg-purple-50">
+                  {[
+                    { id: 'efectivo', label: '💵 Efectivo' },
+                    { id: 'tarjeta', label: '💳 Tarjeta' },
+                    { id: 'transferencia', label: '🏦 Transferencia' }
+                  ].map((m, i, arr) => (
+                    <div key={m.id} className="flex items-center gap-2 mb-2">
+                      <label className="text-sm font-semibold text-gray-700 w-36">{m.label}</label>
+                      <input
+                        id={`mixto-${m.id}`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={pagosMixto[m.id]}
+                        onChange={(e) => { setPagosMixto(prev => ({ ...prev, [m.id]: e.target.value })); setErrorCobro('') }}
+                onFocus={(e) => e.target.select()}
+                        placeholder="0.00"
+                        className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-1.5 text-lg text-right font-bold focus:outline-none focus:border-purple-600"
+                      />
+                    </div>
+                  ))}
+                  <div className="border-t border-purple-300 pt-2 mt-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total ingresado:</span>
+                      <span className="font-bold">RD$ {fmt(totalMixto)}</span>
+                    </div>
+                    <div className={`flex justify-between font-bold ${
+                      Math.abs(faltaMixto) < 0.01 ? 'text-green-600' : faltaMixto > 0 ? 'text-red-600' : 'text-orange-600'
+                    }`}>
+                      <span>{Math.abs(faltaMixto) < 0.01 ? '✅ Cubierto' : faltaMixto > 0 ? 'Falta por cubrir:' : 'Excede por:'}</span>
+                      <span className="text-lg">RD$ {fmt(Math.abs(faltaMixto))}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* FORMAS DE PAGO */}
-              <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className={`grid grid-cols-3 gap-2 mb-3 ${modoMixto ? 'hidden' : ''}`}>
                 {[
                   { id: 'efectivo', label: '💵 Efectivo' },
                   { id: 'tarjeta', label: '💳 Tarjeta' },
                   { id: 'transferencia', label: '🏦 Transf.' }
                 ].map(fp => (
-                  <button
+               <button
                     key={fp.id}
-                    onClick={() => { setFormaPago(fp.id); setErrorCobro(''); if (fp.id === 'efectivo' && montoRef.current) setTimeout(() => montoRef.current?.focus(), 50) }}
+                    id={`metodo-${fp.id}`}
+                    onFocus={() => { setFormaPago(fp.id); setErrorCobro('') }}
+                    onClick={() => { setFormaPago(fp.id); setErrorCobro('') }}
                     className={`py-2 rounded-lg font-semibold text-sm border-2 ${
                       formaPago === fp.id
                         ? 'bg-blue-600 text-white border-blue-600'
@@ -1603,11 +1994,12 @@ function POS() {
               </div>
 
               {/* MONTO RECIBIDO (solo efectivo) */}
-              {formaPago === 'efectivo' && (
+              {!modoMixto && formaPago === 'efectivo' && (
                 <div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-semibold text-gray-600 flex-shrink-0">Recibido:</label>
-                    <input
+                 <input
+                      id="cobro-recibido"
                       ref={montoRef}
                       type="number"
                       value={montoRecibido}
@@ -1638,15 +2030,17 @@ function POS() {
             <div className="p-3 border-t flex gap-2 flex-shrink-0 bg-white rounded-b-xl">
               <button
                 onClick={() => setMostrarCobro(false)}
+           id="cobro-cancelar"
                 disabled={procesando}
-                className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+                className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-400"
               >
                 Cancelar (Esc)
               </button>
-              <button
+        <button
+                id="cobro-confirmar"
                 onClick={confirmarCobro}
                 disabled={procesando}
-                className={`flex-1 py-2.5 rounded-lg font-bold text-white ${
+                className={`flex-1 py-2.5 rounded-lg font-bold text-white focus:outline-none focus:ring-4 focus:ring-green-300 ${
                   procesando ? 'bg-green-400 cursor-wait' : 'bg-green-600 hover:bg-green-700'
                 }`}
               >
@@ -1739,15 +2133,17 @@ function POS() {
       {/* MODAL DE CIERRE DE CAJA */}
       {mostrarCierre && resumenCaja && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-            <div className="bg-red-600 text-white px-5 py-3 rounded-t-xl flex justify-between items-center">
+         <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[92vh] overflow-y-auto">
+            <div className="bg-red-600 text-white px-5 py-3 rounded-t-xl flex justify-between items-center sticky top-0 z-10">
               <h2 className="text-lg font-bold">🔒 CERRAR CAJA</h2>
               <button onClick={() => setMostrarCierre(false)} className="text-white text-2xl leading-none font-bold">✕</button>
             </div>
-            <div className="p-5">
-              <p className="text-sm text-gray-500 text-center mb-4">Resumen del turno actual</p>
+            <div className="p-3">
+          <p className="text-xs text-gray-500 text-center mb-2">
+                {esSoloPos ? 'Cuente el efectivo de la gaveta y presione Confirmar' : 'Resumen del turno actual'}
+              </p>
 
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <div className={`bg-gray-50 rounded-lg p-4 mb-4 ${esSoloPos ? 'hidden' : ''}`}>
                 <div className="flex justify-between py-1 text-sm">
                   <span className="text-gray-500">Apertura de caja:</span>
                   <span className="font-bold">RD$ {fmt(resumenCaja.caja.monto_apertura)}</span>
@@ -1773,24 +2169,105 @@ function POS() {
                   <span className="text-gray-500">Total de ventas:</span>
                   <span className="font-bold">RD$ {fmt(resumenCaja.total_ventas)}</span>
                 </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-gray-600 font-semibold">EFECTIVO EN GAVETA:</span>
+             <div className="flex justify-between py-1">
+                  <span className="text-gray-600 font-semibold">EFECTIVO ESPERADO:</span>
                   <span className="font-bold text-green-600 text-xl">RD$ {fmt(resumenCaja.efectivo_esperado)}</span>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              {/* DESGLOSE DE EFECTIVO */}
+              <div className="border rounded-lg overflow-hidden mb-4">
+               <div className="bg-gray-700 text-white px-3 py-1 text-xs font-bold">
+                  💵 Detalle de Efectivo (conteo físico)
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100 text-gray-600">
+                    <tr>
+                      <th className="px-2 py-0.5 text-center w-24 text-xs">Cantidad</th>
+                      <th className="px-2 py-0.5 text-center text-xs">Billete</th>
+                     <th className="px-2 py-0.5 text-right text-xs">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {DENOMINACIONES.map(d => {
+                      const cant = parseInt(conteoBilletes[d], 10) || 0
+                      return (
+                        <tr key={d} className="border-t">
+                          <td className="px-2 py-0.5">
+                      <input
+                              id={`billete-${d}`}
+                              type="number"
+                              min="0"
+                              value={conteoBilletes[d] ?? ''}
+                              onChange={(e) => setConteoBilletes(prev => ({ ...prev, [d]: e.target.value.replace(/\D/g, '') }))}
+                              onFocus={(e) => e.target.select()}
+                              onKeyDown={(e) => {
+                                const idx = DENOMINACIONES.indexOf(d)
+                          if (e.key === 'ArrowDown' || e.key === 'Enter') {
+                                  e.preventDefault()
+                                  const sig = DENOMINACIONES[idx + 1]
+                                  if (sig !== undefined) document.getElementById(`billete-${sig}`)?.focus()
+                                  else document.getElementById('btn-confirmar-cierre')?.focus()
+                                } else if (e.key === 'ArrowUp') {
+                                  e.preventDefault()
+                                  const ant = DENOMINACIONES[idx - 1]
+                                  if (ant !== undefined) document.getElementById(`billete-${ant}`)?.focus()
+                                }
+                              }}
+                              placeholder="0"
+                          className="w-full border rounded px-2 py-0.5 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </td>
+                         <td className="px-2 py-0.5 text-center text-gray-600 text-sm">X {fmt(d)} =</td>
+                        <td className="px-2 py-0.5 text-right font-semibold text-sm">{fmt(cant * d)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-100 border-t-2">
+                     <td colSpan="2" className="px-2 py-1 font-bold text-gray-700">TOTAL CONTADO</td>
+                      <td className="px-2 py-1 text-right font-bold text-lg">RD$ {fmt(totalContado)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* RESULTADO DEL CUADRE */}
+             <div className={`rounded-lg p-3 mb-4 text-white flex justify-between items-center ${esSoloPos ? 'hidden' : ''} ${
+                Math.abs(diferenciaCaja) < 0.01 ? 'bg-green-600'
+                  : diferenciaCaja > 0 ? 'bg-blue-600' : 'bg-red-600'
+              }`}>
+                <span className="font-bold">
+                  {Math.abs(diferenciaCaja) < 0.01 ? '✅ CUADRADO' : diferenciaCaja > 0 ? '🔵 SOBRANTE' : '🔴 FALTANTE'}
+                </span>
+                <span className="font-bold text-2xl">
+                  {diferenciaCaja > 0 ? '+' : ''}RD$ {fmt(diferenciaCaja)}
+                </span>
+              </div>
+
+     <div className="flex gap-2">
                 <button
+                  id="btn-cancelar-cierre"
                   onClick={() => setMostrarCierre(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-confirmar-cierre')?.focus() }
+                    else if (e.key === 'ArrowUp') { e.preventDefault(); document.getElementById('billete-1')?.focus() }
+                  }}
                   disabled={procesandoCaja}
-                  className="flex-1 py-3 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+                  className="flex-1 py-3 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-400"
                 >
                   Cancelar
                 </button>
                 <button
+                  id="btn-confirmar-cierre"
                   onClick={confirmarCierre}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-cancelar-cierre')?.focus() }
+                    else if (e.key === 'ArrowUp') { e.preventDefault(); document.getElementById('billete-1')?.focus() }
+                  }}
                   disabled={procesandoCaja}
-                  className={`flex-1 py-3 rounded-lg font-bold text-white ${
+                  className={`flex-1 py-3 rounded-lg font-bold text-white focus:outline-none focus:ring-4 focus:ring-red-300 ${
                     procesandoCaja ? 'bg-red-400 cursor-wait' : 'bg-red-600 hover:bg-red-700'
                   }`}
                 >
