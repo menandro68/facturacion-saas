@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import API from '../services/api'
 
 export default function Login({ onLogin }) {
@@ -18,6 +18,43 @@ export default function Login({ onLogin }) {
   })
   const [cambioError, setCambioError] = useState('')
   const [cambioLoading, setCambioLoading] = useState(false)
+
+  // NAVEGACIÓN POR TECLADO (sin mouse)
+  useEffect(() => {
+    if (showCambioModal || modalError) return
+    setTimeout(() => document.getElementById('login-usuario')?.focus(), 150)
+    const filas = [
+      ['tipo-admin', 'tipo-operador', 'tipo-vendedor'],
+      ['login-usuario'],
+      ['login-password'],
+      ['login-entrar']
+    ]
+    const posicion = () => {
+      const id = document.activeElement?.id
+      for (let f = 0; f < filas.length; f++) {
+        const c = filas[f].indexOf(id)
+        if (c >= 0) return [f, c]
+      }
+      return [-1, -1]
+    }
+    const ir = (f, c) => {
+      const fila = filas[f]
+      if (!fila) return
+      document.getElementById(fila[Math.min(c, fila.length - 1)])?.focus()
+    }
+    const onKey = (e) => {
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      e.preventDefault()
+      const [f, c] = posicion()
+      if (f === -1) { ir(1, 0); return }
+      if (e.key === 'ArrowDown') ir(Math.min(f + 1, filas.length - 1), c)
+      else if (e.key === 'ArrowUp') ir(Math.max(f - 1, 0), c)
+      else if (e.key === 'ArrowRight') ir(f, Math.min(c + 1, filas[f].length - 1))
+      else if (e.key === 'ArrowLeft') ir(f, Math.max(c - 1, 0))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showCambioModal, modalError])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -95,23 +132,29 @@ export default function Login({ onLogin }) {
         {/* Selector Admin / Operador / Vendedor */}
         <div className="flex mb-6 border border-gray-200 rounded overflow-hidden">
           <button
+            id="tipo-admin"
             type="button"
+            onFocus={() => setTipo('admin')}
             onClick={() => setTipo('admin')}
-            className={`flex-1 py-2 text-sm font-medium ${tipo === 'admin' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`flex-1 py-2 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'admin' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Administrador
           </button>
           <button
+            id="tipo-operador"
             type="button"
+            onFocus={() => setTipo('operador')}
             onClick={() => setTipo('operador')}
-            className={`flex-1 py-2 text-sm font-medium border-l border-r border-gray-200 ${tipo === 'operador' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`flex-1 py-2 text-sm font-medium border-l border-r border-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'operador' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Operador
           </button>
           <button
+            id="tipo-vendedor"
             type="button"
+            onFocus={() => setTipo('vendedor')}
             onClick={() => setTipo('vendedor')}
-            className={`flex-1 py-2 text-sm font-medium ${tipo === 'vendedor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`flex-1 py-2 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'vendedor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Vendedor
           </button>
@@ -142,6 +185,7 @@ export default function Login({ onLogin }) {
               <>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
                 <input
+                  id="login-usuario"
                   type="text"
                   name="email"
                   value={form.email}
@@ -155,6 +199,7 @@ export default function Login({ onLogin }) {
               <>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
                 <input
+                  id="login-usuario"
                   type="text"
                   name="usuario"
                   value={form.usuario}
@@ -169,6 +214,7 @@ export default function Login({ onLogin }) {
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
             <input
+              id="login-password"
               type="password"
               name="password"
               value={form.password}
@@ -179,9 +225,10 @@ export default function Login({ onLogin }) {
           </div>
 
           <button
+            id="login-entrar"
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-blue-300"
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>

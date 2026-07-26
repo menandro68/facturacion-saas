@@ -161,9 +161,10 @@ function POS() {
   const clienteRef = useRef(null)
   const descValorRef = useRef(null)
   const codigoEliminarRef = useRef(null)
+  const ticketRef = useRef(null)
   const sincronizandoRef = useRef(false)
 
- const usuario = JSON.parse(sessionStorage.getItem('usuario') || '{}')
+  const usuario = JSON.parse(sessionStorage.getItem('usuario') || '{}')
   // Cajero (solo_pos): no ve montos del turno, solo cuenta el efectivo e imprime
   const esSoloPos = usuario?.solo_pos === true
 
@@ -421,7 +422,27 @@ if (mostrarEliminar && codigoEliminarRef.current) codigoEliminarRef.current.focu
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [mostrarEliminar])
-// Foco en el primer billete al abrir el cierre de caja (F3)
+// Scroll del ticket con RePág / AvPág + auto-scroll al agregar artículos
+useEffect(() => {
+    const lista = ticketRef.current
+    if (lista) lista.scrollTop = lista.scrollHeight
+  }, [ticket.length])
+useEffect(() => {
+    const onKey = (e) => {
+      const k = e.key
+      if (k !== 'PageUp' && k !== 'PageDown' && k !== 'Prior' && k !== 'Next') return
+      const lista = ticketRef.current
+      if (!lista) return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      const baja = (k === 'PageDown' || k === 'Next')
+      lista.scrollBy({ top: baja ? 120 : -120, behavior: 'smooth' })
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
+  }, [])
+
+  // Foco en el primer billete al abrir el cierre de caja (F3)
   useEffect(() => {
     if (mostrarCierre) {
       setTimeout(() => document.getElementById('billete-2000')?.focus(), 120)
@@ -797,7 +818,17 @@ if (mostrarEliminar && codigoEliminarRef.current) codigoEliminarRef.current.focu
   // Imprimir el cuadre de caja
   const imprimirCuadre = (c) => {
     if (!c) return
-    const w = window.open('', '_blank')
+   const viejoC = document.getElementById('iframe-cuadre')
+    if (viejoC) viejoC.remove()
+    const ifrC = document.createElement('iframe')
+    ifrC.id = 'iframe-cuadre'
+    ifrC.style.position = 'fixed'
+    ifrC.style.width = '0'
+    ifrC.style.height = '0'
+    ifrC.style.border = '0'
+    ifrC.style.visibility = 'hidden'
+    document.body.appendChild(ifrC)
+    const w = ifrC.contentWindow
     if (!w) { alert('⚠️ Habilite las ventanas emergentes para imprimir.'); return }
     const desg = c.desglose_efectivo || {}
     const filasDesg = DENOMINACIONES
@@ -840,10 +871,15 @@ if (mostrarEliminar && codigoEliminarRef.current) codigoEliminarRef.current.focu
       <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script>
     </body></html>`)
     w.document.close()
+    setTimeout(() => { try { w.focus(); w.print() } catch (e) { console.error('Error imprimiendo cuadre:', e) } }, 500)
   }
 
   // Abrir pantalla de cierre (cargar resumen)
-  const abrirCierre = async () => {
+const abrirCierre = async () => {
+    if (ticket.length > 0) {
+      alert('⚠️ Hay una venta en proceso.\n\nComplete el cobro (F1) o elimine los artículos del ticket antes de cerrar la caja.')
+      return
+    }
     if (pendientes > 0) {
       alert(`⚠️ Hay ${pendientes} venta(s) pendiente(s) de sincronizar.\n\nEspere a que se sincronicen antes de cerrar la caja para que el cuadre sea correcto.`)
       return
@@ -924,11 +960,13 @@ if (mostrarEliminar && codigoEliminarRef.current) codigoEliminarRef.current.focu
       if (resultados.length > 0) {
         agregarAlTicket(resultados[seleccionado] || resultados[0])
       }
-    } else if (e.key === 'ArrowDown') {
+} else if (e.key === 'ArrowDown') {
       e.preventDefault()
+      if (resultados.length === 0) { document.getElementById('ticket-bajar')?.focus(); return }
       setSeleccionado(prev => Math.min(prev + 1, resultados.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
+      if (resultados.length === 0) { document.getElementById('ticket-subir')?.focus(); return }
       setSeleccionado(prev => Math.max(prev - 1, 0))
     } else if (e.key === 'Escape') {
       setBusqueda('')
@@ -1312,7 +1350,15 @@ const teclasDescuento = (e) => {
                   <button
                     id="btn-imprimir-cuadre"
                     autoFocus
-                    onClick={() => imprimirCuadre(cierreExitoso)}
+                    onClick={() => {
+                      imprimirCuadre(cierreExitoso)
+                      setTimeout(() => {
+                        sessionStorage.removeItem('token')
+                        sessionStorage.removeItem('usuario')
+                        sessionStorage.removeItem('es_matriz')
+                     window.location.reload()
+                      }, 2000)
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-aceptar-cierre')?.focus() }
                     }}
@@ -1369,10 +1415,13 @@ const teclasDescuento = (e) => {
               })}
             </p>
           </div>
- 
-          <button
+ <button
             onClick={abrirCierre}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm"
+            disabled={ticket.length > 0}
+            title={ticket.length > 0 ? 'Complete la venta antes de cerrar caja' : 'Cerrar caja (F3)'}
+            className={`text-white px-4 py-2 rounded-lg font-bold text-sm ${
+              ticket.length > 0 ? 'bg-green-600 opacity-40 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+            }`}
           >
             🔒 CERRAR CAJA (F3)
           </button>
@@ -1433,7 +1482,37 @@ const teclasDescuento = (e) => {
         {/* COLUMNA DERECHA: TICKET EN VIVO */}
         <div className="w-[60%] bg-white rounded-lg shadow flex flex-col">
           <div className="bg-gray-800 text-white text-center py-2 rounded-t-lg flex justify-between items-center px-4">
-            <p className="font-bold">🧾 TICKET</p>
+           <p className="font-bold">🧾 TICKET</p>
+            <div className="flex gap-1">
+      <button
+                id="ticket-subir"
+                onClick={() => ticketRef.current?.scrollBy({ top: -120, behavior: 'smooth' })}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('ticket-bajar')?.focus() }
+                  else if (e.key === 'ArrowLeft' || e.key === 'Escape') { e.preventDefault(); inputRef.current?.focus() }
+                  else if (e.key === 'ArrowUp') { e.preventDefault(); ticketRef.current?.scrollBy({ top: -120, behavior: 'smooth' }) }
+                  else if (e.key === 'ArrowDown') { e.preventDefault(); ticketRef.current?.scrollBy({ top: 120, behavior: 'smooth' }) }
+                }}
+                title="Subir"
+                className="bg-gray-600 hover:bg-gray-500 text-white w-8 h-7 rounded font-bold leading-none focus:outline-none focus:ring-4 focus:ring-yellow-400"
+              >
+                ▲
+              </button>
+              <button
+                id="ticket-bajar"
+                onClick={() => ticketRef.current?.scrollBy({ top: 120, behavior: 'smooth' })}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('ticket-subir')?.focus() }
+                  else if (e.key === 'ArrowRight' || e.key === 'Escape') { e.preventDefault(); inputRef.current?.focus() }
+                  else if (e.key === 'ArrowUp') { e.preventDefault(); ticketRef.current?.scrollBy({ top: -120, behavior: 'smooth' }) }
+                  else if (e.key === 'ArrowDown') { e.preventDefault(); ticketRef.current?.scrollBy({ top: 120, behavior: 'smooth' }) }
+                }}
+                title="Bajar"
+                className="bg-gray-600 hover:bg-gray-500 text-white w-8 h-7 rounded font-bold leading-none focus:outline-none focus:ring-4 focus:ring-yellow-400"
+              >
+                ▼
+              </button>
+            </div>
             <p className="text-xs">{ticket.length} línea(s)</p>
           </div>
 
@@ -1460,7 +1539,7 @@ const teclasDescuento = (e) => {
           </div>
 
           {/* LÍNEAS DEL TICKET */}
-          <div className="flex-1 overflow-auto p-2">
+        <div id="ticket-lista" ref={ticketRef} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto p-2">
             {ticket.length === 0 ? (
               <div className="h-full flex items-center justify-center text-gray-400">
                 <div className="text-center">
@@ -1792,7 +1871,7 @@ const teclasDescuento = (e) => {
       {/* MODAL DE COBRO */}
       {mostrarCobro && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[96vh] flex flex-col" onKeyDown={teclasCobro}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[92vh] flex flex-col" onKeyDown={teclasCobro}>
             {/* HEADER FIJO */}
             <div className="bg-green-600 text-white px-4 py-2 rounded-t-xl flex justify-between items-center flex-shrink-0">
               <h2 className="text-base font-bold">💰 COBRAR — RD$ {fmt(totalGeneral)}</h2>
@@ -2105,21 +2184,49 @@ const teclasDescuento = (e) => {
                 )}
               </div>
 
-              <div className="flex gap-2">
+       <div className="flex gap-2">
                 {!ventaExitosa.offline && (
                   <button
-                    onClick={() => {
+                    id="venta-imprimir"
+                    autoFocus
+              onClick={() => {
                       const token = sessionStorage.getItem('token')
-                      window.open(`/invoices/${ventaExitosa.id}/pdf-pos?token=${token}`, '_blank')
+                      const url = `/invoices/${ventaExitosa.id}/pdf-pos?token=${token}`
+                      const viejo = document.getElementById('iframe-impresion')
+                      if (viejo) viejo.remove()
+                      const iframe = document.createElement('iframe')
+                      iframe.id = 'iframe-impresion'
+                      iframe.style.position = 'fixed'
+                      iframe.style.width = '0'
+                      iframe.style.height = '0'
+                      iframe.style.border = '0'
+                      iframe.style.visibility = 'hidden'
+                      iframe.src = url
+                      iframe.onload = () => {
+                        try {
+                          iframe.contentWindow.focus()
+                          iframe.contentWindow.print()
+                        } catch (e) {
+                          console.error('Error imprimiendo:', e)
+                          window.open(url, '_blank')
+                        }
+                      }
+                 document.body.appendChild(iframe)
+                      nuevaVenta()
+                      setTimeout(() => inputRef.current?.focus(), 300)
+                      setTimeout(() => inputRef.current?.focus(), 900)
                     }}
-                    className="flex-1 bg-gray-700 text-white py-3 rounded-lg font-bold text-lg hover:bg-gray-800"
+                    className="flex-1 bg-gray-700 text-white py-3 rounded-lg font-bold text-lg hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-400"
                   >
-                    🖨️ IMPRIMIR
+                    🖨️ IMPRIMIR (Enter)
                   </button>
                 )}
                 <button
+                  id="venta-nueva"
                   onClick={nuevaVenta}
-                  className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700"
+                  className={`flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 ${
+                    !ventaExitosa.offline ? 'hidden' : ''
+                  }`}
                 >
                   🛒 NUEVA VENTA
                 </button>
