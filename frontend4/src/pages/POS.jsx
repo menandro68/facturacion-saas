@@ -117,7 +117,11 @@ function POS() {
   // Desglose de billetes para el cuadre de caja (F3)
   const DENOMINACIONES = [2000, 1000, 500, 200, 100, 50, 25, 20, 10, 5, 1]
   const [conteoBilletes, setConteoBilletes] = useState({})
- const [cierreImpresion, setCierreImpresion] = useState(null)
+  const [cierreImpresion, setCierreImpresion] = useState(null)
+  // Cantidad a eliminar (F4) — permite eliminación parcial de una línea
+ const [cantidadEliminar, setCantidadEliminar] = useState('')
+  // Acumulado de artículos devueltos (eliminados) en la venta actual
+  const [totalDevuelto, setTotalDevuelto] = useState(0)
   // Pago mixto (combinación de métodos en una misma factura)
   const [modoMixto, setModoMixto] = useState(false)
   const [pagosMixto, setPagosMixto] = useState({ efectivo: '', tarjeta: '', transferencia: '' })
@@ -388,11 +392,13 @@ if (!mostrarCobro || mostrarBuscarCliente) return
   useEffect(() => {
 if (mostrarEliminar && codigoEliminarRef.current) codigoEliminarRef.current.focus()
   }, [mostrarEliminar])
+
   // NAVEGACIÓN POR TECLADO EN EL MODAL DE ELIMINAR (sin mouse)
   useEffect(() => {
     if (!mostrarEliminar) return
-    const filas = [
+ const filas = [
       ['elim-codigo'],
+      ...(document.getElementById('elim-cantidad') ? [['elim-cantidad']] : []),
       ['elim-clave'],
       ['elim-cancelar', 'elim-confirmar']
     ]
@@ -666,8 +672,7 @@ useEffect(() => {
           setProcesandoDesc(false)
           return
         }
-        setDescuentoAutorizado(true)
-      } catch (err) {
+    } catch (err) {
         setErrorDesc(err.response?.data?.mensaje || 'Clave incorrecta')
         setProcesandoDesc(false)
         return
@@ -729,6 +734,12 @@ useEffect(() => {
     ? ticket.find(l => (l.codigo || '').toLowerCase() === codigoEliminar.trim().toLowerCase())
     : null
 
+// Al encontrar la línea, precargar la cantidad completa
+  useEffect(() => {
+    if (lineaAEliminar) setCantidadEliminar(String(lineaAEliminar.cantidad))
+    else setCantidadEliminar('')
+  }, [lineaAEliminar?.id, lineaAEliminar?.cantidad])
+
   // Confirmar eliminación (valida clave)
   const confirmarEliminar = async () => {
     if (procesandoEliminar) return
@@ -736,8 +747,17 @@ useEffect(() => {
       setErrorEliminar('Escanee o escriba el código de un artículo que esté en el ticket')
       return
     }
-    if (!claveEliminar.trim()) {
+ if (!claveEliminar.trim()) {
       setErrorEliminar('Ingrese la clave de autorización')
+      return
+    }
+    const cantPedida = parseFloat(cantidadEliminar)
+    if (isNaN(cantPedida) || cantPedida <= 0) {
+      setErrorEliminar('Ingrese una cantidad válida a eliminar')
+      return
+    }
+    if (cantPedida > lineaAEliminar.cantidad) {
+      setErrorEliminar(`Solo hay ${lineaAEliminar.cantidad} en el ticket`)
       return
     }
     setProcesandoEliminar(true)
@@ -749,7 +769,15 @@ useEffect(() => {
         setProcesandoEliminar(false)
         return
       }
-      setTicket(prev => prev.filter(l => l.id !== lineaAEliminar.id))
+    const cantAEliminar = parseFloat(cantidadEliminar) || lineaAEliminar.cantidad
+      setTotalDevuelto(prev => prev + (lineaAEliminar.precio * cantAEliminar))
+      if (cantAEliminar >= lineaAEliminar.cantidad) {
+        setTicket(prev => prev.filter(l => l.id !== lineaAEliminar.id))
+      } else {
+        setTicket(prev => prev.map(l =>
+          l.id === lineaAEliminar.id ? { ...l, cantidad: l.cantidad - cantAEliminar } : l
+        ))
+      }
       setMostrarEliminar(false)
       if (inputRef.current) inputRef.current.focus()
     } catch (err) {
@@ -1085,8 +1113,10 @@ if (procesando) return
       customer_id: clienteSeleccionado ? clienteSeleccionado.id : '',
       ncf_tipo: ncfTipo,
       notas: `POS - Pago: ${etiquetaPago}${notaDescuento}`,
-      fecha_vencimiento: '',
+   fecha_vencimiento: '',
       estado: 'emitida',
+      monto_recibido: modoMixto ? totalGeneral : (formaPago === 'efectivo' ? recibido : totalGeneral),
+      devuelta: modoMixto ? 0 : (formaPago === 'efectivo' ? Math.max(0, devuelta) : 0),
       items: ticket.map(l => ({
         product_id: l.id,
         descripcion: l.nombre,
@@ -1122,8 +1152,10 @@ const res = await API.post('/invoices', payload)
       setClienteSeleccionado(null)
       setDescuentoAutorizado(false)
       setModoMixto(false)
+  setModoMixto(false)
       setPagosMixto({ efectivo: '', tarjeta: '', transferencia: '' })
       setMontoRecibido('')
+      setTotalDevuelto(0)
     } catch (err) {
       // Error de RED (sin conexión) → guardar venta offline
       if (!err.response) {
@@ -1161,10 +1193,11 @@ const res = await API.post('/invoices', payload)
 
   // Nueva venta después del éxito
   const nuevaVenta = () => {
-   setVentaExitosa(null)
+ setVentaExitosa(null)
     setModoMixto(false)
     setPagosMixto({ efectivo: '', tarjeta: '', transferencia: '' })
     setMontoRecibido('')
+    setTotalDevuelto(0)
     setBusqueda('')
     if (inputRef.current) inputRef.current.focus()
   }
@@ -1637,54 +1670,66 @@ const teclasDescuento = (e) => {
             </div>
             {/* FILA DE DESCUENTO (entre ITBIS y TOTAL) */}
             <div className="flex justify-between items-center text-sm mb-1">
-              {descuentoTotalTicket > 0.009 ? (
-                <>
-                  <span className="text-orange-600 font-bold">🏷️ Descuento:</span>
-                  <span className="flex items-center gap-2">
-                    <span className="text-orange-600 font-bold">− RD$ {fmt(descuentoTotalTicket)}</span>
-                    <button
-                      onClick={() => setTicket(prev => prev.map(l => ({ ...l, precio: l.precio_original })))}
-                      className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold hover:bg-orange-200"
-                      title="Quitar descuento"
-                    >
-                      ✕
-                    </button>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-gray-600">🏷️ Descuento:</span>
-           <button
-                    onClick={abrirDescuentoGlobal}
-                    disabled={ticket.length === 0}
-                    className={`text-xs px-3 py-1 rounded font-bold text-white ${
-                      ticket.length > 0
-                        ? 'bg-green-600 hover:bg-green-700'
-                        : 'bg-green-600 opacity-50 cursor-not-allowed'
-                    }`}
+      <span className={descuentoTotalTicket > 0.009 ? 'text-orange-600 font-bold' : 'text-gray-600'}>🏷️ Descuento:</span>
+     <span className="flex items-center gap-2">
+                <button
+                  onClick={abrirDescuentoGlobal}
+                  disabled={ticket.length === 0}
+                  className={`text-xs px-3 py-1 rounded font-bold text-white ${
+                    ticket.length > 0
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-green-600 opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  ➖ Aplicar (F2)
+                </button>
+                <span className={`font-bold ${descuentoTotalTicket > 0.009 ? 'text-orange-600' : 'text-gray-400'}`}>
+                  {descuentoTotalTicket > 0.009 ? `− RD$ ${fmt(descuentoTotalTicket)}` : 'RD$ 0.00'}
+                </span>
+                {descuentoTotalTicket > 0.009 && (
+                  <button
+                    onClick={() => setTicket(prev => prev.map(l => ({ ...l, precio: l.precio_original })))}
+                    className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold hover:bg-orange-200"
+                    title="Quitar descuento"
                   >
-                    ➖ Aplicar (F2)
+     ✕
                   </button>
-                </>
-              )}
+                )}
+              </span>
+            </div>
+  <div className="flex justify-between items-center text-sm mb-1">
+              <span className={totalDevuelto > 0.009 ? 'text-red-600 font-bold' : 'text-gray-600'}>↩️ Devolución:</span>
+              <span className="flex items-center gap-2">
+                <button
+                  onClick={abrirEliminar}
+                  disabled={ticket.length === 0}
+                  className={`text-xs px-3 py-1 rounded font-bold text-white ${
+                    ticket.length > 0
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-green-600 opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  🗑️ ELIMINAR (F4)
+                </button>
+                <span className={`font-bold ${totalDevuelto > 0.009 ? 'text-red-600' : 'text-gray-400'}`}>
+                  {totalDevuelto > 0.009 ? `− RD$ ${fmt(totalDevuelto)}` : 'RD$ 0.00'}
+                </span>
+                {totalDevuelto > 0.009 && (
+                  <button
+                    onClick={() => setTotalDevuelto(0)}
+                    className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold hover:bg-red-200"
+                    title="Limpiar devolución"
+                  >
+                    ✕
+                  </button>
+                )}
+              </span>
             </div>
             <div className="flex justify-between text-5xl font-bold mb-2">
               <span>TOTAL:</span>
               <span>RD$ {fmt(totalGeneral)}</span>
             </div>
-      <div className="flex gap-2">
-     <button
-                onClick={abrirEliminar}
-                disabled={ticket.length === 0}
-                className={`px-4 py-1 rounded-lg font-bold text-white flex flex-col items-center justify-center leading-tight ${
-                  ticket.length > 0
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-green-600 opacity-50 cursor-not-allowed'
-                }`}
-              >
-                <span className="text-sm">ELIMINAR</span>
-                <span className="text-xs">(F4)</span>
-              </button>
+   <div className="flex gap-2">
               <button
                 onClick={abrirCobro}
                 disabled={ticket.length === 0}
@@ -1820,7 +1865,12 @@ const teclasDescuento = (e) => {
             const el = document.activeElement
             if (el && el.tagName === 'BUTTON') return
             e.preventDefault()
-            if (el && el.id === 'elim-codigo') { document.getElementById('elim-clave')?.focus(); return }
+          if (el && el.id === 'elim-codigo') {
+              const c = document.getElementById('elim-cantidad')
+              if (c) { c.focus(); return }
+              document.getElementById('elim-clave')?.focus(); return
+            }
+            if (el && el.id === 'elim-cantidad') { document.getElementById('elim-clave')?.focus(); return }
             confirmarEliminar()
           }}>
             <div className="bg-red-600 text-white px-4 py-2 rounded-t-xl flex justify-between items-center">
@@ -1845,9 +1895,23 @@ const teclasDescuento = (e) => {
                   <div className="mb-3 border-2 border-red-300 bg-red-50 rounded-lg p-2">
                     <p className="text-xs text-red-600 font-bold">SE VA A ELIMINAR:</p>
                     <p className="font-bold text-sm text-gray-800">{lineaAEliminar.nombre}</p>
-                    <p className="text-xs text-gray-500">
+             <p className="text-xs text-gray-500">
                       Cantidad: {lineaAEliminar.cantidad} | RD$ {fmt(lineaAEliminar.precio * lineaAEliminar.cantidad)}
                     </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <label className="text-xs font-bold text-red-700 flex-shrink-0">Cantidad a eliminar:</label>
+                      <input
+                        id="elim-cantidad"
+                        type="number"
+                        min="1"
+                        max={lineaAEliminar.cantidad}
+                        value={cantidadEliminar}
+                        onChange={(e) => { setCantidadEliminar(e.target.value); setErrorEliminar('') }}
+                        onFocus={(e) => e.target.select()}
+                        className="w-24 border-2 border-red-300 rounded px-2 py-1 text-center font-bold focus:outline-none focus:border-red-600"
+                      />
+                      <span className="text-xs text-gray-500">de {lineaAEliminar.cantidad}</span>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 text-center mb-3">Ese código no está en el ticket</p>

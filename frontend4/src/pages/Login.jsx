@@ -170,8 +170,22 @@ export default function Login({ onLogin }) {
                 <p className="text-sm text-gray-600">{modalError}</p>
               </div>
               <div className="px-6 py-4">
-                <button type="button" onClick={() => setModalError('')}
-                  className="w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+              <button type="button"
+                  autoFocus
+                  onClick={() => {
+                    setModalError('')
+                    setForm({ email: '', password: '', usuario: '' })
+                    setTimeout(() => document.getElementById('login-usuario')?.focus(), 150)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
+                      e.preventDefault()
+                      setModalError('')
+                      setForm({ email: '', password: '', usuario: '' })
+                      setTimeout(() => document.getElementById('login-usuario')?.focus(), 150)
+                    }
+                  }}
+                  className="w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-300">
                   Aceptar
                 </button>
               </div>
