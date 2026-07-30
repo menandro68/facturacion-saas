@@ -2227,11 +2227,69 @@ onKeyDown={e => {
                   }}
                  onBlur={() => setTimeout(() => { const el = document.getElementById('ped-cliente-list'); if (el) el.innerHTML = ''; setPedClienteIndex(-1) }, 200)}
                 />
-                <input type="hidden" id="ped-cliente" value="" />
+             <input type="hidden" id="ped-cliente" value="" />
                 <div id="ped-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
               </div>
+
+              {/* Ticket en vivo del Pedido (mismo formato que Nueva Factura) */}
+              <div className="pos-ticket">
+                <div className="pos-ticket-empresa">{usuarioSesion.empresa || ''}</div>
+                <div className="pos-ticket-cliente">
+                  Cliente: {(clientes.find(c => String(c.id) === String(pedClienteSeleccionadoId))?.nombre) || 'Consumidor Final'}
+                </div>
+                <div className="pos-ticket-divider"></div>
+                <div className="pos-ticket-cols"><span>DESCRIPCION</span><span>VALOR</span></div>
+                <div className="pos-ticket-divider"></div>
+                {itemsPed.map((it, i) => (
+                  (it.descripcion || it.precio_unitario) ? (
+                    <div key={i} className="pos-ticket-linea">
+                      <div className="pos-ticket-fila">
+                        <div className="pos-ticket-desc">{it.descripcion}</div>
+                        <button type="button" className="pos-ticket-eliminar"
+                          onClick={() => {
+                            if (!confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
+                            if (itemsPed.length > 1) {
+                              setItemsPed(prev => prev.filter((_, xi) => xi !== i))
+                            } else {
+                              setItemsPed([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
+                              setBuscarProductoPed({})
+                            }
+                          }}>✕</button>
+                      </div>
+                      <div className="pos-ticket-detalle">
+                        <span>
+                          <input type="number" min="0.01" step="any" value={it.cantidad}
+                            onChange={e => setItemsPed(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
+                            className="pos-ticket-cantidad" />
+                          {' x '}{parseFloat(it.precio_unitario || 0).toFixed(2)}
+                        </span>
+                        <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  ) : null
+                ))}
+                {itemsPed.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
+                  <div className="pos-ticket-vacio">Agregue artículos abajo</div>
+                )}
+                <div className="pos-ticket-divider"></div>
+                {(() => {
+                  let subPed = 0, itbPed = 0
+                  itemsPed.forEach(it => {
+                    const bruto = parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)
+                    const base = bruto / (1 + (parseFloat(it.itbis_rate || 0) / 100))
+                    subPed += base
+                    itbPed += bruto - base
+                  })
+                  return <>
+                    <div className="pos-ticket-tot"><span>SUBTOTAL</span><span>{subPed.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="pos-ticket-tot"><span>ITBIS</span><span>{itbPed.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="pos-ticket-total"><span>TOTAL A PAGAR</span><span>RD${(subPed + itbPed).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                  </>
+                })()}
+              </div>
+
               {itemsPed.map((item, index) => (
-                <div key={index} className="border rounded-lg p-3 mb-3 bg-gray-50">
+             <div key={index} className={index !== itemsPed.length - 1 ? "hidden" : "border rounded-lg p-3 mb-3 bg-gray-50"}>
                   {/* Búsqueda de producto */}
                   <div className="relative mb-2">
                     <input type="text" placeholder="🔍 Buscar Articulo..."

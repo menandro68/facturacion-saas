@@ -319,23 +319,33 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   <th className="px-4 py-3 text-left text-gray-600">Pagado</th>
                   <th className="px-4 py-3 text-left text-gray-600">Pendiente</th>
                   <th className="px-4 py-3 text-left text-gray-600">Vencimiento</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Estado</th>
-                  <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
+                 <th className="px-4 py-3 text-left text-gray-600">Estado</th>
                 </tr>
               </thead>
  <tbody>
                 {(() => {
                   const cuentasCredito = todasFacturas.filter(f => f.estado === 'emitida' || f.estado === 'pagada')
                   if (cuentasCredito.length === 0) {
-                    return <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-400">No hay cuentas por cobrar</td></tr>
+                   return <tr><td colSpan="7" className="px-4 py-8 text-center text-gray-400">No hay cuentas por cobrar</td></tr>
                   }
-                  const hoy = new Date()
+            const hoy = new Date()
+                  const condDiasCxc = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
                   return cuentasCredito.map((f) => {
                     const total = parseFloat(f.total || 0)
                     const pagada = f.estado === 'pagada'
                     const pagado = pagada ? total : 0
                     const pendiente = pagada ? 0 : total
-                    const vencida = !pagada && f.fecha_vencimiento && new Date(f.fecha_vencimiento) < hoy
+                    // Vencimiento segun las condiciones de credito del cliente
+                    let fechaVenc = f.fecha_vencimiento ? new Date(f.fecha_vencimiento) : null
+                    if (!fechaVenc && f.customer_id) {
+                      const cliCxc = clientes.find(c => c.id === f.customer_id)
+                      const diasCxc = condDiasCxc[cliCxc?.condiciones] || 0
+                      if (diasCxc > 0) {
+                        fechaVenc = new Date(f.creado_en)
+                        fechaVenc.setDate(fechaVenc.getDate() + diasCxc)
+                      }
+                    }
+                    const vencida = !pagada && fechaVenc && fechaVenc < hoy
                     const estadoTxt = pagada ? 'pagada' : (vencida ? 'vencida' : 'pendiente')
                     return (
                       <tr key={f.id} className="border-t hover:bg-gray-50">
@@ -344,13 +354,13 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                         <td className="px-4 py-3">RD${total.toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
                         <td className="px-4 py-3 text-green-600">RD${pagado.toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
                         <td className="px-4 py-3 text-orange-500 font-medium">RD${pendiente.toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
-                        <td className="px-4 py-3">{f.fecha_vencimiento ? new Date(f.fecha_vencimiento).toLocaleDateString('es-DO') : '-'}</td>
+                        <td className={`px-4 py-3 ${vencida ? 'text-red-600 font-medium' : ''}`}>{fechaVenc ? fechaVenc.toLocaleDateString('es-DO') : '-'}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(estadoTxt)}`}>
                             {estadoTxt.toUpperCase()}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-400">â€”</td>
+                        
                       </tr>
                     )
                   })

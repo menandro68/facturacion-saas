@@ -376,7 +376,11 @@ useEffect(() => {
                 <div className="bg-white rounded-lg shadow p-4 border-l-4 border-teal-500 relative">
                   <div className="text-xs text-gray-500 mb-1">🚚 Conduces</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.conduces.cantidad}</div>
-                  <div className="text-sm text-teal-600 font-medium">RD$ {reporteData.kpis.conduces.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+              <div className="text-sm text-teal-600 font-medium">RD$ {reporteData.kpis.conduces.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                  <button onClick={() => setModalVer('conduces')}
+                    className="absolute top-2 right-2 text-xs bg-teal-600 text-white px-2 py-1 rounded hover:bg-teal-700">
+                    Ver
+                  </button>
                 </div>
                 )}
               </div>
@@ -516,6 +520,7 @@ useEffect(() => {
               cotizacion: { titulo: '📝 Cotizaciones', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'cotizacion'), esPago: false },
               anulada: { titulo: '❌ Anulaciones', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'anulada'), esPago: false },
               nota_credito: { titulo: '💵 Notas de Crédito', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'nota_credito'), esPago: false },
+             conduces: { titulo: '🚚 Conduces', filtro: (reporteData.detalle_conduces || []).map(c => ({ ...c, ncf: c.numero })), esPago: false },
               pagos: { titulo: '💰 Pagos Recibidos', filtro: reporteData.detalle_pagos, esPago: true }
             }
             const c = config[modalVer]
