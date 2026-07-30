@@ -30,8 +30,9 @@ const MODULOS_DISPONIBLES = [
           { id: 'facturas:anular', label: 'Anular Factura' },
           { id: 'facturas:imprimir', label: 'Imprimir Factura' },
           { id: 'facturas:pdf', label: 'PDF Factura' }
-        ]
+]
       },
+      { id: 'conduces', label: 'Conduce' },
 // { id: 'pedidos', label: 'Pedidos' },
       // { id: 'cotizaciones', label: 'Cotizaciones' },
       // { id: 'notas_credito', label: 'Notas de Crédito' },

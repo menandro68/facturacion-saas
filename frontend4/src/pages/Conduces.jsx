@@ -23,6 +23,13 @@ export default function Conduces() {
   const [cdFechaFin, setCdFechaFin] = useState('')
   const [cdFiltroInicio, setCdFiltroInicio] = useState('')
   const [cdFiltroFin, setCdFiltroFin] = useState('')
+  // Descuento global por porcentaje (mismo patron que Nueva Factura)
+  const usuarioSesionCd = (() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } })()
+  const esNoAdminCd = usuarioSesionCd?.rol !== 'admin'
+  const [descuentoPctCd, setDescuentoPctCd] = useState('')
+  const [mostrarAutorizacionCd, setMostrarAutorizacionCd] = useState(false)
+  const [claveAutorizacionCd, setClaveAutorizacionCd] = useState('')
+  const [errorAutorizacionCd, setErrorAutorizacionCd] = useState('')
 
   const cargar = async () => {
     try {
@@ -55,6 +62,38 @@ export default function Conduces() {
     setMostrarConfirmarCd(true)
   }
 
+  const handleConfirmarSiCd = async () => {
+    setMostrarConfirmarCd(false)
+    const pctCd = Math.min(Math.max(parseFloat(descuentoPctCd) || 0, 0), 100)
+    if (pctCd > 0 && esNoAdminCd) {
+      setClaveAutorizacionCd('')
+      setErrorAutorizacionCd('')
+      setMostrarAutorizacionCd(true)
+      return
+    }
+    await guardarConduceFinal()
+  }
+
+  const handleValidarClaveCd = async () => {
+    if (!claveAutorizacionCd.trim()) {
+      setErrorAutorizacionCd('Ingrese la clave de autorización')
+      return
+    }
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveAutorizacionCd })
+      if (res.data.valido) {
+        setMostrarAutorizacionCd(false)
+        setClaveAutorizacionCd('')
+        setErrorAutorizacionCd('')
+        await guardarConduceFinal()
+      } else {
+        setErrorAutorizacionCd('❌ Clave incorrecta')
+      }
+    } catch (e) {
+      setErrorAutorizacionCd('❌ Error al validar clave')
+    }
+  }
+
   const guardarConduceFinal = async () => {
     setMostrarConfirmarCd(false)
     setGuardando(true)
@@ -63,10 +102,12 @@ export default function Conduces() {
         customer_id: form.customer_id,
         chofer_id: form.chofer_id || null,
         notas: form.notas || null,
+        descuento_pct: Math.min(Math.max(parseFloat(descuentoPctCd) || 0, 0), 100),
         items
       })
       setMensaje('Conduce creado correctamente')
       setShowForm(false)
+      setDescuentoPctCd('')
       setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' })
       setItems([])
       cargar()
@@ -122,7 +163,7 @@ export default function Conduces() {
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
             <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea Grabar Este Conduce?</p>
             <div className="flex justify-center gap-6">
-              <button autoFocus id="btn-si-grabar-conduce" onClick={guardarConduceFinal}
+              <button autoFocus id="btn-si-grabar-conduce" onClick={handleConfirmarSiCd}
                 onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-volver-conduce')?.focus() } }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
                 Sí
@@ -132,6 +173,33 @@ export default function Conduces() {
                 className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium text-gray-700">
                 Volver
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {mostrarAutorizacionCd && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-red-600">⚠️ Autorización Requerida</h3>
+              <p className="text-sm text-gray-600 mt-1">Este conduce tiene un descuento aplicado. Se requiere clave de autorización.</p>
+            </div>
+            {errorAutorizacionCd && (
+              <div className="bg-red-100 text-red-700 p-2 rounded mb-3 text-sm">{errorAutorizacionCd}</div>
+            )}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">🔐 Clave de Autorización</label>
+              <input type="password" autoFocus value={claveAutorizacionCd}
+                onChange={e => setClaveAutorizacionCd(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleValidarClaveCd() } }}
+                placeholder="Ingrese la clave del administrador..."
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => { setMostrarAutorizacionCd(false); setClaveAutorizacionCd(''); setErrorAutorizacionCd('') }}
+                className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button onClick={handleValidarClaveCd}
+                className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">✓ Validar y Guardar</button>
             </div>
           </div>
         </div>
@@ -336,8 +404,38 @@ export default function Conduces() {
           )}
           {items.length > 0 && (
             <div className="flex justify-end mb-4">
-              <div className="text-right bg-gray-50 p-4 rounded-lg">
-                <p className="text-lg font-bold text-gray-800">Total: RD${items.reduce((s, it) => { const pp = productos.find(x => x.id === it.product_id); return s + parseFloat(pp?.precio || 0) * parseFloat(it.cantidad || 0) }, 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+              <div className="text-right bg-gray-50 p-4 rounded-lg text-sm">
+                {(() => {
+                  let brutoCd = 0, itbisBrutoCd = 0
+                  items.forEach(it => {
+                    const pp = productos.find(x => x.id === it.product_id)
+                    const precio = parseFloat(pp?.precio || 0)
+                    const rate = parseFloat(pp?.itbis_rate || 0)
+                    const bruto = precio * parseFloat(it.cantidad || 0)
+                    brutoCd += bruto
+                    itbisBrutoCd += bruto - (bruto / (1 + rate / 100))
+                  })
+                  const pctCd = Math.min(Math.max(parseFloat(descuentoPctCd) || 0, 0), 100)
+                  const montoDescCd = brutoCd * (pctCd / 100)
+                  const netoCd = brutoCd - montoDescCd
+                  const itbisNetoCd = itbisBrutoCd * (1 - pctCd / 100)
+                  const subNetoCd = netoCd - itbisNetoCd
+                  return <>
+                    <p className="text-gray-600">TOTAL BRUTO: <span className="font-medium">RD${brutoCd.toFixed(2)}</span></p>
+                    <div className="flex items-center justify-end gap-2 my-1">
+                      <label className="text-gray-600">Descuento</label>
+                      <input type="number" min="0" max="100" step="any" value={descuentoPctCd}
+                        onChange={e => setDescuentoPctCd(e.target.value)}
+                        placeholder="0"
+                        className="w-16 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                      <span className="text-gray-600">%</span>
+                      <span className="font-medium text-red-600 w-24">-RD${montoDescCd.toFixed(2)}</span>
+                    </div>
+                    <p className="text-gray-600">SUB-TOTAL: <span className="font-medium">RD${subNetoCd.toFixed(2)}</span></p>
+                    <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itbisNetoCd.toFixed(2)}</span></p>
+                    <p className="text-lg font-bold text-gray-800">Total: RD${netoCd.toFixed(2)}</p>
+                  </>
+                })()}
               </div>
             </div>
           )}

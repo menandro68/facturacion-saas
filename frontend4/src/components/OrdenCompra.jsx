@@ -750,10 +750,34 @@ const handleItemChange = async (idx, field, value) => {
                   headStyles: { fillColor: [55, 65, 81], textColor: 255, fontStyle: 'bold' },
                   styles: { fontSize: 10, cellPadding: 3 }
                 })
-                const finalY = doc.lastAutoTable.finalY + 8
+         let finalY = doc.lastAutoTable.finalY + 8
+                // ESTRUCTURA FISCAL: Total Bruto -> Descuento -> Sub-Total -> ITBIS -> Neto
+                const brutoOC = parseFloat(verOrden.total) || 0
+                let itbisOC = 0
+                ;(verOrden.items || []).forEach(it => {
+                  const sub = parseFloat(it.subtotal) || 0
+                  const rate = parseFloat(it.itbis_rate) || 0
+                  itbisOC += sub * (rate / 100)
+                })
+                const netoOC = brutoOC + itbisOC
+                const fmtOC = (n) => `RD$${parseFloat(n || 0).toLocaleString('es-DO', {minimumFractionDigits:2, maximumFractionDigits:2})}`
+                doc.setFont('helvetica', 'normal')
+                doc.setFontSize(10)
+                const filasOC = [
+                  ['TOTAL BRUTO', brutoOC],
+                  ['TOTAL DESC.', 0],
+                  ['SUB-TOTAL', brutoOC],
+                  ['TOTAL ITBIS', itbisOC]
+                ]
+                filasOC.forEach(([etq, val]) => {
+                  doc.text(etq, 150, finalY, { align: 'right' })
+                  doc.text(fmtOC(val), 196, finalY, { align: 'right' })
+                  finalY += 6
+                })
+                finalY += 3
                 doc.setFont('helvetica', 'bold')
                 doc.setFontSize(12)
-                doc.text(`TOTAL: RD$${parseFloat(verOrden.total).toLocaleString('es-DO', {minimumFractionDigits:2})}`, 196, finalY, { align: 'right' })
+                doc.text(`NETO RD$: ${fmtOC(netoOC)}`, 196, finalY, { align: 'right' })
                 doc.save(`Orden-${verOrden.numero}.pdf`)
               }}
                 className="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 flex items-center gap-2">

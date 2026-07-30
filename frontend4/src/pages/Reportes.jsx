@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import API from '../services/api'
+import * as XLSX from 'xlsx'
 
 export default function Reportes() {
   const [ventas, setVentas] = useState(null)
@@ -639,7 +640,44 @@ useEffect(() => {
                 URL.revokeObjectURL(url)
               }}
                 className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
-                💾 Exportar TXT DGII
+     💾 Exportar TXT DGII
+              </button>
+            )}
+            {data606 && data606.incluidas.length > 0 && (
+              <button onClick={() => {
+                const periodo = `${anio606}${String(mes606).padStart(2, '0')}`
+                const filas = data606.incluidas.map(o => {
+                  const total = parseFloat(o.total || 0)
+                  const base = total / 1.18
+                  const itbis = total - base
+                  return {
+                    'Orden': o.numero || '',
+                    'Proveedor': o.proveedor_nombre || '',
+                    'RNC': o.proveedor_rnc || '',
+                    'NCF': o.ncf_proveedor || '',
+                    'Fecha': new Date(o.creado_en).toLocaleDateString('es-DO'),
+                    'Monto (sin ITBIS)': parseFloat(base.toFixed(2)),
+                    'ITBIS': parseFloat(itbis.toFixed(2)),
+                    'Total': parseFloat(total.toFixed(2))
+                  }
+                })
+                const totBase = filas.reduce((s, f) => s + f['Monto (sin ITBIS)'], 0)
+                const totItbis = filas.reduce((s, f) => s + f['ITBIS'], 0)
+                const totGeneral = filas.reduce((s, f) => s + f['Total'], 0)
+                filas.push({
+                  'Orden': '', 'Proveedor': '', 'RNC': '', 'NCF': '', 'Fecha': 'TOTALES:',
+                  'Monto (sin ITBIS)': parseFloat(totBase.toFixed(2)),
+                  'ITBIS': parseFloat(totItbis.toFixed(2)),
+                  'Total': parseFloat(totGeneral.toFixed(2))
+                })
+                const ws = XLSX.utils.json_to_sheet(filas)
+                ws['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 18 }, { wch: 14 }, { wch: 14 }]
+                const wb = XLSX.utils.book_new()
+                XLSX.utils.book_append_sheet(wb, ws, 'Reporte 606')
+                XLSX.writeFile(wb, `Reporte_606_${periodo}.xlsx`)
+              }}
+                className="bg-green-700 text-white px-4 py-2 rounded text-sm hover:bg-green-800">
+                📊 Exportar Excel
               </button>
             )}
           </div>
@@ -845,7 +883,46 @@ useEffect(() => {
                 URL.revokeObjectURL(url)
               }}
                 className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
-                💾 Exportar TXT DGII
+    💾 Exportar TXT DGII
+              </button>
+            )}
+            {data607 && data607.incluidas.length > 0 && (
+              <button onClick={() => {
+                const periodo = `${anio607}${String(mes607).padStart(2, '0')}`
+                const filas = data607.incluidas.map(f => {
+                  const anulada = f.estado === 'anulada'
+                  const base = anulada ? 0 : parseFloat(f.subtotal || 0)
+                  const itbis = anulada ? 0 : parseFloat(f.itbis || 0)
+                  const total = anulada ? 0 : parseFloat(f.total || 0)
+                  return {
+                    'Cliente': f.cliente_nombre || 'Consumidor Final',
+                    'RNC/Cédula': f.rnc_cedula || '',
+                    'NCF': f.ncf || '',
+                    'NCF Modif.': f.ncf_modificado || '',
+                    'Estado': (f.estado || '').replace('_', ' ').toUpperCase(),
+                    'Fecha': new Date(f.fecha_emision || f.creado_en).toLocaleDateString('es-DO'),
+                    'Monto (sin ITBIS)': parseFloat(base.toFixed(2)),
+                    'ITBIS': parseFloat(itbis.toFixed(2)),
+                    'Total': parseFloat(total.toFixed(2))
+                  }
+                })
+                const totBase = filas.reduce((s, f) => s + f['Monto (sin ITBIS)'], 0)
+                const totItbis = filas.reduce((s, f) => s + f['ITBIS'], 0)
+                const totGeneral = filas.reduce((s, f) => s + f['Total'], 0)
+                filas.push({
+                  'Cliente': '', 'RNC/Cédula': '', 'NCF': '', 'NCF Modif.': '', 'Estado': '', 'Fecha': 'TOTALES:',
+                  'Monto (sin ITBIS)': parseFloat(totBase.toFixed(2)),
+                  'ITBIS': parseFloat(totItbis.toFixed(2)),
+                  'Total': parseFloat(totGeneral.toFixed(2))
+                })
+                const ws = XLSX.utils.json_to_sheet(filas)
+                ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 18 }, { wch: 14 }, { wch: 14 }]
+                const wb = XLSX.utils.book_new()
+                XLSX.utils.book_append_sheet(wb, ws, 'Reporte 607')
+                XLSX.writeFile(wb, `Reporte_607_${periodo}.xlsx`)
+              }}
+                className="bg-green-700 text-white px-4 py-2 rounded text-sm hover:bg-green-800">
+                📊 Exportar Excel
               </button>
             )}
           </div>

@@ -230,6 +230,8 @@ const buscarClienteRef = useRef(null)
   const [mostrarAutorizacion, setMostrarAutorizacion] = useState(false)
   const [claveAutorizacion, setClaveAutorizacion] = useState('')
   const [productosConDescuento, setProductosConDescuento] = useState([])
+  // Descuento global por porcentaje en Nueva Factura (no aplica a POS)
+  const [descuentoPct, setDescuentoPct] = useState('')
   const [errorAutorizacion, setErrorAutorizacion] = useState('')
   const [error, setError] = useState('')
   const [form, setForm] = useState({
@@ -388,11 +390,25 @@ const handleSubmit = async (e) => {
     setMostrarConfirmar(true)
   }
 
-  const guardarFacturaFinal = async () => {
+ const guardarFacturaFinal = async () => {
     setError('')
     try {
-      const res = await API.post('/invoices', { ...form, items, estado: 'emitida' })
+      // Descuento global por porcentaje: se prorratea en el precio de cada item
+      const pctFinal = Math.min(Math.max(parseFloat(descuentoPct) || 0, 0), 100)
+      let itemsEnviar = items
+      let notasEnviar = form.notas || ''
+      if (pctFinal > 0) {
+        const montoDescTotal = total * (pctFinal / 100)
+        itemsEnviar = items.map(it => ({
+          ...it,
+          precio_unitario: (parseFloat(it.precio_unitario || 0) * (1 - pctFinal / 100)).toFixed(4)
+        }))
+        const notaDesc = `Descuento: RD$${montoDescTotal.toFixed(2)} (${pctFinal}%)`
+        notasEnviar = notasEnviar ? `${notasEnviar} | ${notaDesc}` : notaDesc
+      }
+      const res = await API.post('/invoices', { ...form, notas: notasEnviar, items: itemsEnviar, estado: 'emitida' })
       setShowForm(false)
+      setDescuentoPct('')
       setForm({ customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: '' })
       setItems([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
       setBuscarCliente('')
@@ -428,9 +444,10 @@ const handleSubmit = async (e) => {
       }
     })
 
-    // Si hay productos bajos Y NO es admin (vendedor u operador) → pedir autorización
+  // Si hay productos bajos O descuento global Y NO es admin (vendedor u operador) → pedir autorización
     const esNoAdmin = vendedor_id || modulos_permitidos !== null
-    if (productosBajos.length > 0 && esNoAdmin) {
+    const pctDesc = Math.min(Math.max(parseFloat(descuentoPct) || 0, 0), 100)
+    if ((productosBajos.length > 0 || pctDesc > 0) && esNoAdmin) {
       setProductosConDescuento(productosBajos)
       setClaveAutorizacion('')
       setErrorAutorizacion('')
@@ -2476,7 +2493,7 @@ onKeyDown={e => {
                             if (!it.product_id) continue
                             const invItem = invList.find(v => v.product_id === it.product_id)
                       const minLista = Math.max(parseFloat(invItem?.stock_minimo || 0), parseFloat(invItem?.prod_stock_minimo || 0))
-                            if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
+                           if (usuarioSesion?.features?.stock_negativo !== true && invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
                               const disponible = parseFloat(invItem.stock_actual || 0)
                               if (disponible <= 0) {
                                 alert(`⚠️ Sin stock para "${it.descripcion}".\n\nDisponible: 0. No se puede facturar este artículo.`)
@@ -2501,7 +2518,7 @@ onKeyDown={e => {
                           setPedidos(res.data.data)
                           fetchData()
                           alert('¡Factura emitida exitosamente!')
-                        } catch(e) { alert('Error al convertir') }
+                       } catch(e) { alert('Error al convertir: ' + (e.response?.data?.mensaje || e.message)) }
                       }} className="flex-1 bg-green-600 text-white py-2 rounded text-xs font-medium text-center">Convertir a Factura</button>
                       <button onClick={async () => {
                         if (!confirm('¿Eliminar este pedido?')) return
@@ -2546,7 +2563,7 @@ onKeyDown={e => {
                                 if (!it.product_id) continue
                                 const invItem = invList.find(v => v.product_id === it.product_id)
                            const minimo = Math.max(parseFloat(invItem?.stock_minimo || 0), parseFloat(invItem?.prod_stock_minimo || 0))
-                             if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
+                           if (usuarioSesion?.features?.stock_negativo !== true && invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
                                   const disponible = parseFloat(invItem.stock_actual || 0)
                                   if (disponible <= 0) {
                                     alert(`⚠️ Sin stock para "${it.descripcion}".\n\nDisponible: 0. No se puede facturar este artículo.`)
@@ -4330,12 +4347,32 @@ onKeyDown={e => {
                   </div>
                 </div>
 
-                {/* Totales */}
+             {/* Totales */}
                 <div className="flex justify-end mb-4">
                   <div className="text-sm text-right">
-                    <p className="text-gray-600">Subtotal: <span className="font-medium">RD${subtotal.toFixed(2)}</span></p>
-                    <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itbis.toFixed(2)}</span></p>
-                    <p className="text-lg font-bold text-gray-800">Total: RD${total.toFixed(2)}</p>
+                    {(() => {
+                      const pct = Math.min(Math.max(parseFloat(descuentoPct) || 0, 0), 100)
+                      const brutoFac = total
+                      const montoDesc = brutoFac * (pct / 100)
+                      const netoFac = brutoFac - montoDesc
+                      const subNetoFac = subtotal * (1 - pct / 100)
+                      const itbisNetoFac = itbis * (1 - pct / 100)
+                      return <>
+                        <p className="text-gray-600">TOTAL BRUTO: <span className="font-medium">RD${brutoFac.toFixed(2)}</span></p>
+                        <div className="flex items-center justify-end gap-2 my-1">
+                          <label className="text-gray-600">Descuento</label>
+                          <input type="number" min="0" max="100" step="any" value={descuentoPct}
+                            onChange={e => setDescuentoPct(e.target.value)}
+                            placeholder="0"
+                            className="w-16 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                          <span className="text-gray-600">%</span>
+                          <span className="font-medium text-red-600 w-24">-RD${montoDesc.toFixed(2)}</span>
+                        </div>
+                        <p className="text-gray-600">SUB-TOTAL: <span className="font-medium">RD${subNetoFac.toFixed(2)}</span></p>
+                        <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itbisNetoFac.toFixed(2)}</span></p>
+                        <p className="text-lg font-bold text-gray-800">Total: RD${netoFac.toFixed(2)}</p>
+                      </>
+                    })()}
                   </div>
                 </div>
 
