@@ -4432,10 +4432,17 @@ onKeyDown={e => {
                           </div>
                           <div className="pos-ticket-detalle">
                             <span>
+                        <button type="button" className="pos-ticket-mas-menos"
+                                onClick={() => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: Math.max(1, (parseFloat(x.cantidad) || 1) - 1) } : x))}>−</button>
                               <input type="number" min="0.01" step="any" value={it.cantidad}
                                 onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
                                 className="pos-ticket-cantidad" />
-                              {' x '}{parseFloat(it.precio_unitario || 0).toFixed(2)}
+                              <button type="button" className="pos-ticket-mas-menos"
+                                onClick={() => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: (parseFloat(x.cantidad) || 0) + 1 } : x))}>+</button>
+                            {' x '}
+                              <input type="number" min="0" step="any" value={it.precio_unitario}
+                                onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, precio_unitario: e.target.value } : x))}
+                                className="pos-ticket-cantidad" />
                             </span>
                             <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                           </div>
