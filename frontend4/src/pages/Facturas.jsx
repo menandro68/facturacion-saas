@@ -4188,8 +4188,7 @@ onKeyDown={e => {
                   <input type="date" name="fecha_vencimiento" value={form.fecha_vencimiento} onChange={handleFormChange} />
                 </div>
 
-                {/* Ticket POS en vivo — solo tenants con feature responsive (casa reyes) */}
-                {modoPOS && (
+              {false && (
                   <div className="pos-ticket">
                     <div className="pos-ticket-empresa">{usuarioSesion.empresa || ''}</div>
                     <div className="pos-ticket-cliente">
@@ -4402,8 +4401,56 @@ onKeyDown={e => {
                       className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
                       Guardar
                     </button>
-                  </div>
+           </div>
                 </div>
+
+                {/* Ticket POS en vivo — solo tenants con feature responsive (casa reyes) */}
+                {modoPOS && (
+                  <div className="pos-ticket">
+                    <div className="pos-ticket-empresa">{usuarioSesion.empresa || ''}</div>
+                    <div className="pos-ticket-cliente">
+                      Cliente: {(clientes.find(c => String(c.id) === String(form.customer_id))?.nombre) || 'Consumidor Final'}
+                    </div>
+                    <div className="pos-ticket-divider"></div>
+                    <div className="pos-ticket-cols"><span>DESCRIPCION</span><span>VALOR</span></div>
+                    <div className="pos-ticket-divider"></div>
+                    {items.map((it, i) => (
+                      (it.descripcion || it.precio_unitario) ? (
+                        <div key={i} className="pos-ticket-linea">
+                          <div className="pos-ticket-fila">
+                            <div className="pos-ticket-desc">{it.descripcion}</div>
+                            <button type="button" className="pos-ticket-eliminar"
+                              onClick={() => {
+                                if (!confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
+                                if (items.length > 1) {
+                                  eliminarItem(i)
+                                } else {
+                                  setItems([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
+                                  setBuscarProducto({})
+                                }
+                              }}>✕</button>
+                          </div>
+                          <div className="pos-ticket-detalle">
+                            <span>
+                              <input type="number" min="0.01" step="any" value={it.cantidad}
+                                onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
+                                className="pos-ticket-cantidad" />
+                              {' x '}{parseFloat(it.precio_unitario || 0).toFixed(2)}
+                            </span>
+                            <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        </div>
+                      ) : null
+                    ))}
+                    {items.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
+                      <div className="pos-ticket-vacio">Agregue artículos arriba</div>
+                    )}
+                    <div className="pos-ticket-divider"></div>
+                    <div className="pos-ticket-tot"><span>SUBTOTAL</span><span>{subtotal.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="pos-ticket-tot"><span>ITBIS</span><span>{itbis.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="pos-ticket-total"><span>TOTAL A PAGAR</span><span>RD${total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
+                  </div>
+                )}
 
              {/* Totales */}
                 <div className="flex justify-end mb-4">

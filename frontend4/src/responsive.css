@@ -346,9 +346,11 @@ body.tenant-responsive .pos-ticket-fila {
   }
 
   /* Ocultar las líneas anteriores (ya viven en el ticket) */
-  body.tenant-responsive .pos-item-anterior {
+body.tenant-responsive .pos-item-anterior {
     display: none !important;
   }
+
+
 
   /* Botón + Agregar línea (debajo del ticket) */
   body.tenant-responsive .pos-btn-agregar {
@@ -476,5 +478,65 @@ body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"
 
   body.tenant-responsive .oc-agregar-original {
     display: none;
+  }
+}
+
+/* ============================================================
+   Campo de descuento (%) compacto — no ocupar ancho completo
+   ============================================================ */
+@media (max-width: 767px) {
+
+/* La fila del descuento se apila: etiqueta arriba, campo abajo */
+  body.tenant-responsive .flex.items-center.justify-end.gap-2.my-1 {
+    display: block;
+    text-align: right;
+  }
+
+  body.tenant-responsive input[placeholder="0"][type="number"][max="100"] {
+    width: 10%;
+    min-width: 10%;
+    display: inline-block;
+  }
+}
+
+/* ============================================================
+   Bloque de captura de articulos COMPACTO (solo casa reyes)
+   Mismo lugar, la mitad del alto: campos en 2 columnas,
+   alturas reducidas y etiquetas mas pequenas
+   ============================================================ */
+@media (max-width: 767px) {
+
+  /* Tarjeta mas apretada */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) {
+    gap: 0.375rem;
+    padding: 0.625rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Solo el buscador ocupa el ancho completo; el resto va en 2 columnas */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(2) {
+    grid-column: span 1;
+  }
+
+  /* Etiquetas mas pequenas y pegadas al campo */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div::before {
+    font-size: 0.5625rem;
+    margin-bottom: 0.0625rem;
+  }
+
+  /* Campos mas bajos */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) input,
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) select {
+    min-height: 34px;
+    height: 34px;
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+    font-size: 15px;
+  }
+
+  /* Boton eliminar compacto */
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(7) button {
+    min-height: 30px;
+    padding: 0 0.75rem;
   }
 }
