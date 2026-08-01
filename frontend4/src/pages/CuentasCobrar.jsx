@@ -135,7 +135,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
   }
 
   const handleEliminar = async (id) => {
-    if (!confirm('Â¿Eliminar esta cuenta?')) return
+    if (!confirm('¿Eliminar esta cuenta?')) return
     try {
       await API.delete(`/accounts-receivable/${id}`)
       fetchData()
@@ -164,7 +164,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
         {vendedor_id && (
           <button onClick={() => setTab('cobro_vendedor')}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm flex items-center gap-2">
-            â† Volver
+             Volver
           </button>
         )}
         <button onClick={() => {
@@ -178,7 +178,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           setModalResumen({ totalCuentas: totalPendiente + totalCobrado, totalPendiente, totalCobrado, totalVencidas, fecha: hoy.toLocaleDateString('es-DO') })
         }}
           className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
-          ðŸ–¨ï¸ Imprimir Resumen
+           Imprimir Resumen
         </button>
       </div>
 
@@ -253,12 +253,12 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">Sin factura</option>
                     {facturas.map(f => (
-                      <option key={f.id} value={f.id}>{f.ncf} â€” RD${parseFloat(f.total).toLocaleString()}</option>
+                      <option key={f.id} value={f.id}>{f.ncf} - RD${parseFloat(f.total).toLocaleString()}</option>
                     ))}
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">DescripciÃ³n *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descripcion *</label>
                   <input name="descripcion" value={form.descripcion} onChange={handleChange} required
                     className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
@@ -314,7 +314,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
-                  <th className="px-4 py-3 text-left text-gray-600">DescripciÃ³n</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Descripcion</th>
                   <th className="px-4 py-3 text-left text-gray-600">Total</th>
                   <th className="px-4 py-3 text-left text-gray-600">Pagado</th>
                   <th className="px-4 py-3 text-left text-gray-600">Pendiente</th>
@@ -395,7 +395,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   <input
                     id="cob-vendedor-input"
                     type="text"
-                    placeholder="ðŸ” Buscar vendedor..."
+                    placeholder=" Buscar vendedor..."
                     autoComplete="off"
                     className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
                     onChange={e => {
@@ -544,7 +544,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           <button className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
             onClick={async () => {
               const tbody = document.getElementById('cob-tbody')
-              if (!tbody || tbody.innerHTML.includes('No hay') || tbody.innerHTML.includes('Selecciona')) return alert('Primero realiza una bÃºsqueda')
+              if (!tbody || tbody.innerHTML.includes('No hay') || tbody.innerHTML.includes('Selecciona')) return alert('Primero realiza una busqueda')
               const resultado = document.getElementById('cob-resultado')
               if (vendedor_id && window.bluetoothSerial) {
                 try {
@@ -628,9 +628,9 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   if (savedAddress) {
                     try {
                       await imprimirEnDispositivo(savedAddress, lineas)
-                      alert('âœ… Impreso en ' + (savedName || savedAddress))
+                      alert('OK: Impreso en ' + (savedName || savedAddress))
                     } catch (err) {
-                      alert('âŒ Error al imprimir: ' + err)
+                      alert('Error al imprimir' + err)
                     }
                     return
                   }
@@ -639,7 +639,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   setBtLineas(lineas)
                   setBtModal(true)
                 } catch (err) {
-                  alert('âŒ ' + err)
+                  alert('Error al imprimir' + err)
                 } finally {
                   setBtLoading(false)
                 }
@@ -659,7 +659,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   .resumen{background:#f1f5f9;border-radius:8px;padding:16px;max-width:340px;margin-left:auto}
                   @media print{button{display:none}}
                 </style></head><body>
-              <h2>Cobro por Vendedor â€” ${vendedor_id ? (vendedores.find(v => v.id === vendedor_id)?.nombre || '') : (vendedores.find(v => v.id === document.getElementById('cob-vendedor')?.value)?.nombre || '')}</h2>
+              <h2>Cobro por Vendedor - ${vendedor_id ? (vendedores.find(v => v.id === vendedor_id)?.nombre || '') : (vendedores.find(v => v.id === document.getElementById('cob-vendedor')?.value)?.nombre || '')}</h2>
                 <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
                 <table>
                   <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total Cobrado</th><th>Fecha</th></tr></thead>
@@ -670,7 +670,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 </body></html>`)
               printW.document.close()
             }}>
-            ðŸ–¨ï¸ Imprimir Reporte
+             Imprimir Reporte
           </button>
         </div>
           <table className="w-full text-sm">
@@ -701,7 +701,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   <input
                     id="cxc-vendedor-input"
                     type="text"
-                    placeholder="ðŸ” Buscar vendedor..."
+                    placeholder=" Buscar vendedor..."
                     autoComplete="off"
                     className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
                     onChange={e => {
@@ -786,14 +786,57 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
              const filtradas = todasFacturas.filter(f =>
                   idsClientes.includes(f.customer_id) && f.estado === 'emitida' && pendienteDe(f) >= 0.01
                 )
-                const totalPendiente = filtradas.reduce((s, f) => s + pendienteDe(f), 0)
+            const totalPendiente = filtradas.reduce((s, f) => s + pendienteDe(f), 0)
                 const totalItbis = filtradas.reduce((s, f) => s + parseFloat(f.itbis || 0), 0)
                 const totalSubtotal = filtradas.reduce((s, f) => s + parseFloat(f.subtotal || 0), 0)
+                // Vencimiento segun condiciones de credito del cliente
+                const condDiasAge = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
+                const hoyAge = new Date()
+                const vencimientoDe = f => {
+                  if (f.fecha_vencimiento) return new Date(f.fecha_vencimiento)
+                  const cli = clientes.find(c => c.id === f.customer_id)
+                  const dias = condDiasAge[cli?.condiciones] || 0
+                  const v = new Date(f.creado_en)
+                  v.setDate(v.getDate() + dias)
+                  return v
+                }
+                const diasVencidoDe = f => Math.floor((hoyAge - vencimientoDe(f)) / (1000*60*60*24))
+                // Antiguedad de saldos (aging)
+                const rangos = [
+                  { etq: 'Por vencer', min: -99999, max: 0, color: '#16a34a' },
+                  { etq: '1 a 30 dias', min: 1, max: 30, color: '#65a30d' },
+                  { etq: '31 a 60 dias', min: 31, max: 60, color: '#ca8a04' },
+                  { etq: '61 a 90 dias', min: 61, max: 90, color: '#ea580c' },
+                  { etq: '91 a 120 dias', min: 91, max: 120, color: '#dc2626' },
+                  { etq: 'Mas de 120 dias', min: 121, max: 99999, color: '#7f1d1d' }
+                ]
+                const aging = rangos.map(r => {
+                  const facts = filtradas.filter(f => { const d = diasVencidoDe(f); return d >= r.min && d <= r.max })
+                  return { ...r, cant: facts.length, monto: facts.reduce((s, f) => s + pendienteDe(f), 0) }
+                })
                { const cxcResEl = document.getElementById('cxc-resultado'); if (cxcResEl) cxcResEl.innerHTML = `
                   <p class="text-sm text-gray-600">Facturas pendientes: <span class="font-bold text-gray-800">${filtradas.length}</span></p>
                   <p class="text-sm text-gray-600">Subtotal: <span class="font-medium">RD$${totalSubtotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                   <p class="text-sm text-gray-600">ITBIS: <span class="font-medium">RD$${totalItbis.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                <p class="text-lg font-bold text-red-600 mt-1">Total Pendiente: RD$${totalPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>` }
+                { const ageEl = document.getElementById('cxc-aging'); if (ageEl) ageEl.innerHTML = filtradas.length === 0 ? '' : `
+                  <div class="bg-white rounded-lg shadow overflow-hidden mb-4">
+                    <div class="px-4 py-3 border-b bg-gray-50">
+                      <h4 class="font-semibold text-gray-800 text-sm">Antiguedad de Saldos</h4>
+                    </div>
+                    <table class="w-full text-sm">
+                      <thead class="bg-gray-50">
+                        <tr>
+                          ${aging.map(a => `<th class="px-3 py-2 text-center text-xs font-semibold" style="color:${a.color}">${a.etq}</th>`).join('')}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="border-t">
+                          ${aging.map(a => `<td class="px-3 py-3 text-center"><div class="font-bold text-base" style="color:${a.color}">RD$${a.monto.toLocaleString('es-DO',{minimumFractionDigits:2})}</div><div class="text-xs text-gray-500">${a.cant} fact.</div></td>`).join('')}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>` }
             const tbody = document.getElementById('cxc-tbody')
                 setCxcFiltradas(filtradas)
                 if (tbody) tbody.innerHTML = filtradas.length === 0
@@ -803,7 +846,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       <td class="px-4 py-3 font-mono text-sm">${f.ncf || 'N/A'}</td>
                       <td class="px-4 py-3 text-sm">${f.cliente_nombre || 'Consumidor Final'}</td>
                       <td class="px-4 py-3 text-right text-sm font-medium text-red-600">RD$${pendienteDe(f).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                      <td class="px-4 py-3 text-sm">${f.fecha_vencimiento ? new Date(f.fecha_vencimiento).toLocaleDateString('es-DO') : '-'}</td>
+                     <td class="px-4 py-3 text-sm ${diasVencidoDe(f) > 0 ? 'text-red-600 font-medium' : ''}">${vencimientoDe(f).toLocaleDateString('es-DO')}</td>
                       <td class="px-4 py-3 text-sm">${new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                     </tr>`).join('')
               }}>
@@ -855,7 +898,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     .total-row{font-weight:bold;background:#f1f5f9}
                     @media print{button{display:none}}
                   </style></head><body>
-                  <h2>Cuenta por Cobrar â€” Vendedor: ${vendedorNombre}</h2>
+                  <h2>Cuenta por Cobrar - Vendedor: ${vendedorNombre}</h2>
                   <p class="sub">Fecha: ${hoy.toLocaleDateString('es-DO')}</p>
                   <table>
                     <thead><tr>
@@ -863,8 +906,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       <th>CLIENTE</th>
                       <th style="text-align:center">FECHA EMITIDA</th>
                       <th style="text-align:right">VALOR</th>
-                      <th style="text-align:center">DÃAS VENCIDO</th>
-                      <th style="text-align:right">NOTA DE CRÃ‰DITO</th>
+                      <th style="text-align:center">DIAS VENCIDO</th>
+                      <th style="text-align:right">NOTA DE CREDITO</th>
                       <th style="text-align:right">ABONO</th>
                       <th style="text-align:right">BALANCE</th>
                     </tr></thead>
@@ -882,10 +925,11 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   </body></html>`)
                 printW.document.close()
               }}>
-              ðŸ–¨ï¸ Imprimir
+               Imprimir
             </button>
           </div>
           <div id="cxc-resultado" className="mb-4 text-right bg-red-50 p-3 rounded-lg min-h-8"></div>
+          <div id="cxc-aging"></div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -907,7 +951,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Estado de Cuenta por Cliente</h3>
           <div className="relative mb-6 max-w-md">
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente</label>
-            <input type="text" placeholder="ðŸ” Escriba el nombre del cliente..." autoComplete="off"
+            <input type="text" placeholder=" Escriba el nombre del cliente..." autoComplete="off"
               className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               onChange={e => {
                 const val = e.target.value.toLowerCase()
@@ -939,7 +983,13 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                       const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                       const balance = parseFloat(f.total) - montoNc - abono
-                      const diasVencido = f.fecha_vencimiento ? Math.max(0, Math.floor((hoy - new Date(f.fecha_vencimiento)) / (1000*60*60*24))) : 0
+                      const condDiasEc = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
+                      let vencEc = f.fecha_vencimiento ? new Date(f.fecha_vencimiento) : null
+                      if (!vencEc) {
+                        vencEc = new Date(f.creado_en)
+                        vencEc.setDate(vencEc.getDate() + (condDiasEc[c.condiciones] || 0))
+                      }
+                      const diasVencido = Math.max(0, Math.floor((hoy - vencEc) / (1000*60*60*24)))
                       totalFacturas += parseFloat(f.total)
                       totalNc += montoNc
                       totalAbono += abono
@@ -958,7 +1008,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       <div class="flex gap-4 flex-wrap mb-4">
                         <div class="bg-gray-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Facturas</p><p class="text-lg font-bold text-gray-800">${facturasCliente.length}</p></div>
                         <div class="bg-orange-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Total Facturado</p><p class="text-lg font-bold text-orange-600">RD$${totalFacturas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
-                        <div class="bg-blue-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Nota CrÃ©dito</p><p class="text-lg font-bold text-blue-600">RD$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
+                        <div class="bg-blue-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Nota Credito</p><p class="text-lg font-bold text-blue-600">RD$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
                         <div class="bg-green-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Abonado</p><p class="text-lg font-bold text-green-600">RD$${totalAbono.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
                         <div class="bg-red-50 rounded-lg p-3 text-center min-w-32"><p class="text-xs text-gray-500">Balance</p><p class="text-lg font-bold text-red-600">RD$${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div>
                         <button onclick="
@@ -967,11 +1017,11 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                           printW.document.write('<!DOCTYPE html><html><head><title>Estado de Cuenta</title><style>body{font-family:Arial;padding:20px;color:#1e293b}h2{color:#1e40af;margin-bottom:4px}p.sub{color:#64748b;font-size:12px;margin-bottom:16px}.resumen{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;text-align:center;min-width:100px}.card p.lbl{font-size:11px;color:#64748b;margin:0 0 4px}.card p.val{font-size:16px;font-weight:bold;margin:0}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#1e40af;color:white;padding:7px;text-align:left}td{padding:6px 8px;border:1px solid #cbd5e1}tr:nth-child(even){background:#f8fafc}.total{font-weight:bold;background:#f1f5f9}@media print{button{display:none}}</style></head><body>');
                           printW.document.write('<h2>Estado de Cuenta: ${c.nombre}</h2>');
                           printW.document.write('<p class=sub>Fecha: ${new Date().toLocaleDateString('es-DO')}</p>');
-                          printW.document.write('<div class=resumen><div class=card><p class=lbl>Facturas</p><p class=val>${facturasCliente.length}</p></div><div class=card><p class=lbl>Total Facturado</p><p class=val style=color:#ea580c>RD\$${totalFacturas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Nota CrÃ©dito</p><p class=val style=color:#2563eb>RD\$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Abonado</p><p class=val style=color:#16a34a>RD\$${totalAbono.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Balance</p><p class=val style=color:#dc2626>RD\$${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div></div>');
-                          printW.document.write('<table><thead><tr><th>FACTURA</th><th>FECHA</th><th style=text-align:right>VALOR</th><th style=text-align:right>DÃAS VEN.</th><th style=text-align:right>NOTA CR.</th><th style=text-align:right>ABONO</th><th style=text-align:right>BALANCE</th></tr></thead><tbody>'+filas+'</tbody></table>');
+                          printW.document.write('<div class=resumen><div class=card><p class=lbl>Facturas</p><p class=val>${facturasCliente.length}</p></div><div class=card><p class=lbl>Total Facturado</p><p class=val style=color:#ea580c>RD\$${totalFacturas.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Nota Credito</p><p class=val style=color:#2563eb>RD\$${totalNc.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Abonado</p><p class=val style=color:#16a34a>RD\$${totalAbono.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div><div class=card><p class=lbl>Balance</p><p class=val style=color:#dc2626>RD\$${totalBalance.toLocaleString('es-DO',{minimumFractionDigits:2})}</p></div></div>');
+                          printW.document.write('<table><thead><tr><th>FACTURA</th><th>FECHA</th><th style=text-align:right>VALOR</th><th style=text-align:right>DIAS VEN.</th><th style=text-align:right>NOTA CR.</th><th style=text-align:right>ABONO</th><th style=text-align:right>BALANCE</th></tr></thead><tbody>'+filas+'</tbody></table>');
                           printW.document.write('<script>window.onload=()=>window.print()<\/script></body></html>');
                           printW.document.close();
-                        " style="background:#16a34a;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;align-self:center;display:${vendedor_id ? 'none' : 'inline-block'}">ðŸ–¨ï¸ Imprimir</button>
+                        " style="background:#16a34a;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;align-self:center;display:${vendedor_id ? 'none' : 'inline-block'}"> Imprimir</button>
                     </div>` }
                     { const ecTbodyEl = document.getElementById('ec-tbody'); if (ecTbodyEl) ecTbodyEl.innerHTML = filas || '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No hay facturas pendientes</td></tr>' }
                   }
@@ -1011,7 +1061,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 <th className="px-4 py-3 text-left text-gray-600">FACTURA</th>
                 <th className="px-4 py-3 text-left text-gray-600">FECHA</th>
                 <th className="px-4 py-3 text-right text-gray-600">VALOR</th>
-                <th className="px-4 py-3 text-right text-gray-600">DÃAS VEN.</th>
+                <th className="px-4 py-3 text-right text-gray-600">DIAS VEN.</th>
                 <th className="px-4 py-3 text-right text-gray-600">NOTA CR.</th>
                 <th className="px-4 py-3 text-right text-gray-600">ABONO</th>
                 <th className="px-4 py-3 text-right text-gray-600">BALANCE</th>
@@ -1028,7 +1078,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Historial de Cliente</h3>
           <div className="relative mb-6 max-w-md">
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente</label>
-            <input type="text" placeholder="ðŸ” Escriba el nombre del cliente..." autoComplete="off"
+            <input type="text" placeholder=" Escriba el nombre del cliente..." autoComplete="off"
               className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               onChange={e => {
                 const val = e.target.value.toLowerCase()
@@ -1055,7 +1105,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     { const histTitEl = document.getElementById('hist-titulo'); if (histTitEl) histTitEl.innerHTML = `
                       <div class="mb-3 p-3 bg-blue-50 rounded-lg text-sm">
                         <span class="font-medium text-gray-700">Cliente: </span><span class="text-blue-700 font-bold">${c.nombre}</span>
-                        <span class="ml-4 font-medium text-gray-700">CondiciÃ³n: </span><span class="text-gray-600">${c.condiciones?.replace(/_/g, ' ') || 'contado'} (${diasCondicion} dÃ­as)</span>
+                        <span class="ml-4 font-medium text-gray-700">Condicion: </span><span class="text-gray-600">${c.condiciones?.replace(/_/g, ' ') || 'contado'} (${diasCondicion} dÃ­as)</span>
                   </div>` }
                     const filas = facturasCliente.map(f => {
                       const fechaEmitida = new Date(f.creado_en)
@@ -1131,14 +1181,14 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')}</p>
                   <div class="info">${titulo.innerHTML}</div>
                   <table>
-                    <thead><tr><th>FACTURA</th><th style="text-align:right">VALOR</th><th>FECHA EMITIDA</th><th>FECHA PAGO</th><th style="text-align:center">DÃAS VENCIDO</th><th>ESTADO</th></tr></thead>
+                    <thead><tr><th>FACTURA</th><th style="text-align:right">VALOR</th><th>FECHA EMITIDA</th><th>FECHA PAGO</th><th style="text-align:center">DIAS VENCIDO</th><th>ESTADO</th></tr></thead>
                     <tbody>${tbody.innerHTML}</tbody>
                   </table>
                   <script>window.onload=()=>window.print()</script>
                   </body></html>`)
                 printW.document.close()
               }}>
-              ðŸ–¨ï¸ Imprimir
+               Imprimir
             </button>
           </div>
           <div id="hist-titulo"></div>
@@ -1149,7 +1199,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 <th className="px-4 py-3 text-right text-gray-600">VALOR</th>
                 <th className="px-4 py-3 text-left text-gray-600">FECHA EMITIDA</th>
                 <th className="px-4 py-3 text-left text-gray-600">FECHA PAGO</th>
-                <th className="px-4 py-3 text-center text-gray-600">DÃAS VENCIDO</th>
+                <th className="px-4 py-3 text-center text-gray-600">DIAS VENCIDO</th>
                 <th className="px-4 py-3 text-left text-gray-600">ESTADO</th>
               </tr>
             </thead>
@@ -1177,12 +1227,12 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     localStorage.setItem('bt_printer_name', d.name)
                     try {
                       await imprimirEnDispositivo(d.address, btLineas)
-                      alert('âœ… Impreso en ' + d.name)
+                      alert('OK: Impreso en ' + d.name)
                     } catch (err) {
-                      alert('âŒ ' + err)
+                      alert('Error al imprimir' + err)
                     }
                   }}>
-                  <span className="text-2xl">ðŸ–¨ï¸</span>
+                  <span className="text-2xl"></span>
                   <div>
                     <p className="font-medium text-gray-800 text-sm">{d.name}</p>
                     <p className="text-xs text-gray-400">{d.address}</p>
@@ -1199,13 +1249,13 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
       {modalResumen && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto p-4">
       <div className="flex justify-between items-center mb-6 no-print">
-            <h2 className="text-xl font-bold text-blue-700">Resumen â€” CxC</h2>
+            <h2 className="text-xl font-bold text-blue-700">Resumen - CxC</h2>
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">ðŸ–¨ï¸ Imprimir</button>
-              <button onClick={() => setModalResumen(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">â† Volver</button>
+              <button onClick={() => window.print()} className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800"> Imprimir</button>
+              <button onClick={() => setModalResumen(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm"> Volver</button>
             </div>
           </div>
-          <h2 className="text-xl font-bold text-blue-700 mb-2 hidden print:block">Resumen â€” Cuentas por Cobrar</h2>
+          <h2 className="text-xl font-bold text-blue-700 mb-2 hidden print:block">Resumen - Cuentas por Cobrar</h2>
           <p className="text-gray-400 text-sm mb-6">Fecha: {modalResumen.fecha}</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 border rounded-lg p-4">
