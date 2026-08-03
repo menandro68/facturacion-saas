@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import API from '../services/api'
 import { listarDispositivos, imprimirEnDispositivo } from '../utils/bluetoothPrint'
 
@@ -22,6 +22,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
   const [fechaFin, setFechaFin] = useState('')
   const [cxcFiltradas, setCxcFiltradas] = useState([])
   const [pagos, setPagos] = useState([])
+  const pagosRef = useRef([])
+  useEffect(() => { pagosRef.current = pagos }, [pagos])
   const [invoiceItems, setInvoiceItems] = useState([])
   const [modalResumen, setModalResumen] = useState(null)
   const [btModal, setBtModal] = useState(false)
@@ -780,7 +782,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
            const ncTodas = todasFacturas.filter(x => x.estado === 'nota_credito')
                 const pendienteDe = f => {
                   const montoNc = ncTodas.filter(n => n.referencia_id === f.id).reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                  const montoPagado = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  const montoPagado = pagosRef.current.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   return Math.max(0, parseFloat(f.total || 0) - montoNc - montoPagado)
                 }
              const filtradas = todasFacturas.filter(f =>
@@ -867,7 +869,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     : 0
                   const nc = notasCredito.filter(n => n.referencia_id === f.id)
                   const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                  const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  const abono = pagosRef.current.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   const balance = Math.max(0, parseFloat(f.total) - montoNc - abono)
                   return `<tr>
                     <td>${f.ncf || 'N/A'}</td>
@@ -882,7 +884,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 }).join('')
                   const totalBalance = cxcFiltradas.reduce((s,f) => {
                   const montoNc = notasCredito.filter(n => n.referencia_id === f.id).reduce((a, n) => a + parseFloat(n.total || 0), 0)
-                  const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((a, p) => a + parseFloat(p.monto || 0), 0)
+                  const abono = pagosRef.current.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((a, p) => a + parseFloat(p.monto || 0), 0)
                   return s + Math.max(0, parseFloat(f.total||0) - montoNc - abono)
                 }, 0)
                 printW.document.write(`
@@ -972,16 +974,18 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                const facturasCliente = todasFacturas.filter(f => {
                       if (f.customer_id !== c.id || f.estado !== 'emitida') return false
                       const montoNc = notasCliente.filter(n => n.referencia_id === f.id).reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                      const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      const abono = pagosRef.current.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                       const balance = parseFloat(f.total) - montoNc - abono
                       return balance >= 0.01
                     })
-                    const hoy = new Date()
+                const hoy = new Date()
+                    const condDiasEcSort = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
                     let totalFacturas = 0, totalNc = 0, totalAbono = 0, totalBalance = 0
+                    facturasCliente.sort((a, b) => { const dA = a.fecha_vencimiento ? new Date(a.fecha_vencimiento) : (() => { const d = new Date(a.creado_en); d.setDate(d.getDate() + (condDiasEcSort[c.condiciones] || 0)); return d })(); const dB = b.fecha_vencimiento ? new Date(b.fecha_vencimiento) : (() => { const d = new Date(b.creado_en); d.setDate(d.getDate() + (condDiasEcSort[c.condiciones] || 0)); return d })(); return dA - dB })
                const filas = facturasCliente.map(f => {
                       const nc = notasCliente.filter(n => n.referencia_id === f.id)
                       const montoNc = nc.reduce((s, n) => s + parseFloat(n.total || 0), 0)
-                      const abono = pagos.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      const abono = pagosRef.current.filter(p => ((p.invoice_id === f.id || p.conduce_id === f.id) || p.conduce_id === f.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                       const balance = parseFloat(f.total) - montoNc - abono
                       const condDiasEc = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
                       let vencEc = f.fecha_vencimiento ? new Date(f.fecha_vencimiento) : null
@@ -1280,4 +1284,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
     </div>
   )
 }
+
+
+
+
 

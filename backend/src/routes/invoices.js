@@ -564,9 +564,12 @@ router.get('/:id', verifyToken, tenantGuard, async (req, res) => {
     const { tenant_id } = req.user;
     const { id } = req.params;
     const invoice = await pool.query(
-      `SELECT i.*, c.nombre as cliente_nombre, c.rnc_cedula
+  `SELECT i.*, c.nombre as cliente_nombre, c.rnc_cedula,
+              t.nombre as empresa_nombre, t.rnc as empresa_rnc,
+              t.telefono as empresa_telefono, t.direccion as empresa_direccion
        FROM invoices i
        LEFT JOIN customers c ON i.customer_id = c.id
+       LEFT JOIN tenants t ON i.tenant_id = t.id
        WHERE i.id = $1 AND i.tenant_id = $2`,
       [id, tenant_id]
     );
@@ -584,20 +587,29 @@ router.post('/', verifyToken, tenantGuard, async (req, res) => {
     const { tenant_id } = req.user;
    const { customer_id, ncf_tipo, notas, fecha_vencimiento, items, monto_recibido, devuelta } = req.body;
     try {
-      await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS monto_recibido DECIMAL(12,2)`);
+    await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS monto_recibido DECIMAL(12,2)`);
       await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS devuelta DECIMAL(12,2)`);
+      await pool.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS descuento_monto DECIMAL(12,2) DEFAULT 0`);
     } catch (e) { console.error('Error columnas pago POS:', e.message); }
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, mensaje: 'La factura debe tener al menos un item' });
     }
     await client.query('BEGIN');
-  let subtotal = 0;
+let subtotal = 0;
     let itbis = 0;
     for (const item of items) {
       const item_bruto = item.cantidad * item.precio_unitario;
       const item_base = item_bruto / (1 + ((item.itbis_rate || 0) / 100));
       subtotal += item_base;
       itbis += item_bruto - item_base;
+    }
+    // Descuento global: se resta del total y se prorratea en subtotal e itbis
+    const pctDesc = Math.min(Math.max(parseFloat(req.body.descuento_pct) || 0, 0), 100);
+    const totalBruto = subtotal + itbis;
+    const descuento_monto = totalBruto * (pctDesc / 100);
+    if (pctDesc > 0) {
+      subtotal = subtotal * (1 - pctDesc / 100);
+      itbis = itbis * (1 - pctDesc / 100);
     }
 const total = subtotal + itbis;
     // Blindaje: no permitir facturas con valores negativos o en cero
@@ -661,11 +673,12 @@ const total = subtotal + itbis;
     }
     const numero_factura = await obtenerProximoNumeroFactura(client, tenant_id);
     const invoice = await client.query(
- `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, ncf, estado, subtotal, itbis, total, notas, fecha_vencimiento, fecha_emision, codigo_seguridad, fecha_vencimiento_encf, fecha_firma_digital, numero_factura, operador_id, monto_recibido, devuelta)
-       VALUES ($1, $2, $3, $4, 'emitida', $5, $6, $7, $8, $9, NOW(), $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
+`INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, ncf, estado, subtotal, itbis, total, notas, fecha_vencimiento, fecha_emision, codigo_seguridad, fecha_vencimiento_encf, fecha_firma_digital, numero_factura, operador_id, monto_recibido, devuelta, descuento_monto)
+       VALUES ($1, $2, $3, $4, 'emitida', $5, $6, $7, $8, $9, NOW(), $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
       [tenant_id, customer_id || null, ncf_tipo || 'B01', ncf, subtotal, itbis, total, notas || null, fecha_vencimiento || null, codigo_seguridad, fecha_vencimiento_encf, codigo_seguridad ? new Date() : null, numero_factura, req.user.operador_id || null,
        monto_recibido !== undefined && monto_recibido !== null ? parseFloat(monto_recibido) : null,
-       devuelta !== undefined && devuelta !== null ? parseFloat(devuelta) : null]
+       devuelta !== undefined && devuelta !== null ? parseFloat(devuelta) : null,
+       descuento_monto]
     );
     const invoice_id = invoice.rows[0].id;
 for (const item of items) {
@@ -911,7 +924,8 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
 // ESTRUCTURA FISCAL: Total Bruto -> Descuento -> Sub-Total -> ITBIS -> Neto
     const fmtN = (n) => parseFloat(n || 0).toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     // El descuento viene registrado en las notas del POS
-    let descuentoTicket = 0;
+   let descuentoTicket = parseFloat(data.descuento_monto || 0);
+    if (!descuentoTicket)
     if (data.notas) {
       const m = String(data.notas).match(/Descuento:\s*RD\$\s*([\d.,]+)/i);
       if (m) descuentoTicket = parseFloat(String(m[1]).replace(/,/g, '')) || 0;
@@ -1265,7 +1279,8 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     const tw = 220;
     const tx = M + col - tw;
     const fmtTot = (n) => `RD$ ${parseFloat(n || 0).toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    let descTot = 0;
+    let descTot = parseFloat(data.descuento_monto || 0);
+    if (!descTot)
     if (data.notas) {
       const mDesc = String(data.notas).match(/Descuento:\s*RD\$\s*([\d.,]+)/i);
       if (mDesc) descTot = parseFloat(String(mDesc[1]).replace(/,/g, '')) || 0;
@@ -1477,7 +1492,8 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
     const tw = 220;
     const tx = M + col - tw;
     const fmtTotC = (n) => `RD$ ${parseFloat(n || 0).toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    let descTotC = 0;
+   let descTotC = parseFloat(data.descuento_monto || 0);
+    if (!descTotC)
     if (data.notas) {
       const mDescC = String(data.notas).match(/Descuento:\s*RD\$\s*([\d.,]+)/i);
       if (mDescC) descTotC = parseFloat(String(mDescC[1]).replace(/,/g, '')) || 0;

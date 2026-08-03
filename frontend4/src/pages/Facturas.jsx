@@ -142,10 +142,14 @@ const buscarClienteRef = useRef(null)
       let t = ''
       t += '\x1b\x61\x01' // centrar
       t += '\x1b\x21\x30' // texto grande
-      t += (usuarioSesion.empresa || '') + '\n'
+   t += (f.empresa_nombre || usuarioSesion.empresa || '') + '\n'
       t += '\x1b\x21\x00' // texto normal
       t += '\x1b\x61\x00' // alinear izquierda
-      t += centrar('FACTURA')
+      if (f.empresa_rnc) t += 'RNC: ' + f.empresa_rnc + '\n'
+      if (f.empresa_telefono) t += 'Tel: ' + f.empresa_telefono + '\n'
+      if (f.empresa_direccion) t += f.empresa_direccion + '\n'
+      t += divisor
+      t += centrar(f.ncf_tipo === 'B01' ? 'FACTURA CREDITO FISCAL' : 'FACTURA CONSUMIDOR FINAL')
       t += (f.ncf ? 'NCF: ' + f.ncf + '\n' : '')
       t += 'Fecha: ' + new Date(f.creado_en || Date.now()).toLocaleString('es-DO') + '\n'
       t += 'Cliente: ' + (f.cliente_nombre || 'Consumidor Final') + '\n'
@@ -158,8 +162,16 @@ const buscarClienteRef = useRef(null)
                    (parseFloat(it.cantidad) * parseFloat(it.precio_unitario)).toFixed(2))
       })
       t += divisor
-      t += linea('SUBTOTAL', parseFloat(f.subtotal || 0).toFixed(2))
-      t += linea('ITBIS', parseFloat(f.itbis || 0).toFixed(2))
+  let descTicket = parseFloat(f.descuento_monto || 0)
+      if (!descTicket && f.notas) {
+        const mD = String(f.notas).match(/Descuento:\s*RD\$\s*([\d.,]+)/i)
+        if (mD) descTicket = parseFloat(String(mD[1]).replace(/,/g, '')) || 0
+      }
+      const subNetoTk = parseFloat(f.subtotal || 0)
+      t += linea('TOTAL BRUTO', (subNetoTk + descTicket).toFixed(2))
+      t += linea('TOTAL DESC.', descTicket.toFixed(2))
+      t += linea('SUB-TOTAL', subNetoTk.toFixed(2))
+      t += linea('TOTAL ITBIS', parseFloat(f.itbis || 0).toFixed(2))
       t += '\x1b\x21\x10' // doble alto
       t += linea('TOTAL', 'RD$' + parseFloat(f.total || 0).toFixed(2))
       t += '\x1b\x21\x00'
@@ -361,9 +373,15 @@ const calcularTotales = () => {
   }
 const handleSubmit = async (e) => {
     e.preventDefault()
-    // Validar que la factura tenga un cliente registrado seleccionado
+  // Validar que la factura tenga un cliente registrado seleccionado
     if (!form.customer_id) {
       alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear la factura.')
+      return
+    }
+    // Validar que haya al menos un articulo con cantidad y precio
+    const itemsValidos = items.filter(it => it.descripcion && parseFloat(it.cantidad) > 0 && parseFloat(it.precio_unitario) > 0)
+    if (itemsValidos.length === 0) {
+      alert('⚠️ Debe agregar al menos un artículo con cantidad y precio.')
       return
     }
 // Validar stock disponible por producto (suma cantidades de líneas repetidas)
@@ -393,20 +411,12 @@ const handleSubmit = async (e) => {
  const guardarFacturaFinal = async () => {
     setError('')
     try {
-      // Descuento global por porcentaje: se prorratea en el precio de cada item
+// Descuento global por porcentaje: lo aplica el backend
       const pctFinal = Math.min(Math.max(parseFloat(descuentoPct) || 0, 0), 100)
-      let itemsEnviar = items
-      let notasEnviar = form.notas || ''
-      if (pctFinal > 0) {
-        const montoDescTotal = total * (pctFinal / 100)
-        itemsEnviar = items.map(it => ({
-          ...it,
-          precio_unitario: (parseFloat(it.precio_unitario || 0) * (1 - pctFinal / 100)).toFixed(4)
-        }))
-        const notaDesc = `Descuento: RD$${montoDescTotal.toFixed(2)} (${pctFinal}%)`
-        notasEnviar = notasEnviar ? `${notasEnviar} | ${notaDesc}` : notaDesc
-      }
-      const res = await API.post('/invoices', { ...form, notas: notasEnviar, items: itemsEnviar, estado: 'emitida' })
+      // Solo enviar lineas completas (el flujo POS deja una linea vacia al final)
+      // Los precios van ORIGINALES: el backend calcula el descuento
+      const itemsEnviar = items.filter(it => it.descripcion && parseFloat(it.cantidad) > 0 && parseFloat(it.precio_unitario) > 0)
+      const res = await API.post('/invoices', { ...form, items: itemsEnviar, descuento_pct: pctFinal, estado: 'emitida' })
       setShowForm(false)
       setDescuentoPct('')
       setForm({ customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: '' })
@@ -844,7 +854,7 @@ const { subtotal, itbis, total } = useMemo(() => {
                 }
               }
               if (!vendedorId) { alert('Seleccione un vendedor'); return }
-              const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
+         const clientesVendedor = clientes.filter(c => c.vendedor_id === vendedorId)
               const idsClientes = clientesVendedor.map(c => c.id)
               const filtradas = facturas.filter(f => {
                 if (!idsClientes.includes(f.customer_id)) return false
@@ -855,7 +865,16 @@ const { subtotal, itbis, total } = useMemo(() => {
                 if (fechaFin && fecha > fechaFin) return false
                 return true
               })
-              setRelacionVendedor(filtradas)
+              const conducesRel = conducesVenta.filter(cd => {
+                if (!idsClientes.includes(cd.customer_id)) return false
+                if (cd.estado !== 'emitido' || cd.facturado) return false
+                const d = new Date(cd.creado_en)
+                const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fcd < fechaInicio) return false
+                if (fechaFin && fcd > fechaFin) return false
+                return true
+              }).map(cd => ({ ...cd, ncf: cd.numero, estado: 'emitida', es_conduce: true }))
+              setRelacionVendedor([...filtradas, ...conducesRel])
             }
 }}>
           Buscar
@@ -4345,10 +4364,10 @@ onKeyDown={e => {
                       <div className="col-span-3">
                        <input name="descripcion" placeholder="Descripción" value={item.descripcion} onChange={(e) => handleItemChange(index, e)}
                           readOnly={!!item.product_id}
-                          className={`w-full border rounded px-2 py-1.5 text-sm ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`} required />
+                          className={`w-full border rounded px-2 py-1.5 text-sm ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`} />
                       </div>
                       <div className="col-span-2">
-                       <input name="cantidad" type="number" placeholder="Cant." step="0.01" min="0.01" value={item.cantidad} onChange={(e) => handleItemChange(index, e)}
+                       <input name="cantidad" type="number" placeholder="Cant." step="0.01" value={item.cantidad} onChange={(e) => handleItemChange(index, e)}
                           ref={el => cantidadRefs.current[index] = el}
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
@@ -4356,11 +4375,11 @@ onKeyDown={e => {
                               agregarLineaRef.current?.focus()
                             }
                           }}
-                         className="w-full border rounded px-2 py-1.5 text-sm" required />
+                    className="w-full border rounded px-2 py-1.5 text-sm" />
                       </div>
                       <div className="col-span-2">
                         <input name="precio_unitario" type="number" placeholder="Precio" value={item.precio_unitario} onChange={(e) => handleItemChange(index, e)}
-                          className="w-full border rounded px-2 py-1.5 text-sm" required />
+                          className="w-full border rounded px-2 py-1.5 text-sm" />
                       </div>
                       <div className="col-span-2">
                         <input type="text" readOnly
