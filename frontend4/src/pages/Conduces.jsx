@@ -467,7 +467,7 @@ export default function Conduces() {
             <tr>
               <th className="px-4 py-3 text-left text-gray-600">Numero</th>
               <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
-              <th className="px-4 py-3 text-left text-gray-600">Chofer</th>
+              <th className="px-4 py-3 text-left text-gray-600">Total</th>
               <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
               <th className="px-4 py-3 text-left text-gray-600">Estado</th>
               <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
@@ -485,7 +485,7 @@ export default function Conduces() {
               <tr key={co.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono">{co.numero || 'CD-' + String(co.numero_conduce).padStart(4, '0')}</td>
                 <td className="px-4 py-3">{co.cliente_nombre || '-'}</td>
-                <td className="px-4 py-3">{co.chofer_nombre || '-'}</td>
+                <td className="px-4 py-3">RD${parseFloat(co.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                 <td className="px-4 py-3">{new Date(co.creado_en).toLocaleDateString('es-DO')}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${co.estado === 'anulado' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>

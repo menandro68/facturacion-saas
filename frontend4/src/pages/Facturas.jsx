@@ -272,7 +272,10 @@ const buscarClienteRef = useRef(null)
       API.get('/mantenimiento/zonas').then(r => setZonas(r.data.data)).catch(() => {})
       API.get('/invoices/cotizaciones/lista').then(r => setCotizaciones(r.data.data)).catch(() => {})
       API.get('/invoices/pedidos/lista').then(r => setPedidos(r.data.data)).catch(() => {})
-      API.get('/invoices/nota-credito/lista').then(r => setNotasCredito(r.data.data)).catch(() => {})
+      Promise.all([
+        API.get('/invoices/nota-credito/lista').then(r => r.data.data).catch(() => []),
+        API.get('/conduces/nc/lista').then(r => (r.data.data || []).map(n => ({ ...n, ncf: n.numero, es_conduce_nc: true }))).catch(() => [])
+      ]).then(([ncFac, ncCond]) => setNotasCredito([...ncFac, ...ncCond].sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))))
       API.get('/devoluciones').then(r => setDevoluciones(r.data.data)).catch(() => {})
     } catch (err) {
       console.error(err)
@@ -285,7 +288,10 @@ const buscarClienteRef = useRef(null)
 
   useEffect(() => {
     if (tab === 'nota_credito') {
-      API.get('/invoices/nota-credito/lista').then(r => setNotasCredito(r.data.data)).catch(() => {})
+     Promise.all([
+        API.get('/invoices/nota-credito/lista').then(r => r.data.data).catch(() => []),
+        API.get('/conduces/nc/lista').then(r => (r.data.data || []).map(n => ({ ...n, ncf: n.numero, es_conduce_nc: true }))).catch(() => [])
+      ]).then(([ncFac, ncCond]) => setNotasCredito([...ncFac, ...ncCond].sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))))
     }
   }, [tab])
 
@@ -1302,7 +1308,7 @@ const { subtotal, itbis, total } = useMemo(() => {
             </div>
  
   </div>
-          {facturasZona.length > 0 && (
+         {(facturasZona.length > 0 || conducesZona.length > 0) && (
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -3325,7 +3331,7 @@ onKeyDown={e => {
                     <td className="px-4 py-3 text-right text-red-600 font-medium">-RD${parseFloat(n.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                     <td className="px-4 py-3">{new Date(n.creado_en).toLocaleDateString('es-DO')}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => handlePDF(n.id)} className="text-blue-600 hover:underline text-xs">PDF</button>
+                      <button onClick={() => { if (n.es_conduce_nc) { window.open(`${import.meta.env.VITE_API_URL || ''}/conduces/nc/${n.id}/pdf?token=${sessionStorage.getItem('token')}`, '_blank') } else { handlePDF(n.id) } }} className="text-blue-600 hover:underline text-xs">PDF</button>
                     </td>
                   </tr>
                 ))}
@@ -4125,7 +4131,7 @@ onKeyDown={e => {
                         const filtrados = clientes.filter(c => c.nombre.toLowerCase().includes(buscarCliente.toLowerCase()))
                         if (e.key === 'ArrowDown') {
                           e.preventDefault()
-                          setClienteIndex(i => Math.min(i + 1, filtrados.length))
+                          setClienteIndex(i => (i === -1 && buscarCliente.trim() !== '' && filtrados.length > 0) ? 1 : Math.min(i + 1, filtrados.length))
                           setMostrarDropdown(true)
                         } else if (e.key === 'ArrowUp') {
                           e.preventDefault()

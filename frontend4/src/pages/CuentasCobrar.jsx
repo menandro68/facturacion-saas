@@ -45,7 +45,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
       setClientes(cli.data.data)
       // Conduces emitidos entran como documentos de cobro (sin valor fiscal)
       const conducesCxc = (cond.data.data || [])
-        .filter(cd => cd.estado === 'emitido')
+        .filter(cd => cd.estado === 'emitido' && !cd.facturado)
         .map(cd => ({
           id: cd.id,
           ncf: cd.numero,
@@ -75,7 +75,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
             subtotal: n.total,
             itbis: 0,
             estado: 'nota_credito',
-            referencia_id: n.conduce_id,
+           referencia_id: ((cond.data.data || []).find(cd => cd.id === n.conduce_id)?.factura_id) || n.conduce_id,
             creado_en: n.creado_en,
             fecha_emision: n.creado_en,
             es_conduce_nc: true
