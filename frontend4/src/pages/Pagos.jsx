@@ -43,8 +43,15 @@ export default function Pagos() {
       const conducesPago = (cd.data.data || [])
         .filter(x => x.estado === 'emitido')
         .map(x => ({ id: x.id, ncf: x.numero, cliente_nombre: x.cliente_nombre, total: x.total, estado: 'emitida', es_conduce: true }))
-      setFacturas([...f.data.data.filter(f => f.estado === 'emitida'), ...conducesPago])
-      setNotasCredito(f.data.data.filter(f => f.estado === 'nota_credito'))
+   setFacturas([...f.data.data.filter(f => f.estado === 'emitida'), ...conducesPago])
+      let ncConducesPago = []
+      try {
+        const ncCd = await API.get('/conduces/nc/lista')
+        ncConducesPago = (ncCd.data.data || [])
+          .filter(n => n.estado === 'emitida')
+          .map(n => ({ id: n.id, ncf: n.numero, total: n.total, estado: 'nota_credito', referencia_id: n.conduce_id, es_conduce_nc: true }))
+      } catch (e) { ncConducesPago = [] }
+      setNotasCredito([...f.data.data.filter(f => f.estado === 'nota_credito'), ...ncConducesPago])
       if (t.data.data?.nombre) {
         sessionStorage.setItem('tenant_name', t.data.data.nombre)
       }
@@ -60,7 +67,7 @@ useEffect(() => {
     API.get('/mantenimiento/vendedores').then(r => setVendedoresList(r.data.data || [])).catch(() => {})
   }, [])
 
-  // Al abrir la pantalla de MÃ©todos de Pago, poner el monto pendiente en Efectivo (si estÃ¡ vacÃ­o)
+  // Al abrir la pantalla de Métodos de Pago, poner el monto pendiente en Efectivo (si está vacío)
   useEffect(() => {
     if (showMetodo && form.monto && !metodos.efectivo && !metodos.transferencia && !metodos.tarjeta && !metodos.cheque_valor) {
       setMetodos(prev => ({ ...prev, efectivo: parseFloat(form.monto).toFixed(2) }))
@@ -78,14 +85,14 @@ const handleEnviarMetodo = () => {
     const cheque = parseFloat(metodos.cheque_valor || 0)
     const total = efectivo + transferencia + tarjeta + cheque
 if (total <= 0) {
-      alert('âš ï¸ Debe llenar al menos un mÃ©todo de pago con un monto mayor a 0.')
+      alert('⚠ï¸ Debe llenar al menos un método de pago con un monto mayor a 0.')
       return
     }
     if (form.balance_max !== undefined && total > form.balance_max) {
-      alert(`âš ï¸ El total de los mÃ©todos (RD$${total.toLocaleString('es-DO', {minimumFractionDigits: 2})}) no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+      alert(`⚠ï¸ El total de los métodos (RD$${total.toLocaleString('es-DO', {minimumFractionDigits: 2})}) no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
       return
     }
-// Contar cuÃ¡ntos mÃ©todos se usaron
+// Contar cuántos métodos se usaron
     const cantidadMetodos = [efectivo, transferencia, tarjeta, cheque].filter(m => m > 0).length
     let metodoLabel = 'efectivo'
     if (cantidadMetodos > 1) {
@@ -96,7 +103,7 @@ if (total <= 0) {
       if (tarjeta > maxVal) { metodoLabel = 'tarjeta'; maxVal = tarjeta }
       if (cheque > maxVal) { metodoLabel = 'cheque'; maxVal = cheque }
     }
-// Desglose de mÃ©todos de pago
+// Desglose de métodos de pago
     const partes = []
     if (efectivo > 0) partes.push(`Efectivo: RD$${efectivo.toLocaleString('es-DO', {minimumFractionDigits:2})}`)
     if (transferencia > 0) partes.push(`Transferencia: RD$${transferencia.toLocaleString('es-DO', {minimumFractionDigits:2})}`)
@@ -121,7 +128,7 @@ if (total <= 0) {
     if (parseFloat(metodos.transferencia || 0) > 0) partes.push(`Transf: RD$${parseFloat(metodos.transferencia).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
     if (parseFloat(metodos.tarjeta || 0) > 0) partes.push(`Tarjeta: RD$${parseFloat(metodos.tarjeta).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
     if (parseFloat(metodos.cheque_valor || 0) > 0) partes.push(`Cheque: RD$${parseFloat(metodos.cheque_valor).toLocaleString('es-DO', {minimumFractionDigits:2})}`)
-    return partes.length > 0 ? partes.join(' | ') : 'Seleccionar mÃ©todo...'
+    return partes.length > 0 ? partes.join(' | ') : 'Seleccionar método...'
   }
 
  const handleSubmit = async (e) => {
@@ -129,7 +136,7 @@ if (total <= 0) {
     setError('')
     const totalMetodos = parseFloat(metodos.efectivo || 0) + parseFloat(metodos.transferencia || 0) + parseFloat(metodos.tarjeta || 0) + parseFloat(metodos.cheque_valor || 0)
     if (totalMetodos <= 0) {
-      alert('âš ï¸ Debe seleccionar un mÃ©todo de pago antes de registrar.')
+      alert('⚠ï¸ Debe seleccionar un método de pago antes de registrar.')
       return
     }
     // Mostrar confirmacion antes de grabar
@@ -176,11 +183,11 @@ if (total <= 0) {
       {mostrarConfirmGrabar && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
-            <p className="text-lg font-semibold text-gray-800 mb-6">Â¿Desea grabar este pago?</p>
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea grabar este pago?</p>
             <div className="flex justify-center gap-6">
             <button autoFocus id="btn-si-grabar-pago" onClick={grabarPago}
                 onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-grabar-pago')?.focus() } }}
-                className="bg-blue-600 text-white px-6 py-2 rounded text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">SÃ­</button>
+                className="bg-blue-600 text-white px-6 py-2 rounded text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">Sí</button>
               <button id="btn-no-grabar-pago" onClick={() => setMostrarConfirmGrabar(false)}
                 onKeyDown={e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-grabar-pago')?.focus() } }}
                 className="bg-gray-200 text-gray-700 px-6 py-2 rounded text-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400">No</button>
@@ -191,7 +198,7 @@ if (total <= 0) {
       {mostrarImprimirPago && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
-            <p className="text-lg font-semibold text-gray-800 mb-6">Â¿Desea imprimir el recibo de pago?</p>
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir el recibo de pago?</p>
             <div className="flex justify-center gap-6">
               <button autoFocus
                 onClick={async () => {
@@ -246,9 +253,9 @@ if (total <= 0) {
                     if (savedAddress) {
                       try {
                         await imprimirEnDispositivo(savedAddress, lineas)
-                        alert('âœ… Impreso')
+                        alert('✅ Impreso')
                       } catch (err) {
-                        alert('âŒ ' + err)
+                        alert('❌ ' + err)
                       }
                       return
                     }
@@ -265,7 +272,7 @@ if (total <= 0) {
 id="btn-si-recibo-pago"
                 onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-recibo-pago')?.focus() } }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
-                SÃ­
+                Sí
               </button>
               <button id="btn-no-recibo-pago" onClick={() => setMostrarImprimirPago(false)}
                 onKeyDown={e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-recibo-pago')?.focus() } }}
@@ -282,11 +289,11 @@ id="btn-si-recibo-pago"
         <div className="flex gap-2">
        <button onClick={() => {
               const u = JSON.parse(sessionStorage.getItem('usuario') || '{}')
-              if (u.rol === 'vendedor') { alert('Usted no tiene permiso para este mÃ³dulo'); return }
+              if (u.rol === 'vendedor') { alert('Usted no tiene permiso para este módulo'); return }
               setShowPendientes(true)
             }}
             className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 text-sm">
-            â³ Pagos por Confirmar
+            ⏳ Pagos por Confirmar
           </button>
           <button onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
@@ -319,7 +326,7 @@ id="btn-si-recibo-pago"
                   const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
                       setForm(prev => ({ ...prev, invoice_id: factura.es_conduce ? '' : factura.id, conduce_id: factura.es_conduce ? factura.id : '', monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
                document.getElementById('pago-ncf-resultado').innerHTML =
-                        `<span class="text-green-600 font-medium">âœ“ ${factura.ncf} â€” ${factura.cliente_nombre || 'Consumidor Final'} â€” RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
+                        `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                       setTimeout(() => document.getElementById('pago-monto-input')?.focus(), 50)
                     }
                   }} />
@@ -335,7 +342,7 @@ id="btn-si-recibo-pago"
                   const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
                     setForm(prev => ({ ...prev, invoice_id: factura.es_conduce ? '' : factura.id, conduce_id: factura.es_conduce ? factura.id : '', monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
                     document.getElementById('pago-ncf-resultado').innerHTML =
-                      `<span class="text-green-600 font-medium">âœ“ ${factura.ncf} â€” ${factura.cliente_nombre || 'Consumidor Final'} â€” RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
+                      `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
                   }}
                   className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 whitespace-nowrap">
                   Buscar
@@ -349,7 +356,7 @@ id="btn-si-recibo-pago"
                 onChange={e => {
                   let val = e.target.value
                   if (form.balance_max !== undefined && val !== '' && parseFloat(val) > form.balance_max) {
-                    alert(`âš ï¸ El monto no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+                    alert(`⚠ï¸ El monto no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
                     val = form.balance_max.toFixed(2)
                   }
                   setForm(prev => ({ ...prev, monto: val }))
@@ -359,7 +366,7 @@ id="btn-si-recibo-pago"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">MÃ©todo de Pago</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
               <button type="button" onClick={() => setShowMetodo(true)}
                 className="w-full border rounded px-3 py-2 text-sm text-left bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600">
                 ðŸ’³ {getMetodoLabel()}
@@ -386,7 +393,7 @@ id="btn-si-recibo-pago"
       {showMetodo && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
-            <h3 className="text-lg font-semibold text-center text-gray-800 mb-5">MÃ‰TODOS DE PAGO</h3>
+            <h3 className="text-lg font-semibold text-center text-gray-800 mb-5">MÉTODOS DE PAGO</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ’µ Efectivo</label>
@@ -419,7 +426,7 @@ id="btn-si-recibo-pago"
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ“ Cheque - NÃºmero</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ“ Cheque - Número</label>
                 <input type="text" placeholder="# cheque" value={metodos.cheque_numero}
                   onChange={e => setMetodos(prev => ({...prev, cheque_numero: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -452,9 +459,9 @@ id="btn-si-recibo-pago"
                     localStorage.setItem('bt_printer_name', d.name)
                     try {
                       await imprimirEnDispositivo(d.address, btLineas)
-                      alert('âœ… Impreso en ' + d.name)
+                      alert('✅ Impreso en ' + d.name)
                     } catch (err) {
-                      alert('âŒ ' + err)
+                      alert('❌ ' + err)
                     }
                   }}>
                   <span className="text-2xl">ðŸ–¨ï¸</span>
@@ -476,7 +483,7 @@ id="btn-si-recibo-pago"
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto">
             <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-800">â³ Pagos por Confirmar</h3>
+              <h3 className="text-lg font-semibold text-gray-800">⏳ Pagos por Confirmar</h3>
               <button onClick={() => setShowPendientes(false)} className="text-gray-400 hover:text-gray-600 text-xl">âœ•</button>
             </div>
             <div className="p-4 border-b grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -524,10 +531,10 @@ id="btn-si-recibo-pago"
                     <th className="px-4 py-3 text-left text-gray-600">NCF</th>
                     <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
                     <th className="px-4 py-3 text-left text-gray-600">Monto</th>
-                    <th className="px-4 py-3 text-left text-gray-600">MÃ©todo</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Método</th>
                     <th className="px-4 py-3 text-left text-gray-600">Vendedor</th>
                     <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
-                    <th className="px-4 py-3 text-left text-gray-600">AcciÃ³n</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -547,13 +554,13 @@ id="btn-si-recibo-pago"
                             await API.put(`/payments/${p.id}/confirmar`)
                             setPendientes(prev => prev.filter(x => x.id !== p.id))
                             fetchData()
-                            alert('âœ… Pago confirmado')
+                            alert('✅ Pago confirmado')
                           } catch (err) {
-                            alert('âŒ Error al confirmar')
+                            alert('❌ Error al confirmar')
                           }
                         }}
                           className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">
-                          âœ“ Confirmar
+                          ✓ Confirmar
                         </button>
                       </td>
                     </tr>
@@ -575,7 +582,7 @@ id="btn-si-recibo-pago"
               <th className="px-4 py-3 text-left text-gray-600">NCF</th>
               <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
               <th className="px-4 py-3 text-left text-gray-600">Monto</th>
-              <th className="px-4 py-3 text-left text-gray-600">MÃ©todo</th>
+              <th className="px-4 py-3 text-left text-gray-600">Método</th>
               <th className="px-4 py-3 text-left text-gray-600">Referencia</th>
               <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
               <th className="px-4 py-3 text-left text-gray-600">Fecha</th>

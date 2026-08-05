@@ -1109,7 +1109,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                     { const histTitEl = document.getElementById('hist-titulo'); if (histTitEl) histTitEl.innerHTML = `
                       <div class="mb-3 p-3 bg-blue-50 rounded-lg text-sm">
                         <span class="font-medium text-gray-700">Cliente: </span><span class="text-blue-700 font-bold">${c.nombre}</span>
-                        <span class="ml-4 font-medium text-gray-700">Condicion: </span><span class="text-gray-600">${c.condiciones?.replace(/_/g, ' ') || 'contado'} (${diasCondicion} dÃ­as)</span>
+                        <span class="ml-4 font-medium text-gray-700">Condicion: </span><span class="text-gray-600">${c.condiciones?.replace(/_/g, ' ') || 'contado'} (${diasCondicion} días)</span>
                   </div>` }
                     const filas = facturasCliente.map(f => {
                       const fechaEmitida = new Date(f.creado_en)
@@ -1124,7 +1124,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       <td class="px-4 py-3 text-right text-sm font-medium">RD$${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}${parseFloat(f.nc_aplicada) > 0 ? ' <span style="color:#ef4444;font-size:11px">(NC)</span>' : ''}</td>
                         <td class="px-4 py-3 text-sm">${fechaEmitida.toLocaleDateString('es-DO')}</td>
                         <td class="px-4 py-3 text-sm">${fechaPago ? fechaPago.toLocaleDateString('es-DO') : '-'}</td>
-                        <td class="px-4 py-3 text-sm text-center" style="${vencidoColor}">${diasVencido > 0 ? diasVencido+' dÃ­as' : 'Al dÃ­a'}</td>
+                        <td class="px-4 py-3 text-sm text-center" style="${vencidoColor}">${diasVencido > 0 ? diasVencido+' días' : 'Al día'}</td>
                         <td class="px-4 py-3 text-sm">
                           <span class="px-2 py-1 rounded text-xs font-medium ${f.estado === 'pagada' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
                             ${f.estado.toUpperCase()}

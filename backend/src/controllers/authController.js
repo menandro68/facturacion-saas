@@ -96,11 +96,8 @@ const login = async (req, res) => {
       [login_input]
     );
 
-    if (resultUser.rows.length > 0) {
+ if (resultUser.rows.length > 0 && (!rol_esperado || rol_esperado === 'admin')) {
       const user = resultUser.rows[0];
-      if (rol_esperado && rol_esperado !== 'admin') {
-        return res.status(401).json({ mensaje: 'Estas credenciales no corresponden a este tipo de usuario' });
-      }
       if (user.tenant_estado !== 'activo') {
         return res.status(401).json({ mensaje: 'Cuenta suspendida. Contacte soporte.' });
       }

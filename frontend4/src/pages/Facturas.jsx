@@ -1823,7 +1823,7 @@ onKeyDown={e => {
    <div id="cli-cliente-list" className="absolute z-50 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto"></div>
             </div>
           </div>
-          {facturasCliente.length > 0 && (
+          {(facturasCliente.length > 0 || conducesCliente.length > 0) && (
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -1884,8 +1884,10 @@ onKeyDown={e => {
                     e.preventDefault()
                     const val = e.target.value.trim().toUpperCase()
                     if (!val) return
-                    const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
-                    if (!factura) { alert('Factura no encontrada: ' + val); return }
+                  if (!val) return
+                    const cdCh = conducesVenta.find(c => (c.numero || '').toUpperCase() === val && !c.facturado && c.estado === 'emitido')
+                    const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val) || (cdCh ? { ...cdCh, ncf: cdCh.numero, es_conduce: true } : null)
+                    if (!factura) { alert('Documento no encontrado: ' + val); return }
                     if (facturasChofer.find(f => f.id === factura.id)) { alert('Ya está en la lista'); e.target.value = ''; return }
                     setFacturasChofer(prev => [...prev, factura])
                     e.target.value = ''
@@ -1956,11 +1958,12 @@ onKeyDown={e => {
                 const val = input.value.trim().toUpperCase()
                 if (!val) return
                 if (!choferSeleccionado) { alert('Debe seleccionar un chofer'); return }
-                const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
-                if (!factura) { alert('Factura no encontrada: ' + val); return }
+          const cdCh2 = conducesVenta.find(c => (c.numero || '').toUpperCase() === val && !c.facturado && c.estado === 'emitido')
+                const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val) || (cdCh2 ? { ...cdCh2, ncf: cdCh2.numero, es_conduce: true } : null)
+                if (!factura) { alert('Documento no encontrado: ' + val); return }
                 if (facturasChofer.find(f => f.id === factura.id)) { alert('Ya está en la lista'); input.value = ''; return }
                 try {
-                  await API.put(`/invoices/${factura.id}/asignar-chofer`, { chofer_id: choferSeleccionado })
+                  await API.put(`${factura.es_conduce ? '/conduces' : '/invoices'}/${factura.id}/asignar-chofer`, { chofer_id: choferSeleccionado })
                   setFacturasChofer(prev => [...prev, factura])
                   input.value = ''
                   input.focus()
@@ -2699,7 +2702,14 @@ onKeyDown={e => {
                     .then(r=>r.json()).then(d=>{if(d.success){const fid=d.data?.id||d.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('¿Desea imprimir esta factura?')){window.location.href='/invoices/'+fid+'/print?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
                     .catch(()=>alert('Error al convertir'))
                   }
-                " style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✅ Convertir a Factura</button>
+               " style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✅ Convertir a Factura</button>
+                <button onclick="
+                  if(confirm('¿Desea convertir este pedido a CONDUCE? No se generará NCF.')){
+                    fetch('/invoices/pedido/${p.id}/convertir-conduce',{method:'PUT',headers:{'Authorization':'Bearer '+sessionStorage.getItem('token'),'Content-Type':'application/json'}})
+                    .then(r=>r.json()).then(d=>{if(d.success){const cid=d.data?.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('Conduce '+(d.data?.numero||'')+' creado. ¿Desea imprimirlo?')){window.location.href='/conduces/'+cid+'/pdf?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
+                    .catch(()=>alert('Error al convertir a conduce'))
+                  }
+                " style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">📋 Convertir a Conduce</button>
                 <button onclick="window.close()" style="padding:8px 20px;background:white;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px">← Volver</button>
               </div>
                               </body></html>`)
@@ -3115,7 +3125,7 @@ onKeyDown={e => {
                   }
                   const factura = facturas.find(f => (f.ncf||'').toUpperCase() === ncFacturaBuscar.trim())
                   if (!factura) { alert('Factura no encontrada'); return }
-                  if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crÃ©dito a facturas emitidas'); return }
+                  if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crédito a facturas emitidas'); return }
            try {
                     const res = await API.get(`/invoices/${factura.id}`)
                     const data = res.data.data

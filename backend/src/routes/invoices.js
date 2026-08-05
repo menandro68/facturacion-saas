@@ -397,6 +397,100 @@ WHERE tenant_id = $1 AND tipo_ncf = $2 AND activo = true
   }
 });
 
+// PUT - Convertir pedido a CONDUCE (sin valor fiscal, sin NCF)
+router.put('/pedido/:id/convertir-conduce', verifyToken, tenantGuard, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { tenant_id } = req.user;
+    const { id } = req.params;
+    await client.query('BEGIN');
+
+    const pedidoQ = await client.query(
+      `SELECT * FROM invoices WHERE id=$1 AND tenant_id=$2 AND estado='pedido'`,
+      [id, tenant_id]
+    );
+    if (!pedidoQ.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, mensaje: 'Pedido no encontrado' });
+    }
+    const pedido = pedidoQ.rows[0];
+
+    const itemsQ = await client.query(`SELECT * FROM invoice_items WHERE invoice_id=$1`, [id]);
+    if (itemsQ.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, mensaje: 'El pedido no tiene articulos' });
+    }
+
+    // Nombre del cliente
+    let clienteNombreCd = null;
+    if (pedido.customer_id) {
+      const cliQ = await client.query(`SELECT nombre FROM customers WHERE id=$1 AND tenant_id=$2`, [pedido.customer_id, tenant_id]);
+      if (cliQ.rows[0]) clienteNombreCd = cliQ.rows[0].nombre;
+    }
+
+    // Numero de conduce atomico
+  await client.query(`SELECT pg_advisory_xact_lock(hashtext($1 || '-conduce'))`, [tenant_id]);
+    const maxQ = await client.query(
+      `SELECT COALESCE(MAX(numero_conduce), 0) as maximo FROM conduces WHERE tenant_id=$1`,
+      [tenant_id]
+    );
+    const numeroConduce = parseInt(maxQ.rows[0].maximo) + 1;
+    const numeroTexto = 'CD-' + String(numeroConduce).padStart(4, '0');
+
+    const conduce = await client.query(
+      `INSERT INTO conduces (tenant_id, numero_conduce, numero, customer_id, cliente_nombre, chofer_id, chofer_nombre, notas, estado, operador_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'emitido', $9) RETURNING *`,
+      [tenant_id, numeroConduce, numeroTexto, pedido.customer_id || null, clienteNombreCd,
+       pedido.chofer_id || null, null, `Generado desde pedido`, req.user.operador_id || null]
+    );
+    const conduceId = conduce.rows[0].id;
+
+    let totalConduce = 0;
+    for (const it of itemsQ.rows) {
+      const cantidad = parseFloat(it.cantidad) || 0;
+      const precioUnit = parseFloat(it.precio_unitario) || 0;
+      const rate = parseFloat(it.itbis_rate) || 0;
+      totalConduce += precioUnit * cantidad;
+
+      await client.query(
+        `INSERT INTO conduces_items (conduce_id, product_id, descripcion, cantidad, precio_unitario, itbis_rate)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [conduceId, it.product_id || null, it.descripcion || '', cantidad, precioUnit, rate]
+      );
+
+      if (it.product_id) {
+        const inv = await client.query('SELECT * FROM inventory WHERE product_id=$1 AND tenant_id=$2', [it.product_id, tenant_id]);
+        if (inv.rows.length > 0) {
+          const stockAnt = parseFloat(inv.rows[0].stock_actual);
+          const stockNuevo = stockAnt - cantidad;
+          await client.query('UPDATE inventory SET stock_actual=$1, actualizado_en=NOW() WHERE id=$2', [stockNuevo, inv.rows[0].id]);
+          await client.query(
+            `INSERT INTO inventory_movements (tenant_id,inventory_id,tipo,cantidad,stock_anterior,stock_nuevo,motivo)
+             VALUES ($1,$2,'salida',$3,$4,$5,$6)`,
+            [tenant_id, inv.rows[0].id, cantidad, stockAnt, stockNuevo, `Conduce ${numeroTexto} (Pedido)`]
+          );
+        }
+      }
+    }
+
+    await client.query(`UPDATE conduces SET total=$1, inventario_rebajado=true WHERE id=$2`, [totalConduce, conduceId]);
+
+    // El pedido queda consumido
+    await client.query(
+      `UPDATE invoices SET estado='convertido_conduce', actualizado_en=NOW() WHERE id=$1 AND tenant_id=$2`,
+      [id, tenant_id]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, data: { ...conduce.rows[0], total: totalConduce } });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ success: false, mensaje: error.message });
+  } finally {
+    client.release();
+  }
+});
+
 router.get('/nota-credito/lista', verifyToken, tenantGuard, async (req, res) => {
   try {
     const { tenant_id } = req.user;

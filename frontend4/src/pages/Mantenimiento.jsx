@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import API from '../services/api'
 
 // Módulos del sistema agrupados por categoría (usados para permisos de operadores)
@@ -609,7 +609,7 @@ const crearEmpresa = async () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
          <input id="op-nombre" autoFocus value={formOperador.nombre} onChange={e => setFormOperador({...formOperador, nombre: e.target.value})} required
-                  placeholder="Ej: Juan PÃ©rez"
+                  placeholder="Ej: Juan Pérez"
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('op-username')?.focus() } }}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
@@ -621,9 +621,9 @@ const crearEmpresa = async () => {
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ContraseÃ±a {!editando && '*'}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña {!editando && '*'}</label>
                 <input id="op-password" type="password" value={formOperador.password} onChange={e => setFormOperador({...formOperador, password: e.target.value})} required={!editando}
-                  placeholder={editando ? 'Dejar vacÃo para no cambiar' : 'MÃnimo 4 caracteres'}
+                  placeholder={editando ? 'Dejar vacío para no cambiar' : 'Mínimo 4 caracteres'}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur() } }}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>

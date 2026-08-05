@@ -23,6 +23,12 @@ export default function Conduces() {
   const [cdFechaFin, setCdFechaFin] = useState('')
   const [cdFiltroInicio, setCdFiltroInicio] = useState('')
   const [cdFiltroFin, setCdFiltroFin] = useState('')
+  const [busquedaConduce, setBusquedaConduce] = useState('')
+  const [editandoId, setEditandoId] = useState(null)
+  const [mostrarClaveEditar, setMostrarClaveEditar] = useState(false)
+  const [claveEditar, setClaveEditar] = useState('')
+  const [errorClaveEditar, setErrorClaveEditar] = useState('')
+  const [conducePendienteEditar, setConducePendienteEditar] = useState(null)
   // Descuento global por porcentaje (mismo patron que Nueva Factura)
   const usuarioSesionCd = (() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } })()
   const esNoAdminCd = usuarioSesionCd?.rol !== 'admin'
@@ -98,21 +104,26 @@ export default function Conduces() {
     setMostrarConfirmarCd(false)
     setGuardando(true)
     try {
-      const res = await API.post('/conduces', {
+      const payloadCd = {
         customer_id: form.customer_id,
         chofer_id: form.chofer_id || null,
         notas: form.notas || null,
         descuento_pct: Math.min(Math.max(parseFloat(descuentoPctCd) || 0, 0), 100),
         items
-      })
-      setMensaje('Conduce creado correctamente')
+      }
+      const res = editandoId
+        ? await API.put(`/conduces/${editandoId}/editar`, payloadCd)
+        : await API.post('/conduces', payloadCd)
+      setMensaje(editandoId ? 'Conduce actualizado correctamente' : 'Conduce creado correctamente')
+      const eraEdicion = !!editandoId
+      setEditandoId(null)
       setShowForm(false)
       setDescuentoPctCd('')
       setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' })
       setItems([])
       cargar()
       const id = res.data.data?.id
-      if (id) {
+      if (id && !eraEdicion) {
         setConduceGuardadoId(id)
         setMostrarImprimirCd(true)
       }
@@ -141,6 +152,54 @@ export default function Conduces() {
       cargar()
     } catch (e) {
       alert(e.response?.data?.mensaje || 'Error al convertir en factura')
+    }
+  }
+
+  const solicitarEdicion = (co) => {
+    if (esNoAdminCd) {
+      setConducePendienteEditar(co)
+      setClaveEditar('')
+      setErrorClaveEditar('')
+      setMostrarClaveEditar(true)
+      return
+    }
+    editarConduce(co)
+  }
+
+  const validarClaveEditar = async () => {
+    if (!claveEditar.trim()) {
+      setErrorClaveEditar('Ingrese la clave de autorización')
+      return
+    }
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveEditar })
+      if (res.data.valido) {
+        setMostrarClaveEditar(false)
+        setClaveEditar('')
+        setErrorClaveEditar('')
+        const co = conducePendienteEditar
+        setConducePendienteEditar(null)
+        if (co) editarConduce(co)
+      } else {
+        setErrorClaveEditar('❌ Clave incorrecta')
+      }
+    } catch (e) {
+      setErrorClaveEditar('❌ Error al validar clave')
+    }
+  }
+
+  const editarConduce = async (co) => {
+    try {
+      const res = await API.get(`/conduces/${co.id}`)
+      const d = res.data.data
+      setEditandoId(co.id)
+      setForm({ customer_id: d.customer_id || '', cliente_nombre: d.cliente_nombre || '', chofer_id: d.chofer_id || '', notas: '' })
+      setItems((d.items || []).map(i => ({ product_id: i.product_id, descripcion: i.descripcion, cantidad: parseFloat(i.cantidad) })))
+      setDescuentoPctCd('')
+      setShowForm(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (e) {
+      alert('Error al cargar el conduce: ' + (e.response?.data?.mensaje || e.message))
     }
   }
 
@@ -204,6 +263,33 @@ export default function Conduces() {
           </div>
         </div>
       )}
+      {mostrarClaveEditar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-red-600">🔐 Autorización Requerida</h3>
+              <p className="text-sm text-gray-600 mt-1">Editar un conduce requiere clave de autorización del administrador.</p>
+            </div>
+            {errorClaveEditar && (
+              <div className="bg-red-100 text-red-700 p-2 rounded mb-3 text-sm">{errorClaveEditar}</div>
+            )}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Clave de Autorización</label>
+              <input type="password" autoFocus value={claveEditar}
+                onChange={e => setClaveEditar(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); validarClaveEditar() } }}
+                placeholder="Ingrese la clave del administrador..."
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => { setMostrarClaveEditar(false); setClaveEditar(''); setErrorClaveEditar(''); setConducePendienteEditar(null) }}
+                className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button onClick={validarClaveEditar}
+                className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">✓ Validar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {mostrarImprimirCd && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
@@ -226,10 +312,16 @@ export default function Conduces() {
       )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Conduces</h1>
-        <button onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          + Nuevo Conduce
-        </button>
+        <div className="flex gap-3 items-center">
+          <input type="text" value={busquedaConduce}
+            onChange={e => setBusquedaConduce(e.target.value.toUpperCase())}
+            placeholder="BUSCAR CONDUCE..."
+            className="border rounded px-3 py-2 text-sm uppercase w-56 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button onClick={() => { if (!showForm) { setEditandoId(null); setItems([]); setDescuentoPctCd(''); setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' }) } setShowForm(!showForm) }}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 whitespace-nowrap">
+            + Nuevo Conduce
+          </button>
+        </div>
       </div>
 
       {mensaje && <div className="bg-green-100 text-green-800 p-3 rounded mb-4">{mensaje}</div>}
@@ -261,7 +353,7 @@ export default function Conduces() {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h2 className="text-lg font-bold mb-4">Nuevo Conduce</h2>
+          <h2 className="text-lg font-bold mb-4">{editandoId ? 'Editar Conduce' : 'Nuevo Conduce'}</h2>
 
           {/* Cliente */}
           <div className="mb-4 relative">
@@ -452,7 +544,7 @@ export default function Conduces() {
               className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50">
               {guardando ? 'Guardando...' : 'Guardar Conduce'}
             </button>
-            <button onClick={() => { setShowForm(false); setItems([]); setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' }) }}
+            <button onClick={() => { setShowForm(false); setEditandoId(null); setItems([]); setDescuentoPctCd(''); setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' }) }}
               className="border border-gray-300 px-6 py-2 rounded hover:bg-gray-50">
               Cancelar
             </button>
@@ -475,6 +567,11 @@ export default function Conduces() {
           </thead>
           <tbody>
             {conduces.filter(co => {
+              if (busquedaConduce) {
+                const numCd = (co.numero || '').toUpperCase()
+                const cliCd = (co.cliente_nombre || '').toUpperCase()
+                if (!numCd.includes(busquedaConduce) && !cliCd.includes(busquedaConduce)) return false
+              }
               if (!cdFiltroInicio && !cdFiltroFin) return true
               const d = new Date(co.creado_en)
               const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
@@ -494,6 +591,9 @@ export default function Conduces() {
                 </td>
              <td className="px-4 py-3">
                   <button onClick={() => verPDF(co.id)} className="text-blue-600 hover:underline text-sm mr-3">PDF</button>
+                  {co.estado !== 'anulado' && !co.facturado && (
+                    <button onClick={() => solicitarEdicion(co)} className="text-orange-600 hover:underline text-sm mr-3">Editar</button>
+                  )}
                   {co.estado !== 'anulado' && !co.facturado && (
                     <button onClick={() => convertirFactura(co.id)} className="text-green-600 hover:underline text-sm mr-3">Convertir en Factura</button>
                   )}
