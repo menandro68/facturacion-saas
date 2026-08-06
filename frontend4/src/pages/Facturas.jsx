@@ -28,6 +28,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [facturasZona, setFacturasZona] = useState([])
   const [resumenZona, setResumenZona] = useState(null)
   const [conducesZona, setConducesZona] = useState([])
+  const [pagosCd, setPagosCd] = useState([])
   const [vendedorSeleccionado, setVendedorSeleccionado] = useState('')
   const [facturasVendedor, setFacturasVendedor] = useState([])
   const [resumenVendedor, setResumenVendedor] = useState(null)
@@ -81,6 +82,8 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [ncGuardadaId, setNcGuardadaId] = useState(null)
   const [showCotizacion, setShowCotizacion] = useState(false)
   const [itemsCot, setItemsCot] = useState([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
+  const [descuentoPctCot, setDescuentoPctCot] = useState('')
+  const [editandoCotId, setEditandoCotId] = useState(null)
   const [buscarProductoCot, setBuscarProductoCot] = useState({})
   const [dropdownCot, setDropdownCot] = useState({})
   const [cotClienteIndex, setCotClienteIndex] = useState(-1)
@@ -269,6 +272,7 @@ const buscarClienteRef = useRef(null)
       setProductos(p.data.data)
       API.get('/mantenimiento/vendedores').then(r => setVendedores(r.data.data)).catch(() => {})
       API.get('/conduces').then(r => setConducesVenta(r.data.data || [])).catch(() => {})
+      API.get('/payments').then(r => setPagosCd(r.data.data || [])).catch(() => {})
       API.get('/mantenimiento/zonas').then(r => setZonas(r.data.data)).catch(() => {})
       API.get('/invoices/cotizaciones/lista').then(r => setCotizaciones(r.data.data)).catch(() => {})
       API.get('/invoices/pedidos/lista').then(r => setPedidos(r.data.data)).catch(() => {})
@@ -1329,15 +1333,20 @@ const { subtotal, itbis, total } = useMemo(() => {
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
                 ))}
-                {conducesZona.map(cd => (
+           {conducesZona.map(cd => {
+                  const abonadoCdz = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  const totalCdz = parseFloat(cd.total || 0)
+                  const pagadoCdz = abonadoCdz >= totalCdz - 0.01 && totalCdz > 0
+                  return (
                   <tr key={'cdz-' + cd.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
                     <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
-                    <td className="px-4 py-3">RD${parseFloat(cd.total || 0).toLocaleString()}</td>
-                    <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">CONDUCE</span></td>
+                    <td className="px-4 py-3">RD${totalCdz.toLocaleString()}{abonadoCdz > 0 && !pagadoCdz && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdz.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdz ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdz ? 'PAGADA' : 'CONDUCE'}</span></td>
                     <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -1729,15 +1738,20 @@ onKeyDown={e => {
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
                 ))}
-                {conducesVendedor.map(cd => (
+            {conducesVendedor.map(cd => {
+                  const abonadoCdv = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  const totalCdv = parseFloat(cd.total || 0)
+                  const pagadoCdv = abonadoCdv >= totalCdv - 0.01 && totalCdv > 0
+                  return (
                   <tr key={'cdv-' + cd.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
                     <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
-                    <td className="px-4 py-3">RD${parseFloat(cd.total || 0).toLocaleString()}</td>
-                    <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">CONDUCE</span></td>
+                    <td className="px-4 py-3">RD${totalCdv.toLocaleString()}{abonadoCdv > 0 && !pagadoCdv && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdv.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdv ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdv ? 'PAGADA' : 'CONDUCE'}</span></td>
                     <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -1842,14 +1856,19 @@ onKeyDown={e => {
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
                 ))}
-                {conducesCliente.map(cd => (
+            {conducesCliente.map(cd => {
+                  const abonadoCdc = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                  const totalCdc = parseFloat(cd.total || 0)
+                  const pagadoCdc = abonadoCdc >= totalCdc - 0.01 && totalCdc > 0
+                  return (
                   <tr key={'cdc-' + cd.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
-                    <td className="px-4 py-3">RD${parseFloat(cd.total || 0).toLocaleString()}</td>
-                    <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">CONDUCE</span></td>
+                    <td className="px-4 py-3">RD${totalCdc.toLocaleString()}{abonadoCdc > 0 && !pagadoCdc && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdc.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdc ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdc ? 'PAGADA' : 'CONDUCE'}</span></td>
                     <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -2461,7 +2480,7 @@ onKeyDown={e => {
                       sub += base
                       itb += bruto - base
                     })
-                    return <>
+        return <>
                       <p className="text-gray-600">Subtotal: <span className="font-medium">RD${sub.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                       <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itb.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                       <p className="text-lg font-bold text-gray-800">Total: RD${(sub+itb).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
@@ -2960,11 +2979,27 @@ onKeyDown={e => {
                       const base = bruto / (1 + (parseFloat(it.itbis_rate||0) / 100))
                       sub += base
                       itb += bruto - base
-                    })
+          })
+                    const brutoCot = sub + itb
+                    const pctCot = Math.min(Math.max(parseFloat(descuentoPctCot) || 0, 0), 100)
+                    const montoDescCot = brutoCot * (pctCot / 100)
+                    const netoCot = brutoCot - montoDescCot
+                    const itbisNetoCot = itb * (1 - pctCot / 100)
+                    const subNetoCot = netoCot - itbisNetoCot
                     return <>
-                      <p className="text-gray-600">Subtotal: <span className="font-medium">RD${sub.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
-                      <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itb.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
-                      <p className="text-lg font-bold text-gray-800">Total: RD${(sub+itb).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                      <p className="text-gray-600">TOTAL BRUTO: <span className="font-medium">RD${brutoCot.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                      <div className="flex items-center justify-end gap-2 my-1">
+                        <label className="text-gray-600">Descuento</label>
+                        <input type="number" min="0" max="100" step="any" value={descuentoPctCot}
+                          onChange={e => setDescuentoPctCot(e.target.value)}
+                          placeholder="0"
+                          className="w-16 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                        <span className="text-gray-600">%</span>
+                        <span className="font-medium text-red-600 w-24">-RD${montoDescCot.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>
+                      </div>
+                      <p className="text-gray-600">SUB-TOTAL: <span className="font-medium">RD${subNetoCot.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                      <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itbisNetoCot.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
+                      <p className="text-lg font-bold text-gray-800">Total: RD${netoCot.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
                     </>
                   })()}
                 </div>
@@ -2990,7 +3025,14 @@ onKeyDown={e => {
                   }
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   try {
-                    await API.post('/invoices/cotizacion', { customer_id: customer_id || null, items: itemsValidos })
+                   const payloadCot = { customer_id: customer_id || null, items: itemsValidos, descuento_pct: Math.min(Math.max(parseFloat(descuentoPctCot) || 0, 0), 100) }
+                    if (editandoCotId) {
+                      await API.put(`/invoices/cotizacion/${editandoCotId}/editar`, payloadCot)
+                    } else {
+                      await API.post('/invoices/cotizacion', payloadCot)
+                    }
+                    setEditandoCotId(null)
+                    setDescuentoPctCot('')
                     setShowCotizacion(false)
                     setItemsCot([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
               setBuscarProductoCot({})
@@ -3002,7 +3044,7 @@ onKeyDown={e => {
                   } catch(e) { alert('Error al guardar cotización') }
                 }}
                   className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar Cotización</button>
-                <button onClick={() => setShowCotizacion(false)}
+                <button onClick={() => { setShowCotizacion(false); setEditandoCotId(null); setDescuentoPctCot(''); setItemsCot([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}]) }}
                   className="px-4 py-1.5 border rounded text-sm hover:bg-gray-50">Cancelar</button>
               </div>
             </div>
@@ -3066,7 +3108,26 @@ onKeyDown={e => {
                           fetchData()
                           alert('¡Factura emitida exitosamente!')
                         } catch(e) { alert('Error al convertir') }
-                      }} className="text-green-600 hover:underline text-xs">Convertir a Factura</button>
+                    }} className="text-green-600 hover:underline text-xs">Convertir a Factura</button>
+                      <button onClick={async () => {
+                        try {
+                          const det = await API.get(`/invoices/${c.id}`)
+                          const its = det.data.data.items || []
+                          setEditandoCotId(c.id)
+                          setCotClienteId(c.customer_id || '')
+                          setItemsCot(its.map(it => ({
+                            descripcion: it.descripcion || '',
+                            cantidad: parseFloat(it.cantidad),
+                            precio_unitario: parseFloat(it.precio_unitario),
+                            itbis_rate: parseFloat(it.itbis_rate || 18),
+                            product_id: it.product_id || ''
+                          })))
+                          setDescuentoPctCot('')
+                          setShowCotizacion(true)
+                          setTimeout(() => { const el = document.getElementById('cot-cliente-input'); if (el) el.value = c.cliente_nombre || '' }, 100)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        } catch(e) { alert('Error al cargar la cotización') }
+                      }} className="text-orange-600 hover:underline text-xs">Editar</button>
                       <button onClick={async () => {
                         if (!confirm('¿Eliminar esta cotización?')) return
                         try {
@@ -4550,18 +4611,59 @@ onKeyDown={e => {
               </thead>
               <tbody>
         
-                {facturasFiltradas.filter(f =>
-                (f.estado === 'emitida' || f.estado === 'pagada') && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
-                ).length === 0 ? (
-                  <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">{busquedaNcf ? 'No se encontraron facturas con ese NCF' : 'No hay facturas'}</td></tr>
-                ) : (
-                  facturasFiltradas.filter(f =>
+   {(() => {
+                  const factsVF = facturasFiltradas.filter(f =>
                     (f.estado === 'emitida' || f.estado === 'pagada') && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
-                  ).map((f) => (
+                  ).map(f => ({ ...f, _tipoVF: 'factura' }))
+                  const condsVF = conducesVenta.filter(cd => {
+                    if (cd.estado !== 'emitido' || cd.facturado) return false
+                    if (busquedaNcf && !(cd.numero || '').toUpperCase().includes(busquedaNcf.toUpperCase())) return false
+                    const d = new Date(cd.creado_en)
+                    const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                    if (fechaInicio && fcd < fechaInicio) return false
+                    if (fechaFin && fcd > fechaFin) return false
+                    return true
+                  }).map(cd => ({ ...cd, _tipoVF: 'conduce' }))
+                  const todosVF = [...factsVF, ...condsVF].sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
+                  if (todosVF.length === 0) {
+                    return <tr><td colSpan="6" className="px-4 py-8 text-center text-gray-400">{busquedaNcf ? 'No se encontraron documentos' : 'No hay documentos'}</td></tr>
+                  }
+           return todosVF.map(f => f._tipoVF === 'conduce' ? (() => {
+                    const abonadoVF = pagosCd.filter(p => p.conduce_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                    const totalVF = parseFloat(f.total || 0)
+                    const pagadoVF = abonadoVF >= totalVF - 0.01 && totalVF > 0
+                    return (
+                    <tr key={'cd-' + f.id} className="border-t hover:bg-gray-50">
+                      <td className="px-4 py-3 font-mono">{f.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
+                      <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
+                      <td className="px-4 py-3">RD${totalVF.toLocaleString('es-DO',{minimumFractionDigits:2})}{abonadoVF > 0 && !pagadoVF && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoVF.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${pagadoVF ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoVF ? 'PAGADA' : 'CONDUCE'}</span>
+                      </td>
+               <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString()}</td>
+                   <td className="px-4 py-3 flex gap-2 flex-wrap">
+                        <button onClick={() => {
+                          const tok = sessionStorage.getItem('token')
+                          const ventanaCd = window.open(`/conduces/${f.id}/pdf?token=${tok}`, '_blank')
+                          if (ventanaCd) {
+                            ventanaCd.addEventListener('load', () => {
+                              setTimeout(() => { ventanaCd.focus(); ventanaCd.print() }, 1000)
+                            })
+                          } else {
+                            alert('Por favor permite las ventanas emergentes para imprimir')
+                          }
+                        }}
+                          className="text-blue-600 hover:underline text-xs">Imprimir</button>
+                        <button onClick={() => { const tok = sessionStorage.getItem('token'); window.open(`/conduces/${f.id}/pdf?token=${tok}`, '_blank') }}
+                          className="text-green-600 hover:underline text-xs">PDF</button>
+                      </td>
+                    </tr>
+                    )
+                  })() : (
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
-                  <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                <td className="px-4 py-3">{parseFloat(f.nc_aplicada) > 0 ?(<span className="text-xs font-medium text-gray-800">Fact: {parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {f.nc_numeros || ''}: {parseFloat(f.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}</td>
+                      <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
+                      <td className="px-4 py-3">{parseFloat(f.nc_aplicada) > 0 ? (<span className="text-xs font-medium text-gray-800">Fact: {parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {f.nc_numeros || ''}: {parseFloat(f.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>
                           {f.estado.toUpperCase()}
@@ -4573,11 +4675,7 @@ onKeyDown={e => {
                           <button onClick={() => handleEmitir(f.id)}
                             className="text-blue-600 hover:underline text-xs">Emitir</button>
                         )}
-                  {/* Boton Anular oculto {f.estado !== 'anulada' && puedeVerSubTab('anular') && (
-                          <button onClick={() => handleAnular(f.id)}
-                            className="text-red-500 hover:underline text-xs">Anular</button>
-                        )} */}
-                     {f.estado !== 'borrador' && (
+                        {f.estado !== 'borrador' && (
                           <>
                             {puedeVerSubTab('imprimir') && <button onClick={() => handleImprimir(f.id)}
                               className="text-blue-600 hover:underline text-xs">Imprimir</button>}
@@ -4587,28 +4685,8 @@ onKeyDown={e => {
                         )}
                       </td>
                     </tr>
-   ))
-                )}
-                {conducesVenta.filter(cd => {
-                  if (cd.estado !== 'emitido' || cd.facturado) return false
-                  if (busquedaNcf && !(cd.numero || '').toUpperCase().includes(busquedaNcf.toUpperCase())) return false
-                  const d = new Date(cd.creado_en)
-                  const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-                  if (fechaInicio && fcd < fechaInicio) return false
-                  if (fechaFin && fcd > fechaFin) return false
-                  return true
-                }).map(cd => (
-                  <tr key={'cd-' + cd.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
-                    <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
-                    <td className="px-4 py-3">RD${parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">CONDUCE</span>
-                    </td>
-                    <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">-</td>
-                  </tr>
-                ))}
+                  ))
+                })()}
               </tbody>
             </table>
           </div>

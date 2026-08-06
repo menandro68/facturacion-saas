@@ -180,7 +180,74 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           setModalResumen({ totalCuentas: totalPendiente + totalCobrado, totalPendiente, totalCobrado, totalVencidas, fecha: hoy.toLocaleDateString('es-DO') })
         }}
           className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
-           Imprimir Resumen
+        Imprimir Resumen
+        </button>
+        <button onClick={() => {
+          const hoyImp = new Date()
+          const condDiasImp = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
+          const cuentasImp = todasFacturas.filter(f => f.estado === 'emitida' || f.estado === 'pagada')
+          let tTotal = 0, tPagado = 0, tPendiente = 0
+          const filasImp = cuentasImp.map(f => {
+            const total = parseFloat(f.total || 0)
+            const pagada = f.estado === 'pagada'
+            const pagado = pagada ? total : 0
+            const pendiente = pagada ? 0 : total
+            let fv = f.fecha_vencimiento ? new Date(f.fecha_vencimiento) : null
+            if (!fv && f.customer_id) {
+              const cli = clientes.find(c => c.id === f.customer_id)
+              const d = condDiasImp[cli?.condiciones] || 0
+              if (d > 0) { fv = new Date(f.creado_en); fv.setDate(fv.getDate() + d) }
+            }
+            const vencida = !pagada && fv && fv < hoyImp
+            const estadoTxt = pagada ? 'PAGADA' : (vencida ? 'VENCIDA' : 'PENDIENTE')
+            tTotal += total; tPagado += pagado; tPendiente += pendiente
+            return `<tr>
+              <td>${f.cliente_nombre || 'Sin cliente'}</td>
+              <td class="mono">${f.ncf || 'BORRADOR'}</td>
+              <td class="num">RD$${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+              <td class="num verde">RD$${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+              <td class="num naranja">RD$${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+              <td class="${vencida ? 'rojo' : ''}">${fv ? fv.toLocaleDateString('es-DO') : '-'}</td>
+              <td>${estadoTxt}</td>
+            </tr>`
+          }).join('')
+          const w = window.open('', '_blank')
+          w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cuentas por Cobrar Detallada</title>
+          <style>
+            body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+            h2{color:#1e40af;margin-bottom:4px}
+            p.sub{color:#64748b;font-size:12px;margin:0 0 16px}
+            table{width:100%;border-collapse:collapse;font-size:11px}
+            th{background:#1e40af;color:#fff;padding:7px 6px;text-align:left}
+            td{padding:5px 6px;border:1px solid #cbd5e1}
+            tr:nth-child(even){background:#f8fafc}
+            .num{text-align:right}
+            .mono{font-family:monospace}
+            .verde{color:#16a34a}
+            .naranja{color:#ea580c;font-weight:600}
+            .rojo{color:#dc2626;font-weight:600}
+            tfoot td{font-weight:bold;background:#e2e8f0}
+            @media print{button{display:none}}
+          </style></head><body>
+          <h2>Cuentas por Cobrar - Detallada</h2>
+          <p class="sub">${sessionStorage.getItem('tenant_name') || ''} — Fecha: ${hoyImp.toLocaleDateString('es-DO')} — Total documentos: ${cuentasImp.length}</p>
+          <table>
+            <thead><tr><th>CLIENTE</th><th>DESCRIPCION</th><th style="text-align:right">TOTAL</th><th style="text-align:right">PAGADO</th><th style="text-align:right">PENDIENTE</th><th>VENCIMIENTO</th><th>ESTADO</th></tr></thead>
+            <tbody>${filasImp}</tbody>
+            <tfoot><tr>
+              <td colspan="2">TOTALES</td>
+              <td class="num">RD$${tTotal.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+              <td class="num">RD$${tPagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+              <td class="num">RD$${tPendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+              <td colspan="2"></td>
+            </tr></tfoot>
+          </table>
+          <script>window.onload=()=>window.print()<\/script>
+          </body></html>`)
+          w.document.close()
+        }}
+          className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 text-sm whitespace-nowrap">
+          Imprimir Detallada
         </button>
       </div>
 

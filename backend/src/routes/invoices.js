@@ -89,7 +89,8 @@ router.get('/reporte/productos', verifyToken, tenantGuard, async (req, res) => {
     const { tenant_id } = req.user;
     const { fecha_inicio, fecha_fin, vendedor_id, customer_id, producto } = req.query;
 const result = await pool.query(`
-      SELECT descripcion, SUM(total_cantidad) as total_cantidad, precio_unitario,
+   SELECT descripcion, SUM(total_cantidad) as total_cantidad,
+             MAX(precio_unitario) as precio_unitario,
              SUM(total_subtotal) as total_subtotal, SUM(total_itbis) as total_itbis,
              SUM(total_venta) as total_venta, SUM(total_costo) as total_costo,
              SUM(total_subtotal) - SUM(total_costo) as beneficio
@@ -135,9 +136,30 @@ const result = await pool.query(`
           AND ($4::uuid IS NULL OR c2.vendedor_id = $4::uuid)
           AND ($5::uuid IS NULL OR cd.customer_id = $5::uuid)
           AND ($6::text IS NULL OR ci.descripcion ILIKE $6::text)
-        GROUP BY ci.descripcion, ci.precio_unitario
-      ) unido
-      GROUP BY descripcion, precio_unitario
+    GROUP BY ci.descripcion, ci.precio_unitario
+        UNION ALL
+        SELECT 
+          nci.descripcion,
+          SUM(nci.cantidad) * -1 as total_cantidad,
+          nci.precio_unitario,
+          SUM(nci.cantidad * nci.precio_unitario) * -1 as total_subtotal,
+          0 as total_itbis,
+          SUM(nci.cantidad * nci.precio_unitario) * -1 as total_venta,
+          COALESCE(SUM(nci.cantidad * COALESCE(p3.costo, 0)), 0) * -1 as total_costo
+        FROM conduces_nc ncd
+        JOIN conduces_nc_items nci ON nci.nc_id = ncd.id
+        LEFT JOIN products p3 ON p3.id = nci.product_id
+        LEFT JOIN customers c3 ON c3.id = ncd.customer_id
+        WHERE ncd.tenant_id = $1
+          AND ncd.estado = 'emitida'
+          AND ($2::date IS NULL OR (ncd.creado_en AT TIME ZONE 'UTC' AT TIME ZONE 'America/Santo_Domingo')::date >= $2::date)
+          AND ($3::date IS NULL OR (ncd.creado_en AT TIME ZONE 'UTC' AT TIME ZONE 'America/Santo_Domingo')::date <= $3::date)
+          AND ($4::uuid IS NULL OR c3.vendedor_id = $4::uuid)
+          AND ($5::uuid IS NULL OR ncd.customer_id = $5::uuid)
+          AND ($6::text IS NULL OR nci.descripcion ILIKE $6::text)
+        GROUP BY nci.descripcion, nci.precio_unitario
+ ) unido
+      GROUP BY descripcion
       ORDER BY total_venta DESC
     `, [tenant_id, fecha_inicio || null, fecha_fin || null, vendedor_id || null, customer_id || null, producto ? `%${producto}%` : null]);
     res.json({ success: true, data: result.rows });
@@ -913,11 +935,13 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
               c.direccion as cliente_direccion,
               t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.telefono as empresa_telefono,
               t.direccion as empresa_direccion,
-              v.nombre as vendedor_nombre
+     v.nombre as vendedor_nombre,
+              ref.ncf as ref_ncf, ref.numero_factura as ref_numero_factura
        FROM invoices i
        LEFT JOIN customers c ON i.customer_id = c.id
        LEFT JOIN tenants t ON i.tenant_id = t.id
        LEFT JOIN vendedores v ON c.vendedor_id = v.id
+       LEFT JOIN invoices ref ON i.referencia_id = ref.id
        WHERE i.id=$1 AND i.tenant_id=$2`,
       [id, tenant_id]
     );
@@ -1054,7 +1078,9 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
     lineaGuiones();
     if (data.numero_factura) {
       y += 2;
-      const numeroFormateado = String(data.numero_factura).padStart(8, '0');
+     const numeroFormateado = data.estado === 'nota_credito'
+        ? (data.ref_ncf || (data.ref_numero_factura ? String(data.ref_numero_factura).padStart(8, '0') : '-'))
+        : String(data.numero_factura).padStart(8, '0');
       izquierda(`Factura No.: ${numeroFormateado}`, 9, true);
       y += 3;
       lineaGuiones();
@@ -1153,12 +1179,14 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
       `SELECT i.*, c.nombre as cliente_nombre, c.rnc_cedula, c.telefono as cliente_telefono,
               c.direccion as cliente_direccion, c.condiciones as cliente_condiciones,
               c.email as cliente_negocio,
-              t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.email as empresa_email,
-              v.nombre as vendedor_nombre
+t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.email as empresa_email,
+              v.nombre as vendedor_nombre,
+              ref.ncf as ref_ncf, ref.numero_factura as ref_numero_factura
        FROM invoices i
        LEFT JOIN customers c ON i.customer_id = c.id
        JOIN tenants t ON i.tenant_id = t.id
        LEFT JOIN vendedores v ON c.vendedor_id = v.id
+       LEFT JOIN invoices ref ON i.referencia_id = ref.id
        WHERE i.id = $1 AND i.tenant_id = $2`,
       [id, tenant_id]
     );
@@ -1231,7 +1259,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
       if (data.numero_factura) {
         doc.rect(M, y, col, 16).fill(azulMedio);
         doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
-           .text(`FACTURA No.: ${String(data.numero_factura).padStart(8, '0')}`, M + 8, y + 4, { width: col - 16, align: 'right' });
+          .text(data.estado === 'nota_credito' ? `FACTURA No.: ${data.ref_ncf || (data.ref_numero_factura ? String(data.ref_numero_factura).padStart(8, '0') : '-')}` : `FACTURA No.: ${String(data.numero_factura).padStart(8, '0')}`, M + 8, y + 4, { width: col - 16, align: 'right' })
         y += 22;
       }
 
@@ -1290,7 +1318,7 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
          .text(`Cliente: ${data.cliente_nombre || 'Consumidor Final'}`, M + col / 2, 8, { width: col / 2, align: 'right' });
       if (data.numero_factura) {
         doc.fontSize(8).font('Helvetica')
-           .text(`Factura No.: ${String(data.numero_factura).padStart(8, '0')}`, M + col / 2, 24, { width: col / 2, align: 'right' });
+           .text(data.estado === 'nota_credito' ? `Factura No.: ${data.ref_ncf || (data.ref_numero_factura ? String(data.ref_numero_factura).padStart(8, '0') : '-')}` : `Factura No.: ${String(data.numero_factura).padStart(8, '0')}`, M + col / 2, 24, { width: col / 2, align: 'right' })
       }
       return 45;  // Retorna Y donde empieza la tabla
     };
@@ -1421,11 +1449,13 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
               c.direccion as cliente_direccion, c.condiciones as cliente_condiciones,
               c.email as cliente_negocio,
               t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.email as empresa_email,
-              v.nombre as vendedor_nombre
+  v.nombre as vendedor_nombre,
+              ref.ncf as ref_ncf, ref.numero_factura as ref_numero_factura
        FROM invoices i
        LEFT JOIN customers c ON i.customer_id = c.id
        JOIN tenants t ON i.tenant_id = t.id
        LEFT JOIN vendedores v ON c.vendedor_id = v.id
+       LEFT JOIN invoices ref ON i.referencia_id = ref.id
        WHERE i.id = $1 AND i.tenant_id = $2`,
       [id, tenant_id]
     );
@@ -1482,7 +1512,7 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
     if (data.numero_factura) {
       doc.rect(M, y, col, 22).fill(azulMedio);
       doc.fillColor('white').fontSize(10).font('Helvetica-Bold')
-         .text(`FACTURA No.: ${String(data.numero_factura).padStart(8, '0')}`, M + 10, y + 7, { width: col - 20, align: 'right' });
+         .text(data.estado === 'nota_credito' ? `FACTURA No.: ${data.ref_ncf || (data.ref_numero_factura ? String(data.ref_numero_factura).padStart(8, '0') : '-')}` : `FACTURA No.: ${String(data.numero_factura).padStart(8, '0')}`, M + 10, y + 7, { width: col - 20, align: 'right' })
       y += 32;
     } else {
       y = 115;
@@ -1751,13 +1781,19 @@ router.get('/cotizaciones/lista', verifyToken, tenantGuard, async (req, res) => 
 router.post('/cotizacion', verifyToken, tenantGuard, async (req, res) => {
   try {
     const { tenant_id } = req.user;
-    const { customer_id, items } = req.body;
+const { customer_id, items } = req.body;
+    const pctDescCot = Math.min(Math.max(parseFloat(req.body.descuento_pct) || 0, 0), 100);
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, mensaje: 'Debe agregar al menos un producto' });
     }
-
-let subtotal = 0;
+// Aplicar descuento global prorrateado al precio de cada item
+    if (pctDescCot > 0) {
+      items.forEach(item => {
+        item.precio_unitario = parseFloat(item.precio_unitario) * (1 - pctDescCot / 100);
+      });
+    }
+    let subtotal = 0;
     let itbis = 0;
     items.forEach(item => {
       const itemBruto = parseFloat(item.cantidad) * parseFloat(item.precio_unitario);
@@ -1873,6 +1909,75 @@ if (updSeq.rows.length === 0) {
   } catch (error) {
     console.error('Error convertir cotizacion:', error);
     res.status(500).json({ success: false, mensaje: error.message });
+  }
+});
+
+// PUT - Editar cotizacion
+router.put('/cotizacion/:id/editar', verifyToken, tenantGuard, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { tenant_id } = req.user;
+    const { id } = req.params;
+    const { customer_id, items } = req.body;
+    const pctDescEdCot = Math.min(Math.max(parseFloat(req.body.descuento_pct) || 0, 0), 100);
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ success: false, mensaje: 'Debe agregar al menos un producto' });
+    }
+
+    await client.query('BEGIN');
+
+    const cotQ = await client.query(
+      `SELECT * FROM invoices WHERE id=$1 AND tenant_id=$2 AND estado='cotizacion'`,
+      [id, tenant_id]
+    );
+    if (!cotQ.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, mensaje: 'Cotizacion no encontrada' });
+    }
+
+    if (pctDescEdCot > 0) {
+      items.forEach(item => {
+        item.precio_unitario = parseFloat(item.precio_unitario) * (1 - pctDescEdCot / 100);
+      });
+    }
+
+    let subtotalEd = 0, itbisEd = 0;
+    items.forEach(item => {
+      const bruto = parseFloat(item.cantidad) * parseFloat(item.precio_unitario);
+      const base = bruto / (1 + (parseFloat(item.itbis_rate || 18) / 100));
+      subtotalEd += base;
+      itbisEd += bruto - base;
+    });
+    const totalEdCot = subtotalEd + itbisEd;
+
+    await client.query(`DELETE FROM invoice_items WHERE invoice_id = $1`, [id]);
+
+    for (const item of items) {
+      const bruto = parseFloat(item.cantidad) * parseFloat(item.precio_unitario);
+      const base = bruto / (1 + (parseFloat(item.itbis_rate || 18) / 100));
+      const itemItbis = bruto - base;
+      await client.query(
+        `INSERT INTO invoice_items (invoice_id, product_id, descripcion, cantidad, precio_unitario, itbis_rate, itbis_monto, subtotal, total)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [id, item.product_id || null, item.descripcion, item.cantidad, item.precio_unitario, item.itbis_rate || 18, itemItbis, base, bruto]
+      );
+    }
+
+    const upd = await client.query(
+      `UPDATE invoices SET customer_id=$1, subtotal=$2, itbis=$3, total=$4, actualizado_en=NOW()
+       WHERE id=$5 AND tenant_id=$6 RETURNING *`,
+      [customer_id || cotQ.rows[0].customer_id, subtotalEd, itbisEd, totalEdCot, id, tenant_id]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, data: upd.rows[0] });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error editar cotizacion:', error);
+    res.status(500).json({ success: false, mensaje: error.message });
+  } finally {
+    client.release();
   }
 });
 
