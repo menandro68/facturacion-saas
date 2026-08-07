@@ -200,7 +200,7 @@ return res.json({
     if (resultCajero.rows.length > 0) {
       const cajero = resultCajero.rows[0];
 
-      if (rol_esperado && rol_esperado !== 'operador') {
+     if (rol_esperado && rol_esperado !== 'operador' && rol_esperado !== 'cajero') {
         return res.status(401).json({ mensaje: 'Estas credenciales no corresponden a este tipo de usuario' });
       }
       if (cajero.tenant_estado !== 'activo') {
@@ -474,4 +474,74 @@ const obtenerFeatures = async (req, res) => {
   }
 };
 
-module.exports = { register, login, cambiarCredenciales, listarEmpresasSelector, loginEmpresa, obtenerFeatures };
+// LOGIN CAJERO POR PIN (usuario del tenant + PIN de 4 digitos)
+const loginCajeroPin = async (req, res) => {
+  const { usuario, pin } = req.body;
+  try {
+    if (!usuario || !pin) {
+      return res.status(400).json({ mensaje: 'Usuario y PIN son requeridos' });
+    }
+    if (!/^\d{4}$/.test(String(pin).trim())) {
+      return res.status(400).json({ mensaje: 'El PIN debe ser de 4 digitos' });
+    }
+    // Resolver el tenant desde el usuario del administrador
+    let login_input = usuario;
+    if (login_input && !login_input.includes('@')) {
+      const usuarioLimpio = login_input.toLowerCase().replace(/[^a-z0-9]/g, '');
+      login_input = usuarioLimpio + '@empresa.local';
+    }
+    const tenantQ = await pool.query(
+      `SELECT u.tenant_id, t.nombre as empresa, t.estado as tenant_estado, t.features
+       FROM users u JOIN tenants t ON u.tenant_id = t.id
+       WHERE u.email = $1`,
+      [login_input]
+    );
+    if (tenantQ.rows.length === 0) {
+      return res.status(401).json({ mensaje: 'Usuario de empresa no encontrado' });
+    }
+    const tenantInfo = tenantQ.rows[0];
+    if (tenantInfo.tenant_estado !== 'activo') {
+      return res.status(401).json({ mensaje: 'Cuenta suspendida. Contacte soporte.' });
+    }
+    // Buscar el cajero por PIN dentro de ese tenant
+    const cajeroQ = await pool.query(
+      `SELECT * FROM cajeros WHERE tenant_id = $1 AND pin = $2 AND estado = 'activo'`,
+      [tenantInfo.tenant_id, String(pin).trim()]
+    );
+    if (cajeroQ.rows.length === 0) {
+      return res.status(401).json({ mensaje: 'PIN incorrecto' });
+    }
+    const cajero = cajeroQ.rows[0];
+    const token = jwt.sign(
+      {
+        id: cajero.id,
+        tenant_id: cajero.tenant_id,
+        rol: 'operador',
+        cajero_id: cajero.id,
+        nombre: cajero.nombre,
+        solo_pos: true,
+        modulos_permitidos: ['pos']
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+    return res.json({
+      mensaje: 'Login exitoso',
+      token,
+      usuario: {
+        id: cajero.id,
+        nombre: cajero.nombre,
+        rol: 'operador',
+        empresa: tenantInfo.empresa,
+        features: tenantInfo.features || {},
+        solo_pos: true,
+        modulos_permitidos: ['pos']
+      }
+    });
+  } catch (error) {
+    console.error('Error en login cajero PIN:', error.message);
+    res.status(500).json({ mensaje: 'Error interno del servidor' });
+  }
+};
+
+module.exports = { register, login, cambiarCredenciales, listarEmpresasSelector, loginEmpresa, obtenerFeatures, loginCajeroPin };

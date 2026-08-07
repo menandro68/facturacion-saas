@@ -323,11 +323,13 @@ const crearEmpresa = async () => {
         }
         setShowForm(false)
         fetchNcfElectronicas()
-      } else if (tab === 'cajeros') {
+  } else if (tab === 'cajeros') {
+        // La contrasena se autocompleta con el PIN
+        const payloadCajero = { ...formCajero, password: formCajero.pin }
         if (editando) {
-          await API.put(`/mantenimiento/cajeros/${editando}`, formCajero)
+          await API.put(`/mantenimiento/cajeros/${editando}`, payloadCajero)
         } else {
-          await API.post('/mantenimiento/cajeros', formCajero)
+          await API.post('/mantenimiento/cajeros', payloadCajero)
         }
         setShowForm(false)
         fetchData()
@@ -564,10 +566,7 @@ const crearEmpresa = async () => {
                 />
             <p className="text-xs text-gray-400 mt-1">El cajero usará este PIN para identificarse en el Punto de Venta</p>
               </div>
-              <div className="border-t pt-3 mt-1">
-                <p className="text-sm font-semibold text-gray-700 mb-2">🔑 Credenciales de acceso al sistema</p>
-              </div>
-              <div>
+        <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
                 <input
                   type="text"
@@ -577,18 +576,6 @@ const crearEmpresa = async () => {
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Nombre de usuario para login"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña {!editando && '*'}</label>
-                <input
-                  type="password"
-                  value={formCajero.password}
-                  onChange={(e) => setFormCajero({ ...formCajero, password: e.target.value })}
-                  required={!editando}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={editando ? 'Dejar vacío para no cambiar' : 'Mínimo 4 caracteres'}
-                />
-                <p className="text-xs text-gray-400 mt-1">Al entrar con estas credenciales va directo al Punto de Venta</p>
               </div>
             </div>
             <div className="flex gap-3 justify-end mt-6">

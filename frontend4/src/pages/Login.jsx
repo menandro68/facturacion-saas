@@ -16,19 +16,31 @@ export default function Login({ onLogin }) {
     nueva_password: '',
     repetir_password: ''
   })
-  const [cambioError, setCambioError] = useState('')
+const [cambioError, setCambioError] = useState('')
   const [cambioLoading, setCambioLoading] = useState(false)
 
+  // Empresa configurada en esta caja (se pide una sola vez)
+  const [empresaCaja, setEmpresaCaja] = useState(() => localStorage.getItem('empresa_caja') || '')
+  const [configEmpresa, setConfigEmpresa] = useState('')
+
   // NAVEGACIÓN POR TECLADO (sin mouse)
-  useEffect(() => {
+useEffect(() => {
     if (showCambioModal || modalError) return
-    setTimeout(() => document.getElementById('login-usuario')?.focus(), 150)
-    const filas = [
-      ['tipo-admin', 'tipo-operador', 'tipo-vendedor'],
-      ['login-usuario'],
-      ['login-password'],
-      ['login-entrar']
-    ]
+    if (!document.activeElement?.id?.startsWith('tipo-')) {
+      setTimeout(() => document.getElementById(tipo === 'cajero' ? 'login-password' : 'login-usuario')?.focus(), 150)
+    }
+    const filas = tipo === 'cajero'
+      ? [
+          ['tipo-admin', 'tipo-operador', 'tipo-vendedor', 'tipo-cajero'],
+          ['login-password'],
+          ['login-entrar']
+        ]
+      : [
+          ['tipo-admin', 'tipo-operador', 'tipo-vendedor', 'tipo-cajero'],
+          ['login-usuario'],
+          ['login-password'],
+          ['login-entrar']
+        ]
     const posicion = () => {
       const id = document.activeElement?.id
       for (let f = 0; f < filas.length; f++) {
@@ -54,7 +66,7 @@ export default function Login({ onLogin }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showCambioModal, modalError])
+ }, [showCambioModal, modalError, tipo])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -65,7 +77,17 @@ export default function Login({ onLogin }) {
     setLoading(true)
     setError('')
     try {
-   const payload = tipo === 'admin'
+if (tipo === 'cajero') {
+        const resPin = await API.post('/auth/login-cajero-pin', { usuario: empresaCaja, pin: form.password })
+        sessionStorage.setItem('token', resPin.data.token)
+        sessionStorage.setItem('usuario', JSON.stringify(resPin.data.usuario))
+        sessionStorage.setItem('es_matriz', 'false')
+        onLogin(resPin.data.usuario)
+        setLoading(false)
+        return
+      }
+
+      const payload = tipo === 'admin'
         ? { email: form.email, password: form.password, rol_esperado: 'admin' }
         : { usuario: form.usuario, password: form.password, rol_esperado: tipo }
 
@@ -154,9 +176,18 @@ export default function Login({ onLogin }) {
             type="button"
             onFocus={() => setTipo('vendedor')}
             onClick={() => setTipo('vendedor')}
-            className={`flex-1 py-2 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'vendedor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+      className={`flex-1 py-2 text-sm font-medium border-r border-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'vendedor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Vendedor
+          </button>
+          <button
+            id="tipo-cajero"
+            type="button"
+            onFocus={() => setTipo('cajero')}
+            onClick={() => setTipo('cajero')}
+            className={`flex-1 py-2 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'cajero' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            Cajero
           </button>
         </div>
 {modalError && (
@@ -193,6 +224,63 @@ export default function Login({ onLogin }) {
           </div>
         )}
 
+       {tipo === 'cajero' && !empresaCaja ? (
+          <div>
+            <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+              <p className="text-sm text-blue-800 font-medium">Configuración inicial de esta caja</p>
+              <p className="text-xs text-blue-600 mt-1">Ingrese el usuario de la empresa. Solo se pide una vez en este equipo.</p>
+            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Usuario de la Empresa</label>
+            <input
+              type="text"
+              autoFocus
+              value={configEmpresa}
+              onChange={(e) => setConfigEmpresa(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && configEmpresa.trim()) { localStorage.setItem('empresa_caja', configEmpresa.trim()); setEmpresaCaja(configEmpresa.trim()) } }}
+              placeholder="Ej: menandro"
+              className="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              onClick={() => { if (configEmpresa.trim()) { localStorage.setItem('empresa_caja', configEmpresa.trim()); setEmpresaCaja(configEmpresa.trim()) } }}
+              className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700">
+              Configurar Caja
+            </button>
+          </div>
+        ) : tipo === 'cajero' ? (
+          <form onSubmit={handleSubmit}>
+            <div className="text-center mb-6">
+              <p className="text-lg font-semibold text-gray-800">Introduzca su PIN</p>
+              <p className="text-xs text-gray-500 mt-1">{empresaCaja}</p>
+            </div>
+            <input
+              id="login-password"
+              type="password"
+              name="password"
+              autoFocus
+              value={form.password}
+              onChange={handleChange}
+              maxLength={4}
+              inputMode="numeric"
+              placeholder="••••"
+              className="w-full border-2 border-gray-300 rounded-lg px-3 py-4 mb-6 text-center tracking-[0.5em] text-2xl focus:outline-none focus:ring-4 focus:ring-blue-300"
+              required
+            />
+            <button
+              id="login-entrar"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-lg hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-blue-300">
+              {loading ? 'Entrando...' : 'Entrar'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (confirm('¿Cambiar la empresa configurada en esta caja?')) { localStorage.removeItem('empresa_caja'); setEmpresaCaja(''); setConfigEmpresa('') } }}
+              className="w-full text-xs text-gray-400 hover:text-gray-600 mt-4">
+              Cambiar empresa de esta caja
+            </button>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             {tipo === 'admin' ? (
@@ -225,15 +313,18 @@ export default function Login({ onLogin }) {
             )}
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+      <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{tipo === 'cajero' ? 'PIN (4 dígitos)' : 'Contraseña'}</label>
             <input
               id="login-password"
               type="password"
               name="password"
               value={form.password}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              maxLength={tipo === 'cajero' ? 4 : undefined}
+              inputMode={tipo === 'cajero' ? 'numeric' : undefined}
+              placeholder={tipo === 'cajero' ? '••••' : ''}
+              className={`w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${tipo === 'cajero' ? 'text-center tracking-widest text-lg' : ''}`}
               required
             />
           </div>
@@ -244,9 +335,10 @@ export default function Login({ onLogin }) {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-blue-300"
           >
-            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+        {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
         </form>
+        )}
       </div>
 
       {/* MODAL DE CAMBIO DE CREDENCIALES (Primer Login) */}
