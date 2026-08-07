@@ -33,7 +33,7 @@ export default function Dashboard() {
       <h3 className="text-lg font-semibold text-gray-700 mb-3">Hoy</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow p-5">
-          <p className="text-sm text-gray-500">Facturas Hoy</p>
+          <p className="text-sm text-gray-500">Facturas y/o Conduces Hoy</p>
           <p className="text-3xl font-bold text-blue-600">{data.hoy.facturas_hoy}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-5">
@@ -50,7 +50,7 @@ export default function Dashboard() {
       <h3 className="text-lg font-semibold text-gray-700 mb-3">Este Mes</h3>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow p-5">
-          <p className="text-sm text-gray-500">Facturas</p>
+        <p className="text-sm text-gray-500">Facturas y/o Conduces</p>
           <p className="text-3xl font-bold text-blue-600">{data.mes.facturas_mes}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-5">

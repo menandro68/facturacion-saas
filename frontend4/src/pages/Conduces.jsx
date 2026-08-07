@@ -397,7 +397,7 @@ export default function Conduces() {
                     } else if (e.key === 'Enter') {
                       e.preventDefault()
                     const c = clientesFiltrados[idxCliente >= 0 ? idxCliente : 0]
-                      if (c) { setForm({ ...form, customer_id: c.id, cliente_nombre: c.nombre }); setBusquedaCliente(''); setIdxCliente(-1); setTimeout(() => document.getElementById('conduce-buscar-articulo')?.focus(), 50) }
+               if (c) { setForm({ ...form, customer_id: c.id, cliente_nombre: c.nombre }); setBusquedaCliente(''); setIdxCliente(-1); setTimeout(() => { const el = document.getElementById('conduce-buscar-articulo'); if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }) } }, 100) }
                     }
                   }}
                   className="w-full border border-gray-300 rounded px-3 py-2" />

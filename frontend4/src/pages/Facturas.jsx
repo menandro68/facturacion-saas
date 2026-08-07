@@ -4216,7 +4216,7 @@ onKeyDown={e => {
                          setForm({...form, customer_id: c.id, ncf_tipo: detectarNCFPorCliente(c.tipo)}); setBuscarCliente(c.nombre); setMostrarDropdown(false); setClienteSeleccionado(c)
                           }
                           setClienteIndex(-1)
-                          setTimeout(() => buscarProductoRef.current?.focus(), 100)
+                         setTimeout(() => { buscarProductoRef.current?.focus(); buscarProductoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 100)
                         } else if (e.key === 'Escape') {
                           setMostrarDropdown(false); setClienteIndex(-1)
                         }

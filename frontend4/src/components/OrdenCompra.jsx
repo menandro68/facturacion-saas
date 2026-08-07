@@ -778,10 +778,13 @@ const handleItemChange = async (idx, field, value) => {
                 doc.setFont('helvetica', 'bold')
                 doc.setFontSize(12)
                 doc.text(`NETO RD$: ${fmtOC(netoOC)}`, 196, finalY, { align: 'right' })
-                doc.save(`Orden-${verOrden.numero}.pdf`)
+          doc.autoPrint()
+                const urlOC = doc.output('bloburl')
+                const wOC = window.open(urlOC, '_blank')
+                if (!wOC) alert('Por favor permite las ventanas emergentes para imprimir')
               }}
-                className="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 flex items-center gap-2">
-                📄 Exportar PDF
+                className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-2">
+                Imprimir
               </button>
               <button onClick={() => setVerOrden(null)}
                 className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cerrar</button>
