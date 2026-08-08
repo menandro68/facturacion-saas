@@ -145,6 +145,8 @@ function POS() {
   const [descuentoTipo, setDescuentoTipo] = useState('porcentaje')
   const [descuentoValor, setDescuentoValor] = useState('')
   const [descuentoAutorizado, setDescuentoAutorizado] = useState(false)
+  // Descuento global en MONTO fijo (se mantiene aunque cambien las cantidades)
+  const [descuentoMontoFijo, setDescuentoMontoFijo] = useState(0)
   const [claveDesc, setClaveDesc] = useState('')
   const [errorDesc, setErrorDesc] = useState('')
   const [procesandoDesc, setProcesandoDesc] = useState(false)
@@ -699,17 +701,20 @@ useEffect(() => {
       }
       setTicket(prev => prev.map(l => l.id === descuentoLineaId ? { ...l, precio: nuevoPrecio } : l))
     } else {
-      // Descuento GLOBAL: se prorratea entre todas las líneas
+// Descuento GLOBAL: se prorratea entre todas las líneas
       const totalOriginal = ticket.reduce((acc, l) => acc + l.precio_original * l.cantidad, 0)
       let factor
       if (descuentoTipo === 'porcentaje') {
         factor = 1 - valor / 100
+        setDescuentoMontoFijo(0)
       } else {
         if (valor >= totalOriginal) {
           setErrorDesc(`El descuento no puede ser mayor o igual al total (RD$ ${totalOriginal.toFixed(2)})`)
           return
         }
         factor = 1 - valor / totalOriginal
+        // Guardar el monto fijo para mantenerlo si cambian las cantidades
+        setDescuentoMontoFijo(valor)
       }
       setTicket(prev => prev.map(l => ({ ...l, precio: l.precio_original * factor })))
     }
@@ -1046,6 +1051,24 @@ const abrirCierre = async () => {
   }
 
   // Totales (precios con ITBIS INCLUIDO — se desglosa)
+  // Mantener FIJO el descuento en monto aunque cambien las cantidades
+  useEffect(() => {
+    if (descuentoMontoFijo <= 0 || ticket.length === 0) return
+    const totalOrig = ticket.reduce((acc, l) => acc + l.precio_original * l.cantidad, 0)
+    if (totalOrig <= 0) return
+    if (descuentoMontoFijo >= totalOrig) {
+      setDescuentoMontoFijo(0)
+      setTicket(prev => prev.map(l => ({ ...l, precio: l.precio_original })))
+      return
+    }
+    const factorFijo = 1 - descuentoMontoFijo / totalOrig
+    setTicket(prev => {
+      const necesitaAjuste = prev.some(l => Math.abs(l.precio - l.precio_original * factorFijo) > 0.001)
+      if (!necesitaAjuste) return prev
+      return prev.map(l => ({ ...l, precio: l.precio_original * factorFijo }))
+    })
+  }, [ticket.map(l => l.id + ':' + l.cantidad).join('|'), descuentoMontoFijo])
+
   const totalGeneral = ticket.reduce((acc, l) => acc + l.precio * l.cantidad, 0)
   const baseGeneral = ticket.reduce((acc, l) => {
     const lineaTotal = l.precio * l.cantidad
@@ -1148,7 +1171,7 @@ const res = await API.post('/invoices', payload)
         pago: etiquetaPago
       })
  setMostrarCobro(false)
-      setTicket([])
+      setTicket([]); setDescuentoMontoFijo(0)
       setClienteSeleccionado(null)
       setDescuentoAutorizado(false)
       setModoMixto(false)
