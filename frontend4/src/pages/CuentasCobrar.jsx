@@ -169,7 +169,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
              Volver
           </button>
         )}
-        <button onClick={() => {
+        {!vendedor_id && <button onClick={() => {
           const hoy = new Date()
           const emitidas = todasFacturas.filter(f => f.estado === 'emitida')
           const pagadas = todasFacturas.filter(f => f.estado === 'pagada')
@@ -179,10 +179,10 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           const totalVencidas = vencidas.reduce((s, f) => s + parseFloat(f.total || 0), 0)
           setModalResumen({ totalCuentas: totalPendiente + totalCobrado, totalPendiente, totalCobrado, totalVencidas, fecha: hoy.toLocaleDateString('es-DO') })
         }}
-          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
+        className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm flex items-center gap-2">
         Imprimir Resumen
-        </button>
-        <button onClick={() => {
+        </button>}
+    {!vendedor_id && <button onClick={() => {
           const hoyImp = new Date()
           const condDiasImp = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
           const cuentasImp = todasFacturas.filter(f => f.estado === 'emitida' || f.estado === 'pagada')
@@ -246,9 +246,9 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           </body></html>`)
           w.document.close()
         }}
-          className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 text-sm whitespace-nowrap">
+        className="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 text-sm whitespace-nowrap">
           Imprimir Detallada
-        </button>
+        </button>}
       </div>
 
       {/* Tabs */}
@@ -610,7 +610,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
           </div>
           <div id="cob-resultado" className="mb-4 text-right bg-green-50 p-3 rounded-lg min-h-8"></div>
         <div className="flex justify-end mb-4">
-          <button className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
+          {!vendedor_id && <button className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
             onClick={async () => {
               const tbody = document.getElementById('cob-tbody')
               if (!tbody || tbody.innerHTML.includes('No hay') || tbody.innerHTML.includes('Selecciona')) return alert('Primero realiza una busqueda')
@@ -739,8 +739,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 </body></html>`)
               printW.document.close()
             }}>
-             Imprimir Reporte
-          </button>
+        Imprimir Reporte
+          </button>}
         </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
@@ -833,14 +833,15 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
               )}
             </div>
         <button id="btn-buscar-cxc-vendedor" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-              onClick={() => {
-                let vendedorId = document.getElementById('cxc-vendedor').value
+      onClick={() => {
+                let vendedorId = vendedor_id || document.getElementById('cxc-vendedor')?.value
                 if (!vendedorId) {
                   const nombreEscrito = (document.getElementById('cxc-vendedor-input')?.value || '').trim().toLowerCase()
                   const encontrado = vendedores.find(v => v.nombre.toLowerCase() === nombreEscrito)
                   if (encontrado) {
                     vendedorId = encontrado.id
-                    document.getElementById('cxc-vendedor').value = encontrado.id
+                    const elCxc = document.getElementById('cxc-vendedor')
+                    if (elCxc) elCxc.value = encontrado.id
                   }
                 }
                 if (!vendedorId) return

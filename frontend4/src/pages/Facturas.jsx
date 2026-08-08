@@ -2205,7 +2205,7 @@ onKeyDown={e => {
               + Nuevo Pedido
             </button>
           ) : (
-            <div className="mb-6 border rounded-lg p-4">
+          <div className="mb-6 border rounded-lg p-4 form-nuevo-pedido">
              <h4 className="font-medium mb-3 text-gray-700">Nuevo Pedido</h4>
     
               <div className="relative mb-4 max-w-sm">
@@ -2292,11 +2292,20 @@ onKeyDown={e => {
                     <div key={i} className="pos-ticket-linea">
                       <div className="pos-ticket-fila">
                         <div className="pos-ticket-desc">{it.descripcion}</div>
-                        <button type="button" className="pos-ticket-eliminar"
+            <button type="button" className="pos-ticket-eliminar"
                           onClick={() => {
-                            if (!confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
+                            if (!window.confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
                             if (itemsPed.length > 1) {
                               setItemsPed(prev => prev.filter((_, xi) => xi !== i))
+                              setBuscarProductoPed(prev => {
+                                const nuevo = {}
+                                Object.keys(prev).forEach(k => {
+                                  const idx = parseInt(k)
+                                  if (idx < i) nuevo[idx] = prev[k]
+                                  else if (idx > i) nuevo[idx - 1] = prev[k]
+                                })
+                                return nuevo
+                              })
                             } else {
                               setItemsPed([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
                               setBuscarProductoPed({})
@@ -2305,10 +2314,13 @@ onKeyDown={e => {
                       </div>
                       <div className="pos-ticket-detalle">
                         <span>
-                          <input type="number" min="0.01" step="any" value={it.cantidad}
+                      <input type="number" min="0.01" step="any" value={it.cantidad}
                             onChange={e => setItemsPed(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
                             className="pos-ticket-cantidad" />
-                          {' x '}{parseFloat(it.precio_unitario || 0).toFixed(2)}
+                          {' x '}
+                          <input type="number" min="0" step="any" value={it.precio_unitario}
+                            onChange={e => setItemsPed(prev => prev.map((x, xi) => xi === i ? { ...x, precio_unitario: e.target.value } : x))}
+                            className="pos-ticket-precio" />
                         </span>
                         <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                       </div>

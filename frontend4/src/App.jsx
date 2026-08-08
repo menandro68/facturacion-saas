@@ -17,6 +17,7 @@ import SuperAdmin from './pages/SuperAdmin'
 import SelectorEmpresas from './pages/SelectorEmpresas'
 import POS from './pages/POS'
 import OrdenCompra from './components/OrdenCompra'
+import API from './services/api'
 
 function App() {
   // Detectar si la URL es /super-admin para mostrar el panel super-admin
@@ -48,9 +49,9 @@ function App() {
   useEffect(() => {
     const token = sessionStorage.getItem('token')
     if (!usuario || !token) return
-    fetch('/auth/features', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => {
+API.get('/auth/features')
+      .then(r => {
+        const d = r.data
         if (d.success && d.features) {
           setUsuario(prev => {
             const actualizado = { ...prev, features: d.features }
@@ -221,17 +222,18 @@ const handleEntrarEmpresa = (user) => {
           <nav className="p-3">
             {menuItems.map((item) => (
               <button key={item.id} onClick={async () => {
-                if (item.id === 'listado_precios') {
-                  const token = sessionStorage.getItem('token')
-                const res = await fetch('/products', { headers: { Authorization: `Bearer ${token}` } })
-                 const resInv = await fetch('/inventory', { headers: { Authorization: `Bearer ${token}` } })
-                  const data = await res.json()
-                  const invData = await resInv.json()
-                  const prods = data.data.filter(p => p.precio).map(p => {
-                    const inv = invData.data?.find(i => i.product_id === p.id)
-                    return { ...p, stock_real: inv?.stock_actual || 0 }
-                  })
-                  setListadoPrecios(prods)
+         if (item.id === 'listado_precios') {
+                  try {
+                    const res = await API.get('/products')
+                    const resInv = await API.get('/inventory').catch(() => ({ data: { data: [] } }))
+                    const prods = (res.data.data || []).filter(p => p.precio).map(p => {
+                      const inv = (resInv.data.data || []).find(i => i.product_id === p.id)
+                      return { ...p, stock_real: inv?.stock_actual || 0 }
+                    })
+                    setListadoPrecios(prods)
+                  } catch (e) {
+                    alert('Error al cargar el listado de precios')
+                  }
                   setMenuAbierto(false)
                   return
                 }
@@ -273,17 +275,18 @@ const handleEntrarEmpresa = (user) => {
             {menuItems.map((item) => (
               <button key={item.id} onClick={async () => {
                 
-                if (item.id === 'listado_precios') {
-                  const token = sessionStorage.getItem('token')
-                  const res = await fetch('/products', { headers: { Authorization: `Bearer ${token}` } })
-                  const resInv = await fetch('/inventory', { headers: { Authorization: `Bearer ${token}` } })
-                  const data = await res.json()
-                  const invData = await resInv.json()
-                  const prods = data.data.filter(p => p.precio).map(p => {
-                    const inv = invData.data?.find(i => i.product_id === p.id)
-                    return { ...p, stock_real: inv?.stock_actual || 0 }
-                  })
-                  setListadoPrecios(prods)
+         if (item.id === 'listado_precios') {
+                  try {
+                    const res = await API.get('/products')
+                    const resInv = await API.get('/inventory').catch(() => ({ data: { data: [] } }))
+                    const prods = (res.data.data || []).filter(p => p.precio).map(p => {
+                      const inv = (resInv.data.data || []).find(i => i.product_id === p.id)
+                      return { ...p, stock_real: inv?.stock_actual || 0 }
+                    })
+                    setListadoPrecios(prods)
+                  } catch (e) {
+                    alert('Error al cargar el listado de precios')
+                  }
                   return
                 }
                 setPagina(item.id)

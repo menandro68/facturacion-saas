@@ -1,12 +1,12 @@
-/* ============================================================
-   RESPONSIVE.CSS — Modo responsive por Feature Flag de tenant
+﻿/* ============================================================
+   RESPONSIVE.CSS â€” Modo responsive por Feature Flag de tenant
    Solo se activa si <body> tiene la clase .tenant-responsive
    (empresas con features.responsive = true, ej: casa reyes)
-   Las demás empresas NO reciben ningún cambio visual.
+   Las demÃ¡s empresas NO reciben ningÃºn cambio visual.
    Mobile-first: breakpoints 640px / 768px / 1024px
    ============================================================ */
 
-/* ---------- BASE MÓVIL (pantallas hasta 767px) ---------- */
+/* ---------- BASE MÃ“VIL (pantallas hasta 767px) ---------- */
 @media (max-width: 767px) {
 
   /* Evitar desbordamiento horizontal general */
@@ -18,7 +18,7 @@
     min-width: 0;
   }
 
-  /* Contenedores con padding grande → padding compacto */
+  /* Contenedores con padding grande â†’ padding compacto */
   body.tenant-responsive .p-6 {
     padding: 0.75rem;
   }
@@ -27,7 +27,7 @@
     padding: 0.75rem;
   }
 
-  /* Filas flex (filtros, barras de acciones) → apilar en columna */
+  /* Filas flex (filtros, barras de acciones) â†’ apilar en columna */
   body.tenant-responsive .flex.gap-4,
   body.tenant-responsive .flex.gap-2,
   body.tenant-responsive .flex.gap-3 {
@@ -40,7 +40,7 @@
     gap: 0.5rem;
   }
 
-  /* Grids de varias columnas → una sola columna */
+  /* Grids de varias columnas â†’ una sola columna */
   body.tenant-responsive .grid-cols-2,
   body.tenant-responsive .grid-cols-3,
   body.tenant-responsive .grid-cols-4,
@@ -49,20 +49,20 @@
     grid-template-columns: 1fr;
   }
 
-  /* Inputs, selects y botones a ancho completo y táctiles (44px min) */
+  /* Inputs, selects y botones a ancho completo y tÃ¡ctiles (44px min) */
   body.tenant-responsive input,
   body.tenant-responsive select,
   body.tenant-responsive textarea {
     width: 100%;
     min-height: 44px;
-    font-size: 16px; /* evita zoom automático de iOS */
+    font-size: 16px; /* evita zoom automÃ¡tico de iOS */
   }
 
   body.tenant-responsive button {
     min-height: 44px;
   }
 
-  /* Tablas → scroll horizontal suave sin romper el layout */
+  /* Tablas â†’ scroll horizontal suave sin romper el layout */
   body.tenant-responsive table {
     display: block;
     overflow-x: auto;
@@ -71,7 +71,7 @@
     max-width: 100%;
   }
 
-  /* Tabs (Venta por Fecha, Zona, Vendedor, etc.) → scroll horizontal */
+  /* Tabs (Venta por Fecha, Zona, Vendedor, etc.) â†’ scroll horizontal */
   body.tenant-responsive .flex.border-b,
   body.tenant-responsive .flex.gap-2.border-b {
     overflow-x: auto;
@@ -86,7 +86,7 @@
     white-space: nowrap;
   }
 
-  /* Modales → ocupar casi toda la pantalla */
+  /* Modales â†’ ocupar casi toda la pantalla */
   body.tenant-responsive .fixed.inset-0 > div {
     max-width: 95vw;
     max-height: 90vh;
@@ -94,7 +94,7 @@
     margin: auto;
   }
 
-  /* Textos grandes → reducir levemente */
+  /* Textos grandes â†’ reducir levemente */
   body.tenant-responsive .text-2xl {
     font-size: 1.25rem;
   }
@@ -103,7 +103,7 @@
     font-size: 1.125rem;
   }
 
-  /* Márgenes laterales automáticos → quitar en móvil */
+  /* MÃ¡rgenes laterales automÃ¡ticos â†’ quitar en mÃ³vil */
   body.tenant-responsive .ml-2 {
     margin-left: 0;
   }
@@ -132,12 +132,12 @@
 }
 
 /* ============================================================
-   LÍNEAS DE FACTURA COMO TARJETAS MODERNAS (solo móvil)
-   Apunta únicamente a las filas de artículos usando :has()
+   LÃNEAS DE FACTURA COMO TARJETAS MODERNAS (solo mÃ³vil)
+   Apunta Ãºnicamente a las filas de artÃ­culos usando :has()
    ============================================================ */
 @media (max-width: 767px) {
 
-  /* La fila del artículo se convierte en tarjeta */
+  /* La fila del artÃ­culo se convierte en tarjeta */
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -150,7 +150,7 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
-  /* Artículo y Descripción ocupan el ancho completo de la tarjeta */
+  /* ArtÃ­culo y DescripciÃ³n ocupan el ancho completo de la tarjeta */
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(1),
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(2) {
     grid-column: span 2;
@@ -167,14 +167,14 @@
     margin-bottom: 0.25rem;
   }
 
-  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(1)::before { content: "Artículo"; }
-  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(2)::before { content: "Descripción"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(1)::before { content: "ArtÃ­culo"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(2)::before { content: "DescripciÃ³n"; }
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(3)::before { content: "Cantidad"; }
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(4)::before { content: "Precio"; }
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(5)::before { content: "Subtotal"; }
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(6)::before { content: "ITBIS"; }
 
-  /* Botón eliminar (×) centrado, sin etiqueta */
+  /* BotÃ³n eliminar (Ã—) centrado, sin etiqueta */
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(7)::before {
     content: "";
     margin: 0;
@@ -193,7 +193,7 @@
     background: #fef2f2;
   }
 
-  /* Campos dentro de la tarjeta más cómodos al tacto */
+  /* Campos dentro de la tarjeta mÃ¡s cÃ³modos al tacto */
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) input,
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) select {
     min-height: 44px;
@@ -203,7 +203,7 @@
 }
 
 /* ============================================================
-   TICKET POS EN VIVO — estilo recibo de punto de venta
+   TICKET POS EN VIVO â€” estilo recibo de punto de venta
    Solo se renderiza para tenants con features.responsive
    ============================================================ */
 
@@ -318,7 +318,7 @@ body.tenant-responsive .pos-ticket-fila {
 
 /* ============================================================
    FLUJO POS: tarjeta de entrada bajo demanda
-   Solo móvil + tenants con features.responsive (casa reyes)
+   Solo mÃ³vil + tenants con features.responsive (casa reyes)
    ============================================================ */
 
 /* En escritorio los botones POS nunca se muestran */
@@ -340,19 +340,19 @@ body.tenant-responsive .pos-ticket-fila {
     font-size: inherit;
     background: #fff;
   }
-  /* Ocultar el bloque de entrada cuando la tarjeta está cerrada */
+  /* Ocultar el bloque de entrada cuando la tarjeta estÃ¡ cerrada */
   body.tenant-responsive .pos-entrada-cerrada {
     display: none;
   }
 
-  /* Ocultar las líneas anteriores (ya viven en el ticket) */
+  /* Ocultar las lÃ­neas anteriores (ya viven en el ticket) */
 body.tenant-responsive .pos-item-anterior {
     display: none !important;
   }
 
 
 
-  /* Botón + Agregar línea (debajo del ticket) */
+  /* BotÃ³n + Agregar lÃ­nea (debajo del ticket) */
   body.tenant-responsive .pos-btn-agregar {
     display: block;
     width: 100%;
@@ -371,7 +371,7 @@ body.tenant-responsive .pos-item-anterior {
     transform: scale(0.98);
   }
 
-  /* Botón ✓ Agregar al ticket (confirmar artículo) */
+  /* BotÃ³n âœ“ Agregar al ticket (confirmar artÃ­culo) */
   body.tenant-responsive .pos-btn-confirmar {
     display: block;
     width: 100%;
@@ -390,8 +390,8 @@ body.tenant-responsive .pos-item-anterior {
     transform: scale(0.98);
   }
 
-  /* Ocultar el "+ Agregar línea" original en modo POS
-     (el flujo POS usa su propio botón azul bajo el ticket) */
+  /* Ocultar el "+ Agregar lÃ­nea" original en modo POS
+     (el flujo POS usa su propio botÃ³n azul bajo el ticket) */
   body.tenant-responsive .pos-entrada-cerrada ~ * {}
 body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"],
   body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="submit"] {
@@ -403,8 +403,8 @@ body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"
 /* Sin cambios: en pantalla grande la app se ve igual que siempre */
 
 /* ============================================================
-   ORDEN DE COMPRA — línea de productos como tarjeta (solo móvil)
-   Apunta únicamente a las filas de Nueva Orden de Compra
+   ORDEN DE COMPRA â€” lÃ­nea de productos como tarjeta (solo mÃ³vil)
+   Apunta Ãºnicamente a las filas de Nueva Orden de Compra
    usando los ids oc-prod-input-N (no toca facturas ni editar)
    ============================================================ */
 @media (max-width: 767px) {
@@ -422,7 +422,7 @@ body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
-  /* Buscar y Descripción ocupan el ancho completo de la tarjeta */
+  /* Buscar y DescripciÃ³n ocupan el ancho completo de la tarjeta */
   body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(1),
   body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(2) {
     grid-column: span 2;
@@ -439,12 +439,12 @@ body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"
     margin-bottom: 0.25rem;
   }
 
-  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(1)::before { content: "Artículo"; }
-  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(2)::before { content: "Descripción"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(1)::before { content: "ArtÃ­culo"; }
+  body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(2)::before { content: "DescripciÃ³n"; }
   body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(3)::before { content: "Cantidad"; }
   body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(4)::before { content: "Precio"; }
 
-  /* Botón eliminar (×) sin etiqueta, a la derecha */
+  /* BotÃ³n eliminar (Ã—) sin etiqueta, a la derecha */
   body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) > div:nth-child(5)::before {
     content: "";
     margin: 0;
@@ -462,7 +462,7 @@ body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"
     background: #fef2f2;
   }
 
-  /* Campos dentro de la tarjeta más cómodos al tacto */
+  /* Campos dentro de la tarjeta mÃ¡s cÃ³modos al tacto */
   body.tenant-responsive .grid.grid-cols-12:has(input[id^="oc-prod-input"]) input {
     min-height: 44px;
     border-radius: 0.5rem;
@@ -482,7 +482,7 @@ body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"
 }
 
 /* ============================================================
-   Campo de descuento (%) compacto — no ocupar ancho completo
+   Campo de descuento (%) compacto â€” no ocupar ancho completo
    ============================================================ */
 @media (max-width: 767px) {
 
@@ -577,9 +577,198 @@ body.tenant-responsive form .flex.items-center.gap-4.mt-1 > button[type="button"
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(2),
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(3),
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(4),
-  body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(5),
+body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(5),
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(6),
   body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) > div:nth-child(7) {
     display: none;
   }
 }
+
+/* ============================================
+   PEDIDO MOVIL: buscador de articulos debajo del cliente
+   ============================================ */
+@media (max-width: 768px) {
+  .form-nuevo-pedido {
+    display: flex;
+    flex-direction: column;
+  }
+  .form-nuevo-pedido > h4 { order: 1; }
+.form-nuevo-pedido > div.relative.mb-4 { order: 2; }
+  .form-nuevo-pedido > div.border.rounded-lg.p-3 { order: 3; }
+  .form-nuevo-pedido > div:not(.relative):not(.border):not(.flex) { order: 4; }
+  .form-nuevo-pedido > div.flex { order: 5; }
+}
+
+/* ============================================
+   TICKET EN VIVO DEL PEDIDO â€” diseno moderno (movil)
+   Acotado a .form-nuevo-pedido: no afecta otras pantallas
+   ============================================ */
+@media (max-width: 767px) {
+.form-nuevo-pedido .pos-ticket {
+    display: block;
+    background: #ffffff;
+    border: 1px solid #eef0f4;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+    padding: 0.625rem 0.75rem 0.625rem;
+    margin-bottom: 0.625rem;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: #0f172a;
+  }
+  .form-nuevo-pedido .pos-ticket-empresa {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #2563eb;
+    margin-bottom: 0;
+    line-height: 1.2;
+  }
+  .form-nuevo-pedido .pos-ticket-cliente {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.375rem;
+    line-height: 1.2;
+  }
+  .form-nuevo-pedido .pos-ticket-divider {
+    height: 1px;
+    background: #eef0f4;
+    border: none;
+    margin: 0.25rem 0;
+  }
+  .form-nuevo-pedido .pos-ticket-cols {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding-bottom: 0.125rem;
+  }
+  .form-nuevo-pedido .pos-ticket-linea {
+    background: #f8fafc;
+    border-radius: 0.4375rem;
+    padding: 0.375rem 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .form-nuevo-pedido .pos-ticket-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+.form-nuevo-pedido .pos-ticket-desc {
+    flex: 1;
+    font-size: 0.75rem;
+    font-weight: 900;
+    line-height: 1.2;
+    color: #0f172a;
+    word-break: break-word;
+  }
+.form-nuevo-pedido .pos-ticket-eliminar {
+    background: transparent;
+    color: #dc2626;
+    border: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 900;
+    line-height: 1;
+    flex-shrink: 0;
+    padding: 0;
+  }
+  .form-nuevo-pedido .pos-ticket-eliminar:active {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  .form-nuevo-pedido .pos-ticket-detalle {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.6875rem;
+    color: #64748b;
+    margin-top: 0.0625rem;
+  }
+.form-nuevo-pedido .pos-ticket-detalle > span:last-child {
+    font-size: 0.8125rem;
+    font-weight: 900;
+    color: #0f172a;
+  }
+  .form-nuevo-pedido .pos-ticket-vacio {
+    text-align: center;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    padding: 0.875rem 0;
+  }
+.form-nuevo-pedido .pos-ticket-tot {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #475569;
+    margin-top: 0.125rem;
+  }
+.form-nuevo-pedido .pos-ticket-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: #ffffff;
+    font-size: 0.9375rem;
+    font-weight: 800;
+    border-radius: 0.5rem;
+    padding: 0.4375rem 0.625rem;
+    margin-top: 0.375rem;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
+    white-space: nowrap;
+  }
+  .form-nuevo-pedido .pos-ticket-cantidad,
+  .form-nuevo-pedido .pos-ticket-precio {
+    display: inline-block;
+    width: 3.25rem;
+    background: #ffffff;
+    border: 1px solid #dbe2ea;
+    border-radius: 0.375rem;
+    padding: 0.125rem 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .form-nuevo-pedido .pos-ticket-precio {
+    width: 4.25rem;
+  }
+  .form-nuevo-pedido .pos-ticket-cantidad::-webkit-outer-spin-button,
+  .form-nuevo-pedido .pos-ticket-cantidad::-webkit-inner-spin-button,
+  .form-nuevo-pedido .pos-ticket-precio::-webkit-outer-spin-button,
+  .form-nuevo-pedido .pos-ticket-precio::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+.form-nuevo-pedido .pos-ticket-cantidad:focus,
+  .form-nuevo-pedido .pos-ticket-precio:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  }
+
+  /* Dejar SOLO el buscador de articulos: ocultar Descripcion,
+     Cantidad, Precio, ITBIS y Subtotal (se editan en el ticket) */
+  .form-nuevo-pedido > div.border.rounded-lg.p-3 > input[placeholder="Descripción"],
+  .form-nuevo-pedido > div.border.rounded-lg.p-3 > div.grid.grid-cols-3,
+  .form-nuevo-pedido > div.border.rounded-lg.p-3 > div.flex.justify-between {
+    display: none;
+  }
+  .form-nuevo-pedido > div.border.rounded-lg.p-3 {
+    padding: 0.5rem;
+  }
+  .form-nuevo-pedido > div.border.rounded-lg.p-3 > div.relative {
+    margin-bottom: 0;
+  }
+}
+
