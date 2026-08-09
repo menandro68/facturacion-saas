@@ -911,7 +911,7 @@ useEffect(() => {
       td{padding:5px 6px;border-bottom:1px solid #e2e8f0}
       .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
       .tot{border-top:2px solid #334155;margin-top:6px;padding-top:6px;font-weight:bold;font-size:15px}
-      .dif{margin-top:12px;padding:10px;border-radius:6px;color:#fff;display:flex;justify-content:space-between;font-weight:bold;font-size:16px;background:${colorDif}}
+      .dif{margin-top:12px;padding:10px 6px;border-top:2px solid #000;border-bottom:2px solid #000;color:#000;display:flex;justify-content:space-between;gap:8px;font-weight:900;font-size:17px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     </style></head><body>
       <h2>CUADRE DE CAJA</h2>
       <p class="sub">Operador: ${c.usuario_nombre || 'N/D'}<br>
@@ -948,10 +948,15 @@ const abrirCierre = async () => {
   const res = await API.get('/pos/caja/resumen')
       setResumenCaja(res.data.data)
       setConteoBilletes({})
-   setMostrarCierre(true)
+// 1) Abrir la gaveta PRIMERO (el dialogo de impresion bloquea el hilo)
       abrirGaveta()
-      setTimeout(() => document.getElementById('billete-2000')?.focus(), 700)
-      setTimeout(() => document.getElementById('billete-2000')?.focus(), 1400)
+      // 2) Montar el modal DESPUES de que el dialogo se resuelva,
+      //    asi el modal queda por encima y no lo tapa la impresion
+      setTimeout(() => {
+        setMostrarCierre(true)
+        setTimeout(() => document.getElementById('billete-2000')?.focus(), 250)
+        setTimeout(() => document.getElementById('billete-2000')?.focus(), 800)
+      }, 1200)
     } catch (err) {
       console.error('Error cargando resumen:', err)
     }

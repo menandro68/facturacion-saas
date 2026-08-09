@@ -3,6 +3,16 @@ import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
+// ── CATALOGO DE FEATURE FLAGS ──
+// Para agregar un flag nuevo en el futuro: agregar un objeto aqui. Nada mas.
+const FEATURE_FLAGS = [
+  { key: 'ocultar_pos', label: 'Ocultar Punto de Venta', desc: 'Quita el POS del menu y bloquea el login de Cajero' },
+  { key: 'responsive', label: 'Modo Responsive', desc: 'Interfaz adaptada a celular y tablet' },
+  { key: 'stock_negativo', label: 'Permitir Stock Negativo', desc: 'Deja facturar aunque no haya existencia' },
+  { key: 'pos', label: 'Modulo POS', desc: 'Habilita el modulo de Punto de Venta' },
+  { key: 'orden_compra_menu', label: 'Factura Suplidor', desc: 'Muestra el modulo de Factura Suplidor en el menu' }
+]
+
 export default function SuperAdmin() {
   const [logueado, setLogueado] = useState(!!localStorage.getItem('super_admin_token'))
   const [username, setUsername] = useState('')
@@ -16,6 +26,10 @@ export default function SuperAdmin() {
   const [usuariosData, setUsuariosData] = useState(null)
   const [usuariosLoading, setUsuariosLoading] = useState(false)
   const [tenantSeleccionado, setTenantSeleccionado] = useState(null)
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false)
+  const [featuresData, setFeaturesData] = useState({})
+  const [featuresLoading, setFeaturesLoading] = useState(false)
+  const [featuresGuardando, setFeaturesGuardando] = useState(false)
   const [form, setForm] = useState({
     nombre: '', rnc: '', email: '', telefono: '', direccion: '',
     admin_username: '', admin_password: '', admin_nombre: ''
@@ -107,6 +121,40 @@ export default function SuperAdmin() {
       alert('Error al cargar usuarios')
     } finally {
       setUsuariosLoading(false)
+    }
+  }
+
+  // ── FEATURE FLAGS ──
+  const handleVerFeatures = async (tenant) => {
+    setTenantSeleccionado(tenant)
+    setShowFeaturesModal(true)
+    setFeaturesLoading(true)
+    setFeaturesData({})
+    try {
+      const r = await API.get('/tenants/' + tenant.id + '/features')
+      setFeaturesData(r.data.features || {})
+    } catch (err) {
+      alert('Error al cargar los features')
+    } finally {
+      setFeaturesLoading(false)
+    }
+  }
+
+  const handleGuardarFeatures = async () => {
+    if (!tenantSeleccionado) return
+    setFeaturesGuardando(true)
+    try {
+      const payload = {}
+      FEATURE_FLAGS.forEach(f => { payload[f.key] = featuresData[f.key] === true })
+      await API.put('/tenants/' + tenantSeleccionado.id + '/features', { features: payload })
+      alert('✅ Features guardados correctamente')
+      setShowFeaturesModal(false)
+      setTenantSeleccionado(null)
+      setFeaturesData({})
+    } catch (err) {
+      alert(err.response?.data?.mensaje || 'Error al guardar los features')
+    } finally {
+      setFeaturesGuardando(false)
     }
   }
 
@@ -288,6 +336,10 @@ export default function SuperAdmin() {
                       <div className="flex gap-2 justify-center">
                         <button onClick={() => handleEdit(t)}
                           className="text-blue-600 hover:underline text-xs">✏️ Editar</button>
+                        <button onClick={() => handleVerFeatures(t)}
+                          className="text-xs hover:underline text-indigo-600 font-semibold">
+                          ⚙️ Features
+                        </button>
                         <button onClick={() => handleToggleEstado(t)}
                           className={`text-xs hover:underline ${t.estado === 'activo' ? 'text-red-600' : 'text-green-600'}`}>
                           {t.estado === 'activo' ? '🔴 Suspender' : '🟢 Activar'}
@@ -309,6 +361,58 @@ export default function SuperAdmin() {
           )}
         </div>
       </div>
+
+      {/* MODAL FEATURE FLAGS */}
+      {showFeaturesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-screen overflow-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">⚙️ Features de {tenantSeleccionado?.nombre}</h3>
+                <p className="text-xs text-gray-500 mt-1">Activa o desactiva modulos para esta empresa</p>
+              </div>
+              <button onClick={() => { setShowFeaturesModal(false); setFeaturesData({}); setTenantSeleccionado(null) }}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold">✕</button>
+            </div>
+
+            {featuresLoading ? (
+              <p className="text-center py-6 text-gray-500">Cargando...</p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {FEATURE_FLAGS.map(f => (
+                    <label key={f.key}
+                      className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={featuresData[f.key] === true}
+                        onChange={e => setFeaturesData({ ...featuresData, [f.key]: e.target.checked })}
+                        className="mt-1 h-4 w-4 accent-indigo-600"
+                      />
+                      <div>
+                        <div className="text-sm font-semibold text-gray-800">{f.label}</div>
+                        <div className="text-xs text-gray-500">{f.desc}</div>
+                        <div className="text-[10px] text-gray-400 font-mono mt-1">{f.key}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <div className="flex gap-3 justify-end mt-6 pt-4 border-t">
+                  <button type="button"
+                    onClick={() => { setShowFeaturesModal(false); setFeaturesData({}); setTenantSeleccionado(null) }}
+                    className="px-4 py-2 border rounded hover:bg-gray-50">Cancelar</button>
+                  <button type="button"
+                    onClick={handleGuardarFeatures}
+                    disabled={featuresGuardando}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50">
+                    {featuresGuardando ? 'Guardando...' : 'Guardar Features'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* MODAL VER USUARIOS */}
       {showUsuariosModal && (

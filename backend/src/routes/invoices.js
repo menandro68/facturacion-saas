@@ -960,8 +960,8 @@ router.get('/:id/pdf-pos', verifyToken, tenantGuard, async (req, res) => {
       'B02': 'FACTURA CONSUMIDOR FINAL',
 'B15': 'FACTURA GUBERNAMENTAL'
     }[data.ncf_tipo] || (data.estado === 'nota_credito' ? 'NOTA DE CREDITO' : 'FACTURA');
-    const W = 200;
-    const M = 8;
+    const W = 196;
+    const M = 6;
     const doc = new PDFDocument({ margin: M, size: [W, 1100] });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=ticket-${data.ncf || data.id}.pdf`);

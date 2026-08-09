@@ -206,6 +206,10 @@ return res.json({
       if (cajero.tenant_estado !== 'activo') {
         return res.status(401).json({ mensaje: 'Cuenta suspendida. Contacte soporte.' });
       }
+      // ── Feature Flag: si el tenant tiene el POS deshabilitado, no permitir entrada de cajero ──
+      if (cajero.features?.ocultar_pos === true) {
+        return res.status(403).json({ mensaje: 'Esta empresa no tiene el Punto de Venta habilitado.' });
+      }
       if (!cajero.password_hash) {
         return res.status(401).json({ mensaje: 'Cajero sin contraseña asignada' });
       }
@@ -502,6 +506,10 @@ const loginCajeroPin = async (req, res) => {
     const tenantInfo = tenantQ.rows[0];
     if (tenantInfo.tenant_estado !== 'activo') {
       return res.status(401).json({ mensaje: 'Cuenta suspendida. Contacte soporte.' });
+    }
+    // ── Feature Flag: si el tenant tiene el POS deshabilitado, no permitir entrada de cajero ──
+    if (tenantInfo.features?.ocultar_pos === true) {
+      return res.status(403).json({ mensaje: 'Esta empresa no tiene el Punto de Venta habilitado.' });
     }
     // Buscar el cajero por PIN dentro de ese tenant
     const cajeroQ = await pool.query(
