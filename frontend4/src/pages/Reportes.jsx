@@ -82,7 +82,32 @@ useEffect(() => {
     })
   }
 
-  const fmtCaja = (n) => (parseFloat(n) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+ const fmtCaja = (n) => (parseFloat(n) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  // ── Cuadre de caja: texto y color segun la diferencia (contado - esperado) ──
+  const txtDif = (d) => {
+    if (d === null || d === undefined || d === '') return 'N/D'
+    const v = parseFloat(d)
+    if (isNaN(v)) return 'N/D'
+    if (Math.abs(v) < 0.01) return 'CUADRA'
+    if (v < 0) return 'FALTANTE RD$ ' + fmtCaja(Math.abs(v))
+    return 'SOBRANTE RD$ ' + fmtCaja(v)
+  }
+  const claseDif = (d) => {
+    if (d === null || d === undefined || d === '') return 'text-gray-400'
+    const v = parseFloat(d)
+    if (isNaN(v)) return 'text-gray-400'
+    if (Math.abs(v) < 0.01) return 'text-green-600'
+    if (v < 0) return 'text-red-600'
+    return 'text-blue-600'
+  }
+  const colorDif = (d) => {
+    if (d === null || d === undefined || d === '') return '#999'
+    const v = parseFloat(d)
+    if (isNaN(v)) return '#999'
+    if (Math.abs(v) < 0.01) return 'green'
+    if (v < 0) return 'red'
+    return 'blue'
+  }
 
   const imprimirCajas = () => {
     const w = window.open('', '_blank')
@@ -98,7 +123,9 @@ useEffect(() => {
         <td style="text-align:right">RD$ ${fmtCaja(c.total_tarjeta)}</td>
         <td style="text-align:right">RD$ ${fmtCaja(c.total_transferencia)}</td>
         <td style="text-align:right"><b>RD$ ${fmtCaja(c.total_ventas)}</b></td>
-        <td style="text-align:right; color:green"><b>RD$ ${fmtCaja(c.efectivo_esperado)}</b></td>
+     <td style="text-align:right; color:green"><b>RD$ ${fmtCaja(c.efectivo_esperado)}</b></td>
+        <td style="text-align:right">${c.efectivo_contado === null || c.efectivo_contado === undefined ? '-' : 'RD$ ' + fmtCaja(c.efectivo_contado)}</td>
+        <td style="text-align:right; color:${colorDif(c.diferencia)}"><b>${txtDif(c.diferencia)}</b></td>
       </tr>`).join('')
     const filtros = []
     if (buscarCajero.trim()) filtros.push(`Cajero: ${buscarCajero.trim()}`)
@@ -121,7 +148,7 @@ useEffect(() => {
         <thead><tr>
           <th>Operador</th><th>Apertura</th><th>Cierre</th><th>Facturas</th>
           <th>Monto Apertura</th><th>Efectivo</th><th>Tarjeta</th><th>Transf.</th>
-          <th>Total Ventas</th><th>Gaveta</th>
+         <th>Total Ventas</th><th>Gaveta</th><th>Contado</th><th>Diferencia</th>
         </tr></thead>
         <tbody>${filas}</tbody>
       </table>
@@ -558,12 +585,15 @@ useEffect(() => {
                     </table>
                   </div>
                   <div className="px-6 py-4 border-t flex gap-3 justify-end">
-                    <button onClick={() => {
+                   <button onClick={() => {
                       const contenido = document.getElementById('modal-print-generico').innerHTML
+                      const opSel = operadores.find(o => String(o.id) === String(reporteOpId))
+                      const nombreOp = opSel ? `${opSel.nombre} (${opSel.username})` : ''
+                      const rangoFechas = (desde && hasta) ? `${desde.split('-').reverse().join('/')} al ${hasta.split('-').reverse().join('/')}` : ''
                       const w = window.open('', '_blank')
-                      w.document.write(`<!DOCTYPE html><html><head><title>${c.titulo}</title>
-                        <style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#1e40af;color:white;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #e2e8f0}</style>
-                        </head><body><h2>${c.titulo}</h2>${contenido}<script>window.onload=()=>window.print()</script></body></html>`)
+                      w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${c.titulo}</title>
+                        <style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#1e40af;color:white;padding:8px;text-align:left}td{padding:7px 8px;border-bottom:1px solid #e2e8f0}.encab{margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #1e40af}.encab h2{margin:0 0 6px 0}.encab p{margin:2px 0;font-size:13px;color:#334155}</style>
+                        </head><body><div class="encab"><h2>${c.titulo}</h2>${nombreOp ? `<p><strong>Operador:</strong> ${nombreOp}</p>` : ''}${rangoFechas ? `<p><strong>Periodo:</strong> ${rangoFechas}</p>` : ''}</div>${contenido}<script>window.onload=()=>window.print()</script></body></html>`)
                       w.document.close()
                     }} className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">🖨️ Imprimir</button>
                     <button onClick={() => setModalVer(null)}
@@ -798,6 +828,8 @@ useEffect(() => {
                     <th className="px-3 py-2 text-right">🏦 Transf.</th>
                     <th className="px-3 py-2 text-right">Total Ventas</th>
                     <th className="px-3 py-2 text-right">Gaveta</th>
+                    <th className="px-3 py-2 text-right">Contado</th>
+                    <th className="px-3 py-2 text-center">Cuadre</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -813,6 +845,8 @@ useEffect(() => {
                       <td className="px-3 py-2 text-right">RD$ {fmtCaja(c.total_transferencia)}</td>
                       <td className="px-3 py-2 text-right font-bold">RD$ {fmtCaja(c.total_ventas)}</td>
                       <td className="px-3 py-2 text-right font-bold text-green-600">RD$ {fmtCaja(c.efectivo_esperado)}</td>
+                      <td className="px-3 py-2 text-right">{c.efectivo_contado === null || c.efectivo_contado === undefined ? <span className="text-gray-400">-</span> : 'RD$ ' + fmtCaja(c.efectivo_contado)}</td>
+                      <td className={`px-3 py-2 text-center font-bold ${claseDif(c.diferencia)}`}>{txtDif(c.diferencia)}</td>
                     </tr>
                   ))}
                 </tbody>

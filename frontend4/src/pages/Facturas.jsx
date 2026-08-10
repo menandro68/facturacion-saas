@@ -604,8 +604,10 @@ const { subtotal, itbis, total } = useMemo(() => {
   ]
 
   // Filtrar sub-tabs segun permisos del operador
-  const puedeVerSubTab = (subTabId) => {
-    if (!modulos_permitidos) return true // admin o vendedor: ve todo
+const puedeVerSubTab = (subTabId) => {
+    // Vendedor: solo Pedidos (mas imprimir/pdf de sus propios documentos)
+    if (vendedor_id) return subTabId === 'pedidos' || subTabId === 'imprimir' || subTabId === 'pdf'
+    if (!modulos_permitidos) return true // admin: ve todo
     return modulos_permitidos.includes(`facturas:${subTabId}`)
   }
   const tabsFila1 = tabsFila1Todos.filter(t => puedeVerSubTab(t.id))
@@ -644,7 +646,7 @@ const { subtotal, itbis, total } = useMemo(() => {
       </div>
 
       {/* Filtro de fechas */}
-      <div className="flex gap-4 items-end mb-4 bg-white p-4 rounded-lg shadow">
+      <div className="flex flex-wrap gap-4 items-end justify-center sm:justify-start mb-4 bg-white p-4 rounded-lg shadow">
     <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
           <input type="date" id="filtro-fecha-inicio" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
@@ -1184,7 +1186,8 @@ const { subtotal, itbis, total } = useMemo(() => {
           </button>
         ))}
         
-        {/* Botón Tipo de Impresión */}
+      {/* Botón Tipo de Impresión — oculto para vendedores */}
+        {!vendedor_id && (
         <div className="relative ml-auto mb-2">
           <button onClick={() => setShowFormatoMenu(!showFormatoMenu)}
             className="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700 flex items-center gap-2 font-medium shadow">
@@ -1237,8 +1240,9 @@ const { subtotal, itbis, total } = useMemo(() => {
                 </button>
               </div>
             </>
-          )}
+      )}
         </div>
+        )}
       </div>
 
       {/* Contenido por tab */}

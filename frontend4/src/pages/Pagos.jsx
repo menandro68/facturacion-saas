@@ -85,11 +85,11 @@ const handleEnviarMetodo = () => {
     const cheque = parseFloat(metodos.cheque_valor || 0)
     const total = efectivo + transferencia + tarjeta + cheque
 if (total <= 0) {
-      alert('⚠ï¸ Debe llenar al menos un método de pago con un monto mayor a 0.')
+      alert('⚠️ Debe llenar al menos un método de pago con un monto mayor a 0.')
       return
     }
     if (form.balance_max !== undefined && total > form.balance_max) {
-      alert(`⚠ï¸ El total de los métodos (RD$${total.toLocaleString('es-DO', {minimumFractionDigits: 2})}) no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+      alert(`⚠️ El total de los métodos (RD$${total.toLocaleString('es-DO', {minimumFractionDigits: 2})}) no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
       return
     }
 // Contar cuántos métodos se usaron
@@ -136,7 +136,7 @@ if (total <= 0) {
     setError('')
     const totalMetodos = parseFloat(metodos.efectivo || 0) + parseFloat(metodos.transferencia || 0) + parseFloat(metodos.tarjeta || 0) + parseFloat(metodos.cheque_valor || 0)
     if (totalMetodos <= 0) {
-      alert('⚠ï¸ Debe seleccionar un método de pago antes de registrar.')
+      alert('⚠️ Debe seleccionar un método de pago antes de registrar.')
       return
     }
     // Mostrar confirmacion antes de grabar
@@ -356,7 +356,7 @@ id="btn-si-recibo-pago"
                 onChange={e => {
                   let val = e.target.value
                   if (form.balance_max !== undefined && val !== '' && parseFloat(val) > form.balance_max) {
-                    alert(`⚠ï¸ El monto no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+                    alert(`⚠️ El monto no puede ser mayor al pendiente de la factura: RD$${form.balance_max.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
                     val = form.balance_max.toFixed(2)
                   }
                   setForm(prev => ({ ...prev, monto: val }))
@@ -369,7 +369,7 @@ id="btn-si-recibo-pago"
               <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
               <button type="button" onClick={() => setShowMetodo(true)}
                 className="w-full border rounded px-3 py-2 text-sm text-left bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600">
-                ðŸ’³ {getMetodoLabel()}
+                💳 {getMetodoLabel()}
               </button>
             </div>
             <div className="hidden">
@@ -396,37 +396,37 @@ id="btn-si-recibo-pago"
             <h3 className="text-lg font-semibold text-center text-gray-800 mb-5">MÉTODOS DE PAGO</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ’µ Efectivo</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">💵 Efectivo</label>
                 <input type="number" step="0.01" placeholder="0.00" value={metodos.efectivo}
                   onChange={e => setMetodos(prev => ({...prev, efectivo: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ¦ Transferencia</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">🏦 Transferencia</label>
                 <input type="number" step="0.01" placeholder="0.00" value={metodos.transferencia}
                   onChange={e => setMetodos(prev => ({...prev, transferencia: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ’³ Tarjeta</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">💳 Tarjeta</label>
                 <input type="number" step="0.01" placeholder="0.00" value={metodos.tarjeta}
                   onChange={e => setMetodos(prev => ({...prev, tarjeta: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ“ Cheque - Valor</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Valor</label>
                 <input type="number" step="0.01" placeholder="0.00" value={metodos.cheque_valor}
                   onChange={e => setMetodos(prev => ({...prev, cheque_valor: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ“ Cheque - Banco</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Banco</label>
                 <input type="text" placeholder="Nombre del banco" value={metodos.cheque_banco}
                   onChange={e => setMetodos(prev => ({...prev, cheque_banco: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">ðŸ“ Cheque - Número</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">📝 Cheque - Número</label>
                 <input type="text" placeholder="# cheque" value={metodos.cheque_numero}
                   onChange={e => setMetodos(prev => ({...prev, cheque_numero: e.target.value}))}
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -464,7 +464,7 @@ id="btn-si-recibo-pago"
                       alert('❌ ' + err)
                     }
                   }}>
-                  <span className="text-2xl">ðŸ–¨ï¸</span>
+                  <span className="text-2xl">🖨️</span>
                   <div>
                     <p className="font-medium text-gray-800 text-sm">{d.name}</p>
                     <p className="text-xs text-gray-400">{d.address}</p>
@@ -484,7 +484,7 @@ id="btn-si-recibo-pago"
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto">
             <div className="p-4 border-b flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-800">⏳ Pagos por Confirmar</h3>
-              <button onClick={() => setShowPendientes(false)} className="text-gray-400 hover:text-gray-600 text-xl">âœ•</button>
+              <button onClick={() => setShowPendientes(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
             <div className="p-4 border-b grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
@@ -520,7 +520,7 @@ id="btn-si-recibo-pago"
                   }
                 }}
                   className="px-4 py-2 bg-orange-500 text-white rounded text-sm hover:bg-orange-600">
-                  ðŸ” Buscar
+                  🔍 Buscar
                 </button>
               </div>
             </div>
