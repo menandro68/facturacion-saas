@@ -127,10 +127,22 @@ useEffect(() => {
         <td style="text-align:right">${c.efectivo_contado === null || c.efectivo_contado === undefined ? '-' : 'RD$ ' + fmtCaja(c.efectivo_contado)}</td>
         <td style="text-align:right; color:${colorDif(c.diferencia)}"><b>${txtDif(c.diferencia)}</b></td>
       </tr>`).join('')
-    const filtros = []
+ const filtros = []
     if (buscarCajero.trim()) filtros.push(`Cajero: ${buscarCajero.trim()}`)
     if (desde) filtros.push(`Desde: ${desde}`)
     if (hasta) filtros.push(`Hasta: ${hasta}`)
+    const T = cajasFiltradas.reduce((a, c) => ({
+      apertura: a.apertura + (parseFloat(c.monto_apertura) || 0),
+      efectivo: a.efectivo + (parseFloat(c.total_efectivo) || 0),
+      tarjeta: a.tarjeta + (parseFloat(c.total_tarjeta) || 0),
+      transferencia: a.transferencia + (parseFloat(c.total_transferencia) || 0),
+      ventas: a.ventas + (parseFloat(c.total_ventas) || 0),
+      facturas: a.facturas + (parseInt(c.cantidad_facturas) || 0),
+      esperado: a.esperado + (parseFloat(c.efectivo_esperado) || 0),
+      contado: a.contado + (parseFloat(c.efectivo_contado) || 0),
+      diferencia: a.diferencia + (parseFloat(c.diferencia) || 0)
+    }), { apertura: 0, efectivo: 0, tarjeta: 0, transferencia: 0, ventas: 0, facturas: 0, esperado: 0, contado: 0, diferencia: 0 })
+    const txtDifT = Math.abs(T.diferencia) < 0.01 ? 'CUADRA' : T.diferencia < 0 ? `FALTANTE RD$ ${fmtCaja(Math.abs(T.diferencia))}` : `SOBRANTE RD$ ${fmtCaja(T.diferencia)}`
     w.document.write(`
       <html><head><title>Historial de Cajas</title>
       <style>
@@ -140,6 +152,14 @@ useEffect(() => {
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ccc; padding: 5px 7px; }
         th { background: #f0f0f0; text-align: left; }
+        tfoot .tot td { background: #1e293b; color: #fff; font-size: 12px; }
+        .resumen { margin-top: 18px; border: 2px solid #1e40af; border-radius: 6px; padding: 10px 14px; page-break-inside: avoid; }
+        .resumen h3 { margin: 0 0 8px 0; font-size: 13px; color: #1e40af; }
+        table.res { width: 60%; }
+        table.res td { border: none; border-bottom: 1px solid #e2e8f0; padding: 5px 4px; }
+        table.res td.r { text-align: right; }
+        table.res tr.destaca td { background: #eff6ff; font-size: 13px; }
+        .firma { margin-top: 26px; font-size: 11px; }
         @media print { body { margin: 8px; } }
       </style></head><body>
       <h2>🗄️ Historial de Cajas — Punto de Venta</h2>
@@ -150,12 +170,50 @@ useEffect(() => {
           <th>Monto Apertura</th><th>Efectivo</th><th>Tarjeta</th><th>Transf.</th>
          <th>Total Ventas</th><th>Gaveta</th><th>Contado</th><th>Diferencia</th>
         </tr></thead>
-        <tbody>${filas}</tbody>
+    <tbody>${filas}</tbody>
+        <tfoot><tr class="tot">
+          <td colspan="3"><b>TOTALES (${cajasFiltradas.length} turnos)</b></td>
+          <td><b>${T.facturas}</b></td>
+          <td><b>RD$ ${fmtCaja(T.apertura)}</b></td>
+          <td><b>RD$ ${fmtCaja(T.efectivo)}</b></td>
+          <td><b>RD$ ${fmtCaja(T.tarjeta)}</b></td>
+          <td><b>RD$ ${fmtCaja(T.transferencia)}</b></td>
+          <td><b>RD$ ${fmtCaja(T.ventas)}</b></td>
+          <td><b>RD$ ${fmtCaja(T.esperado)}</b></td>
+          <td><b>RD$ ${fmtCaja(T.contado)}</b></td>
+          <td><b>${txtDifT}</b></td>
+        </tr></tfoot>
       </table>
+      <div class="resumen">
+        <h3>Resumen de entrega — ${cajasFiltradas.length} turno(s)</h3>
+        <table class="res">
+          <tr><td>Efectivo esperado (incluye aperturas)</td><td class="r">RD$ ${fmtCaja(T.esperado)}</td></tr>
+          <tr><td>Menos montos de apertura</td><td class="r">− RD$ ${fmtCaja(T.apertura)}</td></tr>
+          <tr class="destaca"><td><b>DEBE ENTREGAR EN EFECTIVO</b></td><td class="r"><b>RD$ ${fmtCaja(T.esperado - T.apertura)}</b></td></tr>
+          <tr><td>Tarjeta + Transferencia (no efectivo)</td><td class="r">RD$ ${fmtCaja(T.tarjeta + T.transferencia)}</td></tr>
+          <tr><td>Total contado por cajero(a)</td><td class="r">RD$ ${fmtCaja(T.contado)}</td></tr>
+          <tr class="destaca"><td><b>CUADRE GENERAL</b></td><td class="r"><b>${txtDifT}</b></td></tr>
+        </table>
+        <p class="firma">_______________________________<br>Firma del cajero(a)</p>
+      </div>
       <script>window.onload=()=>setTimeout(()=>window.print(),400)</script>
       </body></html>`)
     w.document.close()
   }
+
+  // Turnos por cajero+dia: detecta cierres multiples del mismo cajero en un mismo dia
+  const diaLocal = (f) => { if (!f) return 'sd'; const d = new Date(f); return isNaN(d) ? 'sd' : `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}` }
+  const conteoTurnos = {}
+  dataCajas.forEach(c => {
+const dia = diaLocal(c.fecha_apertura)
+    const k = `${(c.usuario_nombre || 'N/D').toLowerCase()}|${dia}`
+    conteoTurnos[k] = (conteoTurnos[k] || 0) + 1
+  })
+  const turnosDe = (c) => {
+    return conteoTurnos[`${(c.usuario_nombre || 'N/D').toLowerCase()}|${diaLocal(c.fecha_apertura)}`] || 1
+  }
+
+
 
   const cajasFiltradas = dataCajas.filter(c => {
     // Filtro por nombre de operador/cajero
@@ -175,6 +233,19 @@ useEffect(() => {
     }
     return true
   })
+
+  // Totales acumulados de los turnos filtrados
+  const totCajas = cajasFiltradas.reduce((a, c) => ({
+    apertura: a.apertura + (parseFloat(c.monto_apertura) || 0),
+    efectivo: a.efectivo + (parseFloat(c.total_efectivo) || 0),
+    tarjeta: a.tarjeta + (parseFloat(c.total_tarjeta) || 0),
+    transferencia: a.transferencia + (parseFloat(c.total_transferencia) || 0),
+    ventas: a.ventas + (parseFloat(c.total_ventas) || 0),
+    facturas: a.facturas + (parseInt(c.cantidad_facturas) || 0),
+    esperado: a.esperado + (parseFloat(c.efectivo_esperado) || 0),
+    contado: a.contado + (parseFloat(c.efectivo_contado) || 0),
+    diferencia: a.diferencia + (parseFloat(c.diferencia) || 0)
+  }), { apertura: 0, efectivo: 0, tarjeta: 0, transferencia: 0, ventas: 0, facturas: 0, esperado: 0, contado: 0, diferencia: 0 })
 
   if (loading) return <p className="text-gray-500 p-6">Cargando reportes...</p>
 
@@ -834,8 +905,15 @@ useEffect(() => {
                 </thead>
                 <tbody>
                   {cajasFiltradas.map((c, i) => (
-                    <tr key={c.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                      <td className="px-3 py-2 font-semibold">{c.usuario_nombre || 'N/D'}</td>
+                   <tr key={c.id} className={turnosDe(c) > 1 ? 'bg-amber-50' : (i % 2 === 0 ? 'bg-gray-50' : 'bg-white')}>
+                      <td className="px-3 py-2 font-semibold">
+                        {c.usuario_nombre || 'N/D'}
+                        {turnosDe(c) > 1 && (
+                          <span className="ml-2 inline-block bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                            ⚠️ {turnosDe(c)} turnos
+                          </span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-xs">{fmtFechaCaja(c.fecha_apertura)}</td>
                       <td className="px-3 py-2 text-xs">{fmtFechaCaja(c.fecha_cierre)}</td>
                       <td className="px-3 py-2 text-center">{c.cantidad_facturas || 0}</td>
@@ -847,10 +925,49 @@ useEffect(() => {
                       <td className="px-3 py-2 text-right font-bold text-green-600">RD$ {fmtCaja(c.efectivo_esperado)}</td>
                       <td className="px-3 py-2 text-right">{c.efectivo_contado === null || c.efectivo_contado === undefined ? <span className="text-gray-400">-</span> : 'RD$ ' + fmtCaja(c.efectivo_contado)}</td>
                       <td className={`px-3 py-2 text-center font-bold ${claseDif(c.diferencia)}`}>{txtDif(c.diferencia)}</td>
-                    </tr>
+                </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="bg-slate-800 text-white font-bold border-t-4 border-slate-900">
+                    <td className="px-3 py-3">TOTALES ({cajasFiltradas.length} turnos)</td>
+                    <td className="px-3 py-3"></td>
+                    <td className="px-3 py-3"></td>
+                    <td className="px-3 py-3 text-center">{totCajas.facturas}</td>
+                    <td className="px-3 py-3 text-right">RD$ {fmtCaja(totCajas.apertura)}</td>
+                    <td className="px-3 py-3 text-right">RD$ {fmtCaja(totCajas.efectivo)}</td>
+                    <td className="px-3 py-3 text-right">RD$ {fmtCaja(totCajas.tarjeta)}</td>
+                    <td className="px-3 py-3 text-right">RD$ {fmtCaja(totCajas.transferencia)}</td>
+                    <td className="px-3 py-3 text-right">RD$ {fmtCaja(totCajas.ventas)}</td>
+                    <td className="px-3 py-3 text-right text-green-400">RD$ {fmtCaja(totCajas.esperado)}</td>
+                    <td className="px-3 py-3 text-right">RD$ {fmtCaja(totCajas.contado)}</td>
+                    <td className={`px-3 py-3 text-center ${totCajas.diferencia > 0.01 ? 'text-blue-300' : totCajas.diferencia < -0.01 ? 'text-red-300' : 'text-green-300'}`}>
+                      {Math.abs(totCajas.diferencia) < 0.01 ? 'CUADRA' : totCajas.diferencia < 0 ? `FALTANTE RD$ ${fmtCaja(Math.abs(totCajas.diferencia))}` : `SOBRANTE RD$ ${fmtCaja(totCajas.diferencia)}`}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
+              <div className="mt-4 bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                <p className="text-sm text-blue-800 font-semibold mb-2">💰 Resumen de entrega — {cajasFiltradas.length} turno(s)</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div>
+                    <p className="text-gray-600 text-xs">Efectivo esperado</p>
+                    <p className="font-bold text-lg text-green-700">RD$ {fmtCaja(totCajas.esperado)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs">Menos aperturas</p>
+                    <p className="font-bold text-lg text-gray-700">− RD$ {fmtCaja(totCajas.apertura)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs">Tarjeta + Transferencia</p>
+                    <p className="font-bold text-lg text-blue-700">RD$ {fmtCaja(totCajas.tarjeta + totCajas.transferencia)}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-2 border-2 border-green-500">
+                    <p className="text-gray-600 text-xs">DEBE ENTREGAR EN EFECTIVO</p>
+                    <p className="font-bold text-xl text-green-700">RD$ {fmtCaja(totCajas.esperado - totCajas.apertura)}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

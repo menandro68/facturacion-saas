@@ -102,6 +102,7 @@ function POS() {
   const [clientes, setClientes] = useState([])
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [mostrarBuscarCliente, setMostrarBuscarCliente] = useState(false)
+  const [indiceCliente, setIndiceCliente] = useState(-1)
   const [busquedaCliente, setBusquedaCliente] = useState('')
   const [consultandoDgii, setConsultandoDgii] = useState(false)
   const [resultadoDgii, setResultadoDgii] = useState(null)
@@ -1668,14 +1669,7 @@ const teclasDescuento = (e) => {
                         >
                           +
                         </button>
-                        {tieneDescuento ? (
-                          <span className="text-xs ml-1">
-                            <span className="text-gray-400 line-through">RD$ {fmt(l.precio_original)}</span>{' '}
-                            <span className="text-orange-600 font-bold">RD$ {fmt(l.precio)}</span>
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-500 ml-1">x RD$ {fmt(l.precio)}</span>
-                        )}
+                  <span className="text-xs text-gray-500 ml-1">x RD$ {fmt(tieneDescuento ? l.precio_original : l.precio)}</span>
                       </div>
                       <p className="font-bold text-sm">RD$ {fmt(l.precio * l.cantidad)}</p>
                     </div>
@@ -2051,21 +2045,40 @@ const teclasDescuento = (e) => {
                 {/* BÚSQUEDA DE CLIENTE */}
                 {mostrarBuscarCliente && (
                   <div className="mt-2">
-                    <input
+           <input
                       ref={clienteRef}
                       type="text"
                       value={busquedaCliente}
-                      onChange={(e) => setBusquedaCliente(e.target.value)}
+                      onChange={(e) => { setBusquedaCliente(e.target.value); setIndiceCliente(-1) }}
+                      onKeyDown={(e) => {
+                        if (clientesFiltrados.length === 0) return
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          setIndiceCliente(prev => (prev + 1) % clientesFiltrados.length)
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          setIndiceCliente(prev => prev <= 0 ? clientesFiltrados.length - 1 : prev - 1)
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const idx = indiceCliente >= 0 ? indiceCliente : 0
+                          if (clientesFiltrados[idx]) {
+                            seleccionarCliente(clientesFiltrados[idx])
+                            setIndiceCliente(-1)
+                          }
+                        }
+                      }}
                       placeholder="Buscar por nombre o RNC..."
                       className="w-full border-2 border-blue-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-600"
                     />
                     {clientesFiltrados.length > 0 && (
                       <div className="mt-1 border-2 border-blue-200 rounded-lg overflow-hidden max-h-36 overflow-y-auto bg-white">
-                        {clientesFiltrados.map(c => (
+                        {clientesFiltrados.map((c, i) => (
                           <button
                             key={c.id}
                             onClick={() => seleccionarCliente(c)}
-                            className="w-full text-left px-3 py-1.5 border-b last:border-b-0 hover:bg-blue-50"
+                            onMouseEnter={() => setIndiceCliente(i)}
+                            className={`w-full text-left px-3 py-1.5 border-b last:border-b-0 ${i === indiceCliente ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
                           >
                             <p className="font-semibold text-sm text-gray-800">{c.nombre}</p>
                             <p className="text-xs text-gray-500">
