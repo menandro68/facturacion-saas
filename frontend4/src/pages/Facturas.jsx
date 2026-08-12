@@ -646,18 +646,18 @@ const puedeVerSubTab = (subTabId) => {
       </div>
 
       {/* Filtro de fechas */}
-      <div className="flex flex-wrap gap-4 items-end justify-center sm:justify-start mb-4 bg-white p-4 rounded-lg shadow">
-    <div>
+<div className="flex flex-wrap gap-3 sm:gap-4 items-end mb-4 bg-white p-3 sm:p-4 rounded-lg shadow">
+        <div className="flex-1 min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicial</label>
           <input type="date" id="filtro-fecha-inicio" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
-            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <div>
+        <div className="flex-1 min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Final</label>
           <input type="date" id="filtro-fecha-fin" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
-            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="w-full border rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-  <button id="btn-buscar-reporte" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+  <button id="btn-buscar-reporte" className="w-full sm:w-auto bg-blue-600 text-white px-5 py-2.5 sm:py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
           onClick={async () => {
             // Leer fechas directamente del DOM para evitar valores obsoletos (stale) por timing
             const fechaInicio = document.getElementById('filtro-fecha-inicio')?.value || ''
@@ -2577,7 +2577,7 @@ onKeyDown={e => {
                     </div>
                     <p className="text-sm font-medium text-gray-800 mb-1">{p.cliente_nombre || 'Consumidor Final'}</p>
                     <p className="text-xs text-gray-500 mb-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</p>
-                    <div className="flex gap-3 flex-wrap">
+                    <div className="grid grid-cols-3 gap-2">
                       <button onClick={async () => {
                         try {
                           const res = await API.get(`/invoices/${p.id}`)
@@ -2600,7 +2600,7 @@ onKeyDown={e => {
                             if (hid) hid.value = data.customer_id || ''
                           }, 200)
                         } catch(e) { alert('Error al cargar pedido: ' + (e.response?.data?.mensaje || e.message)) }
-                      }} className="flex-1 bg-blue-600 text-white py-2 rounded text-xs font-medium text-center">✏️ Editar</button>
+                     }} className="bg-blue-600 text-white py-2.5 rounded-lg text-xs font-medium text-center leading-tight">✏️ Editar</button>
                       <button onClick={async () => {
                         if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
                       if (!confirm('¿Convertir este pedido a factura?')) return
@@ -2640,7 +2640,7 @@ onKeyDown={e => {
                           fetchData()
                           alert('¡Factura emitida exitosamente!')
                        } catch(e) { alert('Error al convertir: ' + (e.response?.data?.mensaje || e.message)) }
-                      }} className="flex-1 bg-green-600 text-white py-2 rounded text-xs font-medium text-center">Convertir a Factura</button>
+                     }} className="bg-green-600 text-white py-2.5 rounded-lg text-xs font-medium text-center leading-tight">Convertir</button>
                       <button onClick={async () => {
                         if (!confirm('¿Eliminar este pedido?')) return
                         try {
@@ -2648,7 +2648,7 @@ onKeyDown={e => {
                           const res = await API.get('/invoices/pedidos/lista')
                           setPedidos(res.data.data)
                         } catch(e) { alert('Error') }
-                      }} className="flex-1 border border-red-300 text-red-500 py-2 rounded text-xs text-center">Eliminar</button>
+                     }} className="border border-red-300 text-red-500 py-2.5 rounded-lg text-xs font-medium text-center leading-tight">Eliminar</button>
                     </div>
                   </div>
                 ))}

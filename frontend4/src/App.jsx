@@ -205,7 +205,7 @@ const handleEntrarEmpresa = (user) => {
     <div className="min-h-screen bg-gray-100 flex flex-col">
 
       {/* Header móvil */}
-      <div className="bg-white shadow-md flex items-center justify-between px-4 py-3 md:hidden">
+      <div className="bg-white shadow-md flex items-center justify-between px-4 py-3 md:hidden sticky top-0 z-50">
         <div>
           <h1 className="text-base font-bold text-blue-600">Facturación</h1>
           {esVendedor && <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">Vendedor</span>}
@@ -218,7 +218,7 @@ const handleEntrarEmpresa = (user) => {
 
       {/* Menú móvil desplegable */}
       {menuAbierto && (
-        <div className="bg-white shadow-lg md:hidden z-50">
+        <div className="bg-white shadow-lg md:hidden z-50 max-h-[75vh] overflow-y-auto">
           <nav className="p-3">
             {menuItems.map((item) => (
               <button key={item.id} onClick={async () => {
@@ -340,9 +340,9 @@ const handleEntrarEmpresa = (user) => {
       </div>
       {listadoPrecios && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-blue-700">🏷️ Listado de Precios</h2>
-            <button onClick={() => setListadoPrecios(null)} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium">← Volver</button>
+          <div className="flex justify-between items-center gap-3 mb-4">
+            <h2 className="text-lg sm:text-xl font-bold text-blue-700 leading-tight">🏷️ Listado de Precios</h2>
+            <button onClick={() => setListadoPrecios(null)} className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap flex-shrink-0">← Volver</button>
           </div>
           <p className="text-gray-400 text-sm mb-4">Fecha: {new Date().toLocaleDateString('es-DO')} — {listadoPrecios.length} producto(s)</p>
           <table className="w-full text-sm border-collapse">

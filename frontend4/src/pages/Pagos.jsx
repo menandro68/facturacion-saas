@@ -179,7 +179,7 @@ if (total <= 0) {
   if (loading) return <p className="text-gray-500 p-6">Cargando pagos...</p>
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-6">
       {mostrarConfirmGrabar && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
@@ -284,19 +284,19 @@ id="btn-si-recibo-pago"
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
+     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h2 className="text-xl font-bold text-gray-800">Pagos</h2>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 sm:flex gap-2">
        <button onClick={() => {
               const u = JSON.parse(sessionStorage.getItem('usuario') || '{}')
               if (u.rol === 'vendedor') { alert('Usted no tiene permiso para este módulo'); return }
               setShowPendientes(true)
             }}
-            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 text-sm">
+           className="bg-orange-500 text-white px-3 sm:px-4 py-2.5 rounded-lg hover:bg-orange-600 text-xs sm:text-sm font-medium leading-tight">
             ⏳ Pagos por Confirmar
           </button>
           <button onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+           className="bg-blue-600 text-white px-3 sm:px-4 py-2.5 rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium leading-tight">
             + Registrar Pago
           </button>
         </div>
@@ -575,11 +575,11 @@ id="btn-si-recibo-pago"
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-sm">
+    <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="w-full text-sm min-w-[820px]">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-gray-600">NCF</th>
+              <th className="px-4 py-3 text-left text-gray-600 whitespace-nowrap">NCF</th>
               <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
               <th className="px-4 py-3 text-left text-gray-600">Monto</th>
               <th className="px-4 py-3 text-left text-gray-600">Método</th>

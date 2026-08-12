@@ -143,22 +143,22 @@ if (tipo === 'cajero') {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-blue-600 text-center mb-1">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 sm:p-6">
+      <div className="bg-white p-5 sm:p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h1 className="text-xl sm:text-2xl font-bold text-blue-600 text-center mb-1">
           Sistema de Facturación
         </h1>
         <p className="text-base font-semibold text-red-500 text-center mb-2 lowercase">saas</p>
         <p className="text-gray-500 text-center mb-6">Inicia sesión para continuar</p>
 
         {/* Selector Admin / Operador / Vendedor */}
-        <div className="flex mb-6 border border-gray-200 rounded overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px mb-6 border border-gray-200 rounded-lg overflow-hidden bg-gray-200">
           <button
             id="tipo-admin"
             type="button"
             onFocus={() => setTipo('admin')}
             onClick={() => setTipo('admin')}
-            className={`flex-1 py-2 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'admin' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`py-2.5 px-1 text-xs sm:text-sm font-medium leading-tight focus:outline-none focus:ring-4 focus:ring-blue-300 focus:z-10 ${tipo === 'admin' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Administrador
           </button>
@@ -167,7 +167,7 @@ if (tipo === 'cajero') {
             type="button"
             onFocus={() => setTipo('operador')}
             onClick={() => setTipo('operador')}
-            className={`flex-1 py-2 text-sm font-medium border-l border-r border-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'operador' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`py-2.5 px-1 text-xs sm:text-sm font-medium leading-tight focus:outline-none focus:ring-4 focus:ring-blue-300 focus:z-10 ${tipo === 'operador' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Operador
           </button>
@@ -176,7 +176,7 @@ if (tipo === 'cajero') {
             type="button"
             onFocus={() => setTipo('vendedor')}
             onClick={() => setTipo('vendedor')}
-      className={`flex-1 py-2 text-sm font-medium border-r border-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'vendedor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`py-2.5 px-1 text-xs sm:text-sm font-medium leading-tight focus:outline-none focus:ring-4 focus:ring-blue-300 focus:z-10 ${tipo === 'vendedor' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Vendedor
           </button>
@@ -185,7 +185,7 @@ if (tipo === 'cajero') {
             type="button"
             onFocus={() => setTipo('cajero')}
             onClick={() => setTipo('cajero')}
-            className={`flex-1 py-2 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-300 ${tipo === 'cajero' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`py-2.5 px-1 text-xs sm:text-sm font-medium leading-tight focus:outline-none focus:ring-4 focus:ring-blue-300 focus:z-10 ${tipo === 'cajero' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Cajero
           </button>
@@ -293,7 +293,7 @@ if (tipo === 'cajero') {
                   value={form.email}
                   onChange={handleChange}
                   placeholder="Usuario o email"
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </>
@@ -306,7 +306,7 @@ if (tipo === 'cajero') {
                   name="usuario"
                   value={form.usuario}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </>
@@ -324,7 +324,7 @@ if (tipo === 'cajero') {
               maxLength={tipo === 'cajero' ? 4 : undefined}
               inputMode={tipo === 'cajero' ? 'numeric' : undefined}
               placeholder={tipo === 'cajero' ? '••••' : ''}
-              className={`w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${tipo === 'cajero' ? 'text-center tracking-widest text-lg' : ''}`}
+              className={`w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 ${tipo === 'cajero' ? 'text-center tracking-widest text-lg' : ''}`}
               required
             />
           </div>
@@ -333,7 +333,7 @@ if (tipo === 'cajero') {
             id="login-entrar"
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-blue-300"
+            className="w-full bg-blue-600 text-white py-3 sm:py-2.5 rounded-lg font-medium text-base hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-blue-300"
           >
         {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>

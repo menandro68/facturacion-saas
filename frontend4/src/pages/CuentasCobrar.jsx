@@ -160,13 +160,13 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
   }
 
   return (
-    <div className="p-6">
+   <div className="p-3 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
         <h2 className="text-xl font-bold text-gray-800">Cuentas por Cobrar</h2>
         {vendedor_id && (
           <button onClick={() => setTab('cobro_vendedor')}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm flex items-center gap-2">
-             Volver
+            ← Volver
           </button>
         )}
         {!vendedor_id && <button onClick={() => {
@@ -252,7 +252,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b mb-6">
+     <div className="flex gap-2 border-b mb-6 overflow-x-auto">
         {[
           { id: 'cuentas', label: 'Cuentas por Cobrar' },
           { id: 'cobro_vendedor', label: 'Cobro por Vendedor' },
@@ -263,7 +263,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
         .filter(t => !modulos_permitidos || modulos_permitidos.includes(`cuentas_cobrar:${t.id}`))
         .map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
               tab === t.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}>
             {t.label}
