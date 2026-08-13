@@ -4327,7 +4327,7 @@ onKeyDown={e => {
                           </div>
                        <div className="pos-ticket-detalle">
                             <span>
-                              <input type="number" min="0.01" step="any" value={it.cantidad}
+                          <input type="number" min="0.01" step="any" value={it.cantidad}
                                 onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
                                 className="pos-ticket-cantidad" />
                               {' x '}{parseFloat(it.precio_unitario || 0).toFixed(2)}
@@ -4392,7 +4392,7 @@ onKeyDown={e => {
                                     .filter((_, i) => i !== index))
                                   setBuscarProducto(prev => { const n = {...prev}; delete n[index]; return n })
                                 } else {
-                                  setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
+                                  setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate, cantidad: modoPOS ? parseFloat(item.cantidad || 1).toFixed(2) : item.cantidad} : item))
                                   setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
                                 }
                         setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
@@ -4545,12 +4545,13 @@ onKeyDown={e => {
                           <div className="pos-ticket-detalle">
                             <span>
                         <button type="button" className="pos-ticket-mas-menos"
-                                onClick={() => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: Math.max(1, (parseFloat(x.cantidad) || 1) - 1) } : x))}>−</button>
-                              <input type="number" min="0.01" step="any" value={it.cantidad}
+                                onClick={() => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: Math.max(1, (parseFloat(x.cantidad) || 1) - 1).toFixed(2) } : x))}>−</button>
+                             <input type="text" inputMode="decimal" value={it.cantidad}
                                 onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
+                                onBlur={e => { const v = parseFloat(e.target.value); setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: isNaN(v) || v <= 0 ? '1.00' : v.toFixed(2) } : x)) }}
                                 className="pos-ticket-cantidad" />
                               <button type="button" className="pos-ticket-mas-menos"
-                                onClick={() => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: (parseFloat(x.cantidad) || 0) + 1 } : x))}>+</button>
+                                onClick={() => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: ((parseFloat(x.cantidad) || 0) + 1).toFixed(2) } : x))}>+</button>
                             {' x '}
                               <input type="number" min="0" step="any" value={it.precio_unitario}
                                 onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, precio_unitario: e.target.value } : x))}
