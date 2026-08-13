@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import API from '../services/api'
 
 export default function Configuracion() {
   const [form, setForm] = useState({
-    nombre: '', rnc: '', email: '', telefono: '', direccion: ''
+    nombre: '', rnc: '', email: '', telefono: '', direccion: '', actividad: ''
   })
   const [loading, setLoading] = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -20,7 +20,8 @@ export default function Configuracion() {
           rnc: t.rnc || '',
           email: t.email || '',
           telefono: t.telefono || '',
-          direccion: t.direccion || ''
+          direccion: t.direccion || '',
+          actividad: t.actividad || ''
         })
       } catch (err) {
         console.error(err)
@@ -86,6 +87,12 @@ export default function Configuracion() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
             <input name="direccion" value={form.direccion} onChange={handleChange}
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Actividad Comercial</label>
+            <input name="actividad" value={form.actividad} onChange={handleChange}
+              placeholder="Ej: Venta de provisiones al por mayor y detalle"
               className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="md:col-span-2 flex justify-end">

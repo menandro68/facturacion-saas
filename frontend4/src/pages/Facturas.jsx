@@ -534,11 +534,6 @@ const handlePDF = (id) => {
   }
 
 const handleImprimir = (id) => {
-    if (modoPOS) {
-      setFacturaGuardadaId(id)
-      setMostrarImprimir(true)
-      return
-    }
     const token = sessionStorage.getItem('token')
     let endpoint = '/pdf'
     if (formatoImpresion === 'pos') endpoint = '/pdf-pos'
