@@ -1030,7 +1030,26 @@ const abrirCierre = async () => {
   }
 
   // Agregar producto al ticket
-  const agregarAlTicket = (producto) => {
+const agregarAlTicket = (producto) => {
+    const stockDisp = parseFloat(producto.stock_actual || 0)
+    if (stockDisp <= 0) {
+      alert(`SIN EXISTENCIA\n\n"${producto.nombre}" no tiene stock disponible.\n\nStock actual: ${stockDisp}`)
+      setBusqueda('')
+      setResultados([])
+      setSeleccionado(0)
+      if (inputRef.current) inputRef.current.focus()
+      return
+    }
+    const enTicket = ticket.find(l => l.id === producto.id)
+    const cantActual = enTicket ? enTicket.cantidad : 0
+    if (cantActual + 1 > stockDisp) {
+      alert(`STOCK INSUFICIENTE\n\n"${producto.nombre}"\n\nDisponible: ${stockDisp}\nYa en el ticket: ${cantActual}`)
+      setBusqueda('')
+      setResultados([])
+      setSeleccionado(0)
+      if (inputRef.current) inputRef.current.focus()
+      return
+    }
     setTicket(prev => {
       const existe = prev.find(l => l.id === producto.id)
       if (existe) {
@@ -1044,7 +1063,8 @@ const abrirCierre = async () => {
         codigo: producto.codigo,
         precio: parseFloat(producto.precio),
         precio_original: parseFloat(producto.precio),
-        itbis_rate: parseFloat(producto.itbis_rate || 18),
+    itbis_rate: parseFloat(producto.itbis_rate || 18),
+        stock_disponible: stockDisp,
         cantidad: 1
       }]
     })
@@ -1083,9 +1103,14 @@ const abrirCierre = async () => {
   }
 
   // Cambiar cantidad de una línea
-  const cambiarCantidad = (id, nuevaCantidad) => {
+const cambiarCantidad = (id, nuevaCantidad) => {
     const cant = parseFloat(nuevaCantidad)
     if (isNaN(cant) || cant <= 0) return
+    const linea = ticket.find(l => l.id === id)
+    if (linea && linea.stock_disponible !== undefined && cant > linea.stock_disponible) {
+      alert(`STOCK INSUFICIENTE\n\n"${linea.nombre}"\n\nDisponible: ${linea.stock_disponible}\nSolicitado: ${cant}`)
+      return
+    }
     setTicket(prev => prev.map(l => l.id === id ? { ...l, cantidad: cant } : l))
   }
 
