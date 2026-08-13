@@ -154,6 +154,10 @@ function POS() {
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
   const [codigoEliminar, setCodigoEliminar] = useState('')
   const [claveEliminar, setClaveEliminar] = useState('')
+  const [mostrarAnular, setMostrarAnular] = useState(false)
+  const [claveAnular, setClaveAnular] = useState('')
+  const [errorAnular, setErrorAnular] = useState('')
+  const [procesandoAnular, setProcesandoAnular] = useState(false)
   const [errorEliminar, setErrorEliminar] = useState('')
   const [procesandoEliminar, setProcesandoEliminar] = useState(false)
 
@@ -477,7 +481,7 @@ useEffect(() => {
 // TECLAS F1 = COBRAR / F2 = DESCUENTO / F3 = CERRAR CAJA / F4 = ELIMINAR (globales en el POS)
   useEffect(() => {
     const manejarTeclasGlobales = (e) => {
-      const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento || mostrarEliminar
+      const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento || mostrarEliminar || mostrarAnular
       if (e.key === 'F1') {
         e.preventDefault()
         if (caja && !modalAbierto && ticket.length > 0) {
@@ -500,6 +504,13 @@ useEffect(() => {
         e.preventDefault()
         if (caja && !modalAbierto && ticket.length > 0) {
           abrirEliminar()
+        }
+        } else if (e.key === 'F6') {
+        e.preventDefault()
+        if (caja && !modalAbierto && ticket.length > 0) {
+          setClaveAnular('')
+          setErrorAnular('')
+          setMostrarAnular(true)
         }
       } else if (e.key === '+' || e.key === 'Add') {
         e.preventDefault()
@@ -790,6 +801,34 @@ useEffect(() => {
       setErrorEliminar(err.response?.data?.mensaje || 'Clave incorrecta')
     } finally {
       setProcesandoEliminar(false)
+    }
+  }
+  // Anular ticket completo (valida clave)
+  const confirmarAnularTicket = async () => {
+    if (procesandoAnular) return
+    if (!claveAnular.trim()) {
+      setErrorAnular('Ingrese la clave de autorización')
+      return
+    }
+    setProcesandoAnular(true)
+    setErrorAnular('')
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveAnular })
+      if (!res.data.success) {
+        setErrorAnular('Clave incorrecta')
+        setProcesandoAnular(false)
+        return
+      }
+      setTicket([])
+      setTotalDevuelto(0)
+      setDescuentoAutorizado(false)
+      setMostrarAnular(false)
+      setClaveAnular('')
+      if (inputRef.current) inputRef.current.focus()
+    } catch (err) {
+      setErrorAnular(err.response?.data?.mensaje || 'Clave incorrecta')
+    } finally {
+      setProcesandoAnular(false)
     }
   }
 
@@ -1733,6 +1772,13 @@ const teclasDescuento = (e) => {
                 >
                   🗑️ ELIMINAR (F4)
                 </button>
+                <button
+                  onClick={() => { setClaveAnular(''); setErrorAnular(''); setMostrarAnular(true) }}
+                  disabled={ticket.length === 0}
+                  className={`text-xs px-3 py-1 rounded font-bold text-white ml-1 ${ticket.length > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 opacity-50 cursor-not-allowed'}`}
+                >
+                  ANULAR TICKET (F6)
+                </button>
                 <span className={`font-bold ${totalDevuelto > 0.009 ? 'text-red-600' : 'text-gray-400'}`}>
                   {totalDevuelto > 0.009 ? `− RD$ ${fmt(totalDevuelto)}` : 'RD$ 0.00'}
                 </span>
@@ -1879,6 +1925,44 @@ const teclasDescuento = (e) => {
       )}
 
      {/* MODAL DE ELIMINAR ARTÍCULO */}
+     {mostrarAnular && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="bg-red-600 px-5 py-3 flex justify-between items-center">
+              <h3 className="text-white font-bold">ANULAR TICKET COMPLETO</h3>
+              <button onClick={() => setMostrarAnular(false)} className="text-white text-2xl leading-none">×</button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-gray-600 mb-3">Se eliminarán todas las líneas del ticket actual. Esta acción no se puede deshacer.</p>
+              <label className="block text-sm font-semibold text-gray-600 mb-1">🔑 Clave de autorización</label>
+              <input
+                id="anular-clave"
+                type="password"
+                autoFocus
+                value={claveAnular}
+                onChange={(e) => { setClaveAnular(e.target.value); setErrorAnular('') }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmarAnularTicket() } }}
+                placeholder="Clave del administrador"
+                className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+              {errorAnular && <p className="text-red-600 text-sm mt-2 font-semibold">{errorAnular}</p>}
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => setMostrarAnular(false)}
+                  className="flex-1 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">
+                  Cancelar (Esc)
+                </button>
+                <button
+                  onClick={confirmarAnularTicket}
+                  disabled={procesandoAnular}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 disabled:opacity-50">
+                  {procesandoAnular ? 'Anulando...' : 'ANULAR TICKET'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {mostrarEliminar && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
        <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onKeyDown={(e) => {
