@@ -871,6 +871,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   return v
                 }
                 const diasVencidoDe = f => Math.floor((hoyAge - vencimientoDe(f)) / (1000*60*60*24))
+                filtradas.sort((a, b) => vencimientoDe(a) - vencimientoDe(b))
                 // Antiguedad de saldos (aging)
                 const rangos = [
                   { etq: 'Por vencer', min: -99999, max: 0, color: '#16a34a' },

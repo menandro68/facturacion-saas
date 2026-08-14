@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import API from '../services/api'
 
 export default function Facturas({ vendedor_id = null, modulos_permitidos = null }) {
@@ -106,7 +106,7 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [clienteIndex, setClienteIndex] = useState(-1)
 const buscarClienteRef = useRef(null)
 
-  // Modo POS (casa reyes): abrir Nueva Factura automÃ¡ticamente al entrar
+  // Modo POS (casa reyes): abrir Nueva Factura automáticamente al entrar
   useEffect(() => {
     if (modoPOS && !vendedor_id) {
       setShowForm(true)
@@ -125,7 +125,7 @@ const buscarClienteRef = useRef(null)
   const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
   const [mostrarImprimir, setMostrarImprimir] = useState(false)
   const [facturaGuardadaId, setFacturaGuardadaId] = useState(null)
-  // ImpresiÃ³n tÃ©rmica vÃ­a RawBT (solo modo POS / casa reyes)
+  // Impresión térmica vía RawBT (solo modo POS / casa reyes)
   const imprimirTicketRawBT = async (facturaId) => {
     try {
       const res = await API.get(`/invoices/${facturaId}`)
@@ -189,7 +189,7 @@ const buscarClienteRef = useRef(null)
     }
   }
 
-  // Hoja completa con diÃ¡logo de impresiÃ³n nativo (solo modo POS / casa reyes)
+  // Hoja completa con diálogo de impresión nativo (solo modo POS / casa reyes)
   const imprimirHojaCompleta = async (facturaId) => {
     try {
       const res = await API.get(`/invoices/${facturaId}`)
@@ -202,7 +202,7 @@ const buscarClienteRef = useRef(null)
           <td style="text-align:right">RD$${(parseFloat(it.cantidad)*parseFloat(it.precio_unitario)).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
         </tr>`).join('')
       const w = window.open('', '_blank')
-      if (!w) { alert('âš ï¸ Habilite las ventanas emergentes para imprimir.'); return }
+      if (!w) { alert('⚠️ Habilite las ventanas emergentes para imprimir.'); return }
       w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Factura ${f.ncf || ''}</title>
         <style>
           body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;max-width:700px;margin:0 auto}
@@ -219,14 +219,14 @@ const buscarClienteRef = useRef(null)
         <div class="header">
           <div class="empresa">${usuarioSesion.empresa || ''}</div>
           <div class="titulo">FACTURA ${f.ncf ? 'NCF: ' + f.ncf : ''}</div>
-          <div class="titulo">Factura No.: ${f.numero_factura || f.id} â€” ${new Date(f.creado_en || Date.now()).toLocaleString('es-DO')}</div>
+          <div class="titulo">Factura No.: ${f.numero_factura || f.id} — ${new Date(f.creado_en || Date.now()).toLocaleString('es-DO')}</div>
         </div>
         <div class="info">
           <div><b>Cliente:</b> ${f.cliente_nombre || 'Consumidor Final'}</div>
-          ${f.cliente_rnc ? `<div><b>RNC/CÃ©dula:</b> ${f.cliente_rnc}</div>` : ''}
+          ${f.cliente_rnc ? `<div><b>RNC/Cédula:</b> ${f.cliente_rnc}</div>` : ''}
         </div>
         <table>
-          <thead><tr><th>DescripciÃ³n</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Total</th></tr></thead>
+          <thead><tr><th>Descripción</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Total</th></tr></thead>
           <tbody>${filas}</tbody>
         </table>
         <div class="totales">
@@ -385,16 +385,16 @@ const handleSubmit = async (e) => {
     e.preventDefault()
   // Validar que la factura tenga un cliente registrado seleccionado
     if (!form.customer_id) {
-      alert('âš ï¸ Debe seleccionar un cliente registrado de la lista para crear la factura.')
+      alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear la factura.')
       return
     }
     // Validar que haya al menos un articulo con cantidad y precio
     const itemsValidos = items.filter(it => it.descripcion && parseFloat(it.cantidad) > 0 && parseFloat(it.precio_unitario) > 0)
     if (itemsValidos.length === 0) {
-      alert('âš ï¸ Debe agregar al menos un artÃ­culo con cantidad y precio.')
+      alert('⚠️ Debe agregar al menos un artículo con cantidad y precio.')
       return
     }
-// Validar stock disponible por producto (suma cantidades de lÃ­neas repetidas)
+// Validar stock disponible por producto (suma cantidades de líneas repetidas)
     // Feature Flag stock_negativo: permite facturar sin stock (ej: casa reyes)
     const permiteStockNegativo = usuarioSesion?.features?.stock_negativo === true
     if (!permiteStockNegativo) {
@@ -407,11 +407,9 @@ const handleSubmit = async (e) => {
     for (const [productId, cantidadTotal] of Object.entries(cantidadesPorProducto)) {
       const prod = productos.find(p => p.id === productId)
       if (prod) {
-       const padreProd = prod.articulo_padre_id ? productos.find(x => x.id === prod.articulo_padre_id) : null
-        const factorProd = parseFloat(prod.factor_empaque || 1) || 1
-        const stockDisponible = padreProd ? Math.floor(parseFloat(padreProd.stock_actual || 0) / factorProd) : parseFloat(prod.stock_actual || 0)
+        const stockDisponible = parseFloat(prod.stock_actual || 0)
         if (cantidadTotal > stockDisponible) {
-          alert(`âš ï¸ Stock insuficiente para "${prod.nombre}".\n\nDisponible: ${stockDisponible}\nSolicitado: ${cantidadTotal}\n\nSolo puede facturar hasta ${stockDisponible}.`)
+          alert(`⚠️ Stock insuficiente para "${prod.nombre}".\n\nDisponible: ${stockDisponible}\nSolicitado: ${cantidadTotal}\n\nSolo puede facturar hasta ${stockDisponible}.`)
           return
         }
       }
@@ -466,7 +464,7 @@ const handleSubmit = async (e) => {
       }
     })
 
-  // Si hay productos bajos O descuento global Y NO es admin (vendedor u operador) â†’ pedir autorizaciÃ³n
+  // Si hay productos bajos O descuento global Y NO es admin (vendedor u operador) → pedir autorización
     const esNoAdmin = vendedor_id || modulos_permitidos !== null
     const pctDesc = Math.min(Math.max(parseFloat(descuentoPct) || 0, 0), 100)
     if ((productosBajos.length > 0 || pctDesc > 0) && esNoAdmin) {
@@ -477,13 +475,13 @@ const handleSubmit = async (e) => {
       return
     }
 
-    // Si es admin o no hay precios bajos â†’ guardar directo
+    // Si es admin o no hay precios bajos → guardar directo
     await guardarFacturaFinal()
   }
 
   const handleValidarClave = async () => {
     if (!claveAutorizacion.trim()) {
-      setErrorAutorizacion('Ingrese la clave de autorizaciÃ³n')
+      setErrorAutorizacion('Ingrese la clave de autorización')
       return
     }
     try {
@@ -495,10 +493,10 @@ const handleSubmit = async (e) => {
         setErrorAutorizacion('')
         await guardarFacturaFinal()
       } else {
-        setErrorAutorizacion('âŒ Clave incorrecta. Intente de nuevo.')
+        setErrorAutorizacion('❌ Clave incorrecta. Intente de nuevo.')
       }
     } catch(e) {
-      setErrorAutorizacion('âŒ Error al validar clave')
+      setErrorAutorizacion('❌ Error al validar clave')
     }
   }
 
@@ -508,7 +506,7 @@ const handleSubmit = async (e) => {
   }
 
   const handleEmitir = async (id) => {
-    if (!confirm('Â¿Emitir esta factura? Se asignarÃ¡ un NCF.')) return
+    if (!confirm('¿Emitir esta factura? Se asignará un NCF.')) return
     try {
       await API.put(`/invoices/${id}/emitir`)
       fetchData()
@@ -518,7 +516,7 @@ const handleSubmit = async (e) => {
   }
 
   const handleAnular = async (id) => {
-    if (!confirm('Â¿Anular esta factura?')) return
+    if (!confirm('¿Anular esta factura?')) return
     try {
       await API.put(`/invoices/${id}/anular`)
       fetchData()
@@ -542,7 +540,7 @@ const handleImprimir = (id) => {
     else if (formatoImpresion === 'carta') endpoint = '/pdf-carta'
     const url = `/invoices/${id}${endpoint}?token=${token}`
 
-    // Abrir PDF en nueva pestaÃ±a y disparar impresion automatica
+    // Abrir PDF en nueva pestaña y disparar impresion automatica
     const ventana = window.open(url, '_blank')
     if (ventana) {
       ventana.addEventListener('load', () => {
@@ -595,9 +593,9 @@ const { subtotal, itbis, total } = useMemo(() => {
     // { id: 'cobro_vendedor', label: 'Cobro por Vendedor' },
     // { id: 'cxc_vendedor', label: 'Cuenta por Cobrar por Vendedor' },
     { id: 'pedidos', label: 'Pedidos' },
-    { id: 'cotizacion', label: 'CotizaciÃ³n' },
-    { id: 'nota_credito', label: 'Nota de CrÃ©dito' },
-    { id: 'devoluciones', label: 'ðŸ”„ Devoluciones' },
+    { id: 'cotizacion', label: 'Cotización' },
+    { id: 'nota_credito', label: 'Nota de Crédito' },
+    { id: 'devoluciones', label: '🔄 Devoluciones' },
   ]
 
   // Filtrar sub-tabs segun permisos del operador
@@ -850,7 +848,7 @@ const puedeVerSubTab = (subTabId) => {
               setCotFechaInicio(fechaInicio)
               setCotFechaFin(fechaFin)
             }
-        // Si estamos en el tab relacion_vendedor, buscar la relaciÃ³n del vendedor
+        // Si estamos en el tab relacion_vendedor, buscar la relación del vendedor
             if (tab === 'relacion_vendedor') {
               let vendedorId = document.getElementById('rel-vendedor')?.value
               // Si no hay ID guardado, resolverlo por el nombre escrito
@@ -891,7 +889,7 @@ const puedeVerSubTab = (subTabId) => {
 {((tab === 'fecha' && resumen) || (tab === 'cliente' && resumenCliente) || (tab === 'zona' && resumenZona) || (tab === 'vendedor' && resumenVendedor) || (tab === 'relacion_vendedor' && relacionVendedor.length > 0)) && (
           <button
             onClick={() => {
-              // Si estamos en el tab relacion_vendedor, imprimir la relaciÃ³n del vendedor
+              // Si estamos en el tab relacion_vendedor, imprimir la relación del vendedor
               if (tab === 'relacion_vendedor' && relacionVendedor.length > 0) {
                 const vendedorId = document.getElementById('rel-vendedor')?.value
                 const vendedor = vendedores.find(v => v.id === vendedorId)
@@ -906,7 +904,7 @@ const puedeVerSubTab = (subTabId) => {
                   </tr>`).join('')
                 const totalGeneral = relacionVendedor.reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0)
                 printW.document.write(`
-                  <!DOCTYPE html><html><head><title>RelaciÃ³n Vendedor</title>
+                  <!DOCTYPE html><html><head><title>Relación Vendedor</title>
                   <style>
                     body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
                     h2{color:#1e40af;margin-bottom:4px}
@@ -918,8 +916,8 @@ const puedeVerSubTab = (subTabId) => {
                     .total-row{font-weight:bold;background:#f1f5f9}
                     @media print{button{display:none}}
                   </style></head><body>
-                  <h2>RelaciÃ³n de Facturas â€” Vendedor: ${vendedor?.nombre || ''}</h2>
-                  <p class="sub">PerÃ­odo: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} â€” Total facturas: ${relacionVendedor.length}</p>
+                  <h2>Relación de Facturas — Vendedor: ${vendedor?.nombre || ''}</h2>
+                  <p class="sub">Período: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} — Total facturas: ${relacionVendedor.length}</p>
                   <table>
                     <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
                     <tbody>
@@ -1134,7 +1132,7 @@ const puedeVerSubTab = (subTabId) => {
                   @media print{button{display:none}}
                 </style></head><body>
                 <h2>Reporte de Ventas</h2>
-                <p class="periodo">PerÃ­odo: ${fechaInicio || 'Inicio'} al ${fechaFin || 'Hoy'}</p>
+                <p class="periodo">Período: ${fechaInicio || 'Inicio'} al ${fechaFin || 'Hoy'}</p>
                 <table>
                   <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th><th style="text-align:center">Fecha</th></tr></thead>
                   <tbody>${filas}${filasConduces}</tbody>
@@ -1151,7 +1149,7 @@ const puedeVerSubTab = (subTabId) => {
               printW.document.close()
             }}
             className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
-            ðŸ–¨ï¸ Imprimir Reporte
+            🖨️ Imprimir Reporte
           </button>
         )}
       </div>
@@ -1159,7 +1157,7 @@ const puedeVerSubTab = (subTabId) => {
       {/* Tabs fila 1 */}
       <div className="flex gap-2 border-b mb-0">
         {tabsFila1.map(t => (
-          <button key={t.id} onClick={() => { if (vendedor_id) { alert('Usted no tiene permiso para este mÃ³dulo'); return }; setTab(t.id) }}
+          <button key={t.id} onClick={() => { if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }; setTab(t.id) }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.id
                 ? 'border-blue-600 text-blue-600'
@@ -1173,7 +1171,7 @@ const puedeVerSubTab = (subTabId) => {
 {/* Tabs fila 2 */}
       <div className="flex gap-2 border-b mb-6 items-center">
         {tabsFila2.map(t => (
-          <button key={t.id} onClick={() => { if (vendedor_id && t.id !== 'pedidos') { alert('Usted no tiene permiso para este mÃ³dulo'); return }; setTab(t.id); if (t.id === 'nota_credito') { API.get('/invoices/nota-credito/lista').then(r => setNotasCredito(r.data.data)).catch(() => {}) } }}
+          <button key={t.id} onClick={() => { if (vendedor_id && t.id !== 'pedidos') { alert('Usted no tiene permiso para este módulo'); return }; setTab(t.id); if (t.id === 'nota_credito') { API.get('/invoices/nota-credito/lista').then(r => setNotasCredito(r.data.data)).catch(() => {}) } }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t.id
                 ? 'border-blue-600 text-blue-600'
@@ -1183,16 +1181,16 @@ const puedeVerSubTab = (subTabId) => {
           </button>
         ))}
         
-      {/* BotÃ³n Tipo de ImpresiÃ³n â€” oculto para vendedores */}
+      {/* Botón Tipo de Impresión — oculto para vendedores */}
         {!vendedor_id && (
         <div className="relative ml-auto mb-2">
           <button onClick={() => setShowFormatoMenu(!showFormatoMenu)}
             className="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700 flex items-center gap-2 font-medium shadow">
-            ðŸ–¨ï¸ Tipo de ImpresiÃ³n
+            🖨️ Tipo de Impresión
             <span className="text-xs bg-white text-purple-700 px-2 py-0.5 rounded font-bold">
               {formatoImpresion === 'pos' ? 'POS' : formatoImpresion === 'carta' ? 'CARTA' : 'MEDIA'}
             </span>
-            <span className="text-xs">â–¼</span>
+            <span className="text-xs">▼</span>
           </button>
           
           {showFormatoMenu && (
@@ -1200,40 +1198,40 @@ const puedeVerSubTab = (subTabId) => {
               {/* Overlay para cerrar al hacer clic afuera */}
               <div className="fixed inset-0 z-40" onClick={() => setShowFormatoMenu(false)}></div>
               
-              {/* MenÃº dropdown */}
+              {/* Menú dropdown */}
               <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-xl z-50 w-64 overflow-hidden">
                 <div className="bg-gray-50 px-4 py-2 border-b">
-                  <p className="text-xs font-semibold text-gray-700">Selecciona el formato de impresiÃ³n</p>
+                  <p className="text-xs font-semibold text-gray-700">Selecciona el formato de impresión</p>
                 </div>
                 
                 <button onClick={() => cambiarFormato('carta')}
                   className={`w-full px-4 py-3 text-left hover:bg-blue-50 border-b text-sm flex items-start gap-3 ${formatoImpresion === 'carta' ? 'bg-blue-100' : ''}`}>
-                  <span className="text-2xl">ðŸ“„</span>
+                  <span className="text-2xl">📄</span>
                   <div className="flex-1">
                     <p className="font-medium text-gray-800">Carta Entera</p>
-                    <p className="text-xs text-gray-500">8.5 Ã— 11 pulgadas</p>
+                    <p className="text-xs text-gray-500">8.5 × 11 pulgadas</p>
                   </div>
-                  {formatoImpresion === 'carta' && <span className="text-blue-600 font-bold">âœ“</span>}
+                  {formatoImpresion === 'carta' && <span className="text-blue-600 font-bold">✓</span>}
                 </button>
                 
                 <button onClick={() => cambiarFormato('media')}
                   className={`w-full px-4 py-3 text-left hover:bg-blue-50 border-b text-sm flex items-start gap-3 ${formatoImpresion === 'media' ? 'bg-blue-100' : ''}`}>
-                  <span className="text-2xl">ðŸ“‹</span>
+                  <span className="text-2xl">📋</span>
                   <div className="flex-1">
                     <p className="font-medium text-gray-800">Media Carta</p>
-                    <p className="text-xs text-gray-500">5.5 Ã— 8.5 pulgadas</p>
+                    <p className="text-xs text-gray-500">5.5 × 8.5 pulgadas</p>
                   </div>
-                  {formatoImpresion === 'media' && <span className="text-blue-600 font-bold">âœ“</span>}
+                  {formatoImpresion === 'media' && <span className="text-blue-600 font-bold">✓</span>}
                 </button>
                 
                 <button onClick={() => cambiarFormato('pos')}
                   className={`w-full px-4 py-3 text-left hover:bg-blue-50 text-sm flex items-start gap-3 ${formatoImpresion === 'pos' ? 'bg-blue-100' : ''}`}>
-                  <span className="text-2xl">ðŸ§¾</span>
+                  <span className="text-2xl">🧾</span>
                   <div className="flex-1">
                     <p className="font-medium text-gray-800">Punto de Venta</p>
-                    <p className="text-xs text-gray-500">TÃ©rmica 80mm</p>
+                    <p className="text-xs text-gray-500">Térmica 80mm</p>
                   </div>
-                  {formatoImpresion === 'pos' && <span className="text-blue-600 font-bold">âœ“</span>}
+                  {formatoImpresion === 'pos' && <span className="text-blue-600 font-bold">✓</span>}
                 </button>
               </div>
             </>
@@ -1253,7 +1251,7 @@ const puedeVerSubTab = (subTabId) => {
                 <input
                   id="zona-buscar-input"
                   type="text"
-                  placeholder="ðŸ” Buscar zona..."
+                  placeholder="🔍 Buscar zona..."
                   autoComplete="off"
                   className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
                   onChange={e => {
@@ -1375,7 +1373,7 @@ const puedeVerSubTab = (subTabId) => {
                 <input
                   id="prod-vendedor-input"
                   type="text"
-                  placeholder="ðŸ” Buscar vendedor..."
+                  placeholder="🔍 Buscar vendedor..."
                   autoComplete="off"
                   className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
                   onChange={e => {
@@ -1439,7 +1437,7 @@ const puedeVerSubTab = (subTabId) => {
               <input
                 id="prod-cliente-input"
                 type="text"
-                placeholder="ðŸ” Buscar cliente..."
+                placeholder="🔍 Buscar cliente..."
                 autoComplete="off"
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
           onChange={e => {
@@ -1595,7 +1593,7 @@ onKeyDown={e => {
                     @media print{button{display:none}}
                   </style></head><body>
                   <h2>Reporte de Venta por Producto</h2>
-                  <p class="sub">PerÃ­odo: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} | Vendedor: ${vendedorNombre} | Cliente: ${clienteNombre}</p>
+                  <p class="sub">Período: ${fechaInicio||'Inicio'} al ${fechaFin||'Hoy'} | Vendedor: ${vendedorNombre} | Cliente: ${clienteNombre}</p>
                   <table>
                     <thead><tr>
                       <th>Producto</th>
@@ -1617,7 +1615,7 @@ onKeyDown={e => {
                 printW.document.close()
               }}
               className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
-              ðŸ–¨ï¸ Imprimir Reporte
+              🖨️ Imprimir Reporte
             </button>
             )}
           </div>
@@ -1659,7 +1657,7 @@ onKeyDown={e => {
               <input
                 id="vend-vendedor-input"
                 type="text"
-                placeholder="ðŸ” Buscar vendedor..."
+                placeholder="🔍 Buscar vendedor..."
                 autoComplete="off"
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-64 w-full"
                 onChange={e => {
@@ -1779,7 +1777,7 @@ onKeyDown={e => {
               <input
                 id="cli-cliente-input"
                 type="text"
-                placeholder="ðŸ” Buscar cliente..."
+                placeholder="🔍 Buscar cliente..."
                 autoComplete="off"
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-64 w-full"
                 onChange={e => {
@@ -1892,7 +1890,7 @@ onKeyDown={e => {
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Entregada Chofer</h3>
           <div className="flex gap-3 items-end mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">NÃºmero de Factura (NCF)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Número de Factura (NCF)</label>
               <input
                 id="chofer-ncf-input"
                 type="text"
@@ -1908,7 +1906,7 @@ onKeyDown={e => {
                     const cdCh = conducesVenta.find(c => (c.numero || '').toUpperCase() === val && !c.facturado && c.estado === 'emitido')
                     const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val) || (cdCh ? { ...cdCh, ncf: cdCh.numero, es_conduce: true } : null)
                     if (!factura) { alert('Documento no encontrado: ' + val); return }
-                    if (facturasChofer.find(f => f.id === factura.id)) { alert('Ya estÃ¡ en la lista'); e.target.value = ''; return }
+                    if (facturasChofer.find(f => f.id === factura.id)) { alert('Ya está en la lista'); e.target.value = ''; return }
                     setFacturasChofer(prev => [...prev, factura])
                     e.target.value = ''
                   }
@@ -1921,7 +1919,7 @@ onKeyDown={e => {
                 <input
                   id="chofer-buscar-input"
                   type="text"
-                  placeholder="ðŸ” Buscar chofer..."
+                  placeholder="🔍 Buscar chofer..."
                   autoComplete="off"
                   className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
                   onChange={e => {
@@ -1981,7 +1979,7 @@ onKeyDown={e => {
           const cdCh2 = conducesVenta.find(c => (c.numero || '').toUpperCase() === val && !c.facturado && c.estado === 'emitido')
                 const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val) || (cdCh2 ? { ...cdCh2, ncf: cdCh2.numero, es_conduce: true } : null)
                 if (!factura) { alert('Documento no encontrado: ' + val); return }
-                if (facturasChofer.find(f => f.id === factura.id)) { alert('Ya estÃ¡ en la lista'); input.value = ''; return }
+                if (facturasChofer.find(f => f.id === factura.id)) { alert('Ya está en la lista'); input.value = ''; return }
                 try {
                   await API.put(`${factura.es_conduce ? '/conduces' : '/invoices'}/${factura.id}/asignar-chofer`, { chofer_id: choferSeleccionado })
                   setFacturasChofer(prev => [...prev, factura])
@@ -2005,7 +2003,7 @@ onKeyDown={e => {
                     </tr>`).join('')
                   const totalGeneral = facturasChofer.reduce((s, f) => s + parseFloat(f.total || 0), 0)
                   printW.document.write(`
-                    <!DOCTYPE html><html><head><title>RelaciÃ³n Chofer</title>
+                    <!DOCTYPE html><html><head><title>Relación Chofer</title>
                     <style>
                       body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
                       h2{color:#1e40af;margin-bottom:4px}
@@ -2017,8 +2015,8 @@ onKeyDown={e => {
                       .total-row{font-weight:bold;background:#f1f5f9}
                       @media print{button{display:none}}
                     </style></head><body>
-                    <h2>RelaciÃ³n de Entregas - Chofer: ${(choferesLista.find(c => c.id === choferSeleccionado) || {}).nombre || ''}</h2>
-                    <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')} â€” Total facturas: ${facturasChofer.length}</p>
+                    <h2>Relación de Entregas - Chofer: ${(choferesLista.find(c => c.id === choferSeleccionado) || {}).nombre || ''}</h2>
+                    <p class="sub">Fecha: ${new Date().toLocaleDateString('es-DO')} — Total facturas: ${facturasChofer.length}</p>
                     <table>
                       <thead><tr><th>NCF</th><th>Cliente</th><th style="text-align:right">Total</th></tr></thead>
                       <tbody>
@@ -2034,11 +2032,11 @@ onKeyDown={e => {
                   printW.document.close()
                 }}
                 className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
-                  ðŸ–¨ï¸ Imprimir RelaciÃ³n
+                  🖨️ Imprimir Relación
                 </button>
                 <button onClick={() => setFacturasChofer([])}
                   className="border border-red-300 text-red-500 px-4 py-2 rounded text-sm hover:bg-red-50">
-                  ðŸ—‘ï¸ Limpiar
+                  🗑️ Limpiar
                 </button>
               </>
             )}
@@ -2069,7 +2067,7 @@ onKeyDown={e => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button onClick={() => setFacturasChofer(prev => prev.filter(x => x.id !== f.id))}
-                          className="text-red-500 hover:text-red-700 font-bold text-lg">Ã—</button>
+                          className="text-red-500 hover:text-red-700 font-bold text-lg">×</button>
                       </td>
                     </tr>
                   ))}
@@ -2090,7 +2088,7 @@ onKeyDown={e => {
 
       {tab === 'relacion_vendedor' && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">RelaciÃ³n Vendedor</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Relación Vendedor</h3>
           <div className="flex gap-4 items-end mb-6 flex-wrap">
             <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
@@ -2098,7 +2096,7 @@ onKeyDown={e => {
                 <input
                   id="rel-vendedor-input"
                   type="text"
-                  placeholder="ðŸ” Buscar vendedor..."
+                  placeholder="🔍 Buscar vendedor..."
                   autoComplete="off"
                   className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48 w-full"
                   onChange={e => {
@@ -2189,7 +2187,7 @@ onKeyDown={e => {
                   <p className="text-lg font-bold text-gray-800">
                   Total General: RD${relacionVendedor.filter(f => f.estado === 'emitida').reduce((s, f) => s + parseFloat(f.total_neto != null ? f.total_neto : f.total || 0), 0).toLocaleString('es-DO',{minimumFractionDigits:2})}
                   </p>
-                  <p className="text-gray-500 text-xs mt-1">{relacionVendedor.length} factura(s) â€” {relacionVendedor.filter(f => f.estado === 'emitida').length} emitida(s)</p>
+                  <p className="text-gray-500 text-xs mt-1">{relacionVendedor.length} factura(s) — {relacionVendedor.filter(f => f.estado === 'emitida').length} emitida(s)</p>
                 </div>
               </div>
             </>
@@ -2295,7 +2293,7 @@ onKeyDown={e => {
                         <div className="pos-ticket-desc">{it.descripcion}</div>
             <button type="button" className="pos-ticket-eliminar"
                           onClick={() => {
-                            if (!window.confirm('Â¿Eliminar "' + it.descripcion + '" del ticket?')) return
+                            if (!window.confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
                             if (itemsPed.length > 1) {
                               setItemsPed(prev => prev.filter((_, xi) => xi !== i))
                               setBuscarProductoPed(prev => {
@@ -2311,7 +2309,7 @@ onKeyDown={e => {
                               setItemsPed([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
                               setBuscarProductoPed({})
                             }
-                          }}>âœ•</button>
+                          }}>✕</button>
                       </div>
                       <div className="pos-ticket-detalle">
                         <span>
@@ -2329,7 +2327,7 @@ onKeyDown={e => {
                   ) : null
                 ))}
                 {itemsPed.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
-                  <div className="pos-ticket-vacio">Agregue artÃ­culos abajo</div>
+                  <div className="pos-ticket-vacio">Agregue artículos abajo</div>
                 )}
                 <div className="pos-ticket-divider"></div>
                 {(() => {
@@ -2350,9 +2348,9 @@ onKeyDown={e => {
 
               {itemsPed.map((item, index) => (
              <div key={index} className={index !== itemsPed.length - 1 ? "hidden" : "border rounded-lg p-3 mb-3 bg-gray-50"}>
-                  {/* BÃºsqueda de producto */}
+                  {/* Búsqueda de producto */}
                   <div className="relative mb-2">
-                    <input type="text" placeholder="ðŸ” Buscar Articulo..."
+                    <input type="text" placeholder="🔍 Buscar Articulo..."
                       ref={el => pedProductoRefs.current[index] = el}
                       value={buscarProductoPed[index] || ''}
                       onChange={e => {
@@ -2397,14 +2395,14 @@ onKeyDown={e => {
                               setDropdownPed(prev => ({...prev, [index]: false}))
                               setTimeout(() => pedCantidadRefs.current[index]?.focus(), 100)
                             }}>
-                            {p.nombre} â€” RD${parseFloat(p.precio).toLocaleString()}
+                            {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                  {/* DescripciÃ³n */}
-<input placeholder="DescripciÃ³n" value={item.descripcion}
+                  {/* Descripción */}
+<input placeholder="Descripción" value={item.descripcion}
                     readOnly={!!item.product_id}
                     onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, descripcion: e.target.value} : it))}
                     className={`w-full border rounded-lg px-3 py-2.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
@@ -2427,7 +2425,7 @@ onKeyDown={e => {
                           if (item.product_id && e.target.value !== '') {
                             const prod = productos.find(p => p.id === item.product_id)
                             if (prod && parseFloat(e.target.value) < parseFloat(prod.precio)) {
-                              alert(`âš ï¸ El precio no puede ser menor al precio de venta del artÃ­culo: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+                              alert(`⚠️ El precio no puede ser menor al precio de venta del artículo: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
                               setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: prod.precio} : it))
                             }
                           }
@@ -2477,7 +2475,7 @@ onKeyDown={e => {
                           }
                           setBuscarProductoPed(prev => reindexarPed(prev))
                         }}
-                          className="bg-red-100 text-red-500 hover:bg-red-200 rounded-full w-7 h-7 flex items-center justify-center text-lg font-bold">Ã—</button>
+                          className="bg-red-100 text-red-500 hover:bg-red-200 rounded-full w-7 h-7 flex items-center justify-center text-lg font-bold">×</button>
                       )}
                     </div>
                   </div>
@@ -2507,17 +2505,17 @@ onKeyDown={e => {
                   setTimeout(() => pedProductoRefs.current[itemsPed.length]?.focus(), 150)
                 }}
                   onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); pedGuardarRef.current?.focus() } }}
-                  className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar lÃ­nea</button>
+                  className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
             <button ref={pedGuardarRef} onClick={async () => {
                   const customer_id = pedClienteSeleccionadoId
-                  if (!customer_id) return alert('âš ï¸ Debe seleccionar un cliente registrado de la lista para crear el pedido.')
+                  if (!customer_id) return alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear el pedido.')
                  const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
                   if (!itemsValidos.length) return alert('Agrega al menos un producto')
                   for (const it of itemsValidos) {
                     if (it.product_id) {
                       const prod = productos.find(p => p.id === it.product_id)
                       if (prod && parseFloat(it.precio_unitario) < parseFloat(prod.precio)) {
-                        return alert(`âš ï¸ El precio de "${it.descripcion}" (RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2})}) es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. CorrÃ­gelo antes de guardar.`)
+                        return alert(`⚠️ El precio de "${it.descripcion}" (RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2})}) es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrígelo antes de guardar.`)
                       }
                     }
                   }
@@ -2561,10 +2559,10 @@ onKeyDown={e => {
             )}
           </div>
 
-          {/* CAMBIO 2: tabla de pedidos con vista mÃ³vil (cards) y desktop */}
+          {/* CAMBIO 2: tabla de pedidos con vista móvil (cards) y desktop */}
           {pedidos.length > 0 && (
             <>
-              {/* Vista mÃ³vil - cards */}
+              {/* Vista móvil - cards */}
               <div className="sm:hidden space-y-3">
                 {pedidos.map(p => (
                   <div key={p.id} className="bg-gray-50 rounded-lg p-4 border">
@@ -2597,10 +2595,10 @@ onKeyDown={e => {
                             if (hid) hid.value = data.customer_id || ''
                           }, 200)
                         } catch(e) { alert('Error al cargar pedido: ' + (e.response?.data?.mensaje || e.message)) }
-                     }} className="bg-blue-600 text-white py-2.5 rounded-lg text-xs font-medium text-center leading-tight">âœï¸ Editar</button>
+                     }} className="bg-blue-600 text-white py-2.5 rounded-lg text-xs font-medium text-center leading-tight">✏️ Editar</button>
                       <button onClick={async () => {
-                        if (vendedor_id) { alert('Usted no tiene permiso para este mÃ³dulo'); return }
-                      if (!confirm('Â¿Convertir este pedido a factura?')) return
+                        if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
+                      if (!confirm('¿Convertir este pedido a factura?')) return
                         try {
                           const detPed = await API.get(`/invoices/${p.id}`)
                           const itemsPed = detPed.data.data.items || []
@@ -2614,15 +2612,15 @@ onKeyDown={e => {
                            if (usuarioSesion?.features?.stock_negativo !== true && invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
                               const disponible = parseFloat(invItem.stock_actual || 0)
                               if (disponible <= 0) {
-                                alert(`âš ï¸ Sin stock para "${it.descripcion}".\n\nDisponible: 0. No se puede facturar este artÃ­culo.`)
+                                alert(`⚠️ Sin stock para "${it.descripcion}".\n\nDisponible: 0. No se puede facturar este artículo.`)
                                 return
                               }
-                              if (!confirm(`âš ï¸ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${disponible}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nÂ¿Desea facturar solo ${disponible}?`)) return
+                              if (!confirm(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${disponible}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\n¿Desea facturar solo ${disponible}?`)) return
                               it.cantidad = disponible
                               huboAjuste = true
                             }
                             if (invItem && minLista > 0 && parseFloat(invItem.stock_actual || 0) <= minLista) {
-                              alert(`âš ï¸ STOCK BAJO: "${it.descripcion}"\n\nQuedan ${parseFloat(invItem.stock_actual || 0)} (mÃ­nimo ${minLista}).\n\nSe convertirÃ¡ a factura, pero considere reabastecer.`)
+                              alert(`⚠️ STOCK BAJO: "${it.descripcion}"\n\nQuedan ${parseFloat(invItem.stock_actual || 0)} (mínimo ${minLista}).\n\nSe convertirá a factura, pero considere reabastecer.`)
                             }
                           }
                          if (huboAjuste) {
@@ -2635,11 +2633,11 @@ onKeyDown={e => {
                           const res = await API.get('/invoices/pedidos/lista')
                           setPedidos(res.data.data)
                           fetchData()
-                          alert('Â¡Factura emitida exitosamente!')
+                          alert('¡Factura emitida exitosamente!')
                        } catch(e) { alert('Error al convertir: ' + (e.response?.data?.mensaje || e.message)) }
                      }} className="bg-green-600 text-white py-2.5 rounded-lg text-xs font-medium text-center leading-tight">Convertir</button>
                       <button onClick={async () => {
-                        if (!confirm('Â¿Eliminar este pedido?')) return
+                        if (!confirm('¿Eliminar este pedido?')) return
                         try {
                           await API.put(`/invoices/${p.id}/anular`)
                           const res = await API.get('/invoices/pedidos/lista')
@@ -2684,10 +2682,10 @@ onKeyDown={e => {
                            if (usuarioSesion?.features?.stock_negativo !== true && invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
                                   const disponible = parseFloat(invItem.stock_actual || 0)
                                   if (disponible <= 0) {
-                                    alert(`âš ï¸ Sin stock para "${it.descripcion}".\n\nDisponible: 0. No se puede facturar este artÃ­culo.`)
+                                    alert(`⚠️ Sin stock para "${it.descripcion}".\n\nDisponible: 0. No se puede facturar este artículo.`)
                                     return
                                   }
-                                  if (!confirm(`âš ï¸ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${disponible}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nÂ¿Desea facturar solo ${disponible}?`)) return
+                                  if (!confirm(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${disponible}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\n¿Desea facturar solo ${disponible}?`)) return
                                   await API.put(`/invoices/pedido/${p.id}/editar`, {
                                     customer_id: data.customer_id || null,
                                     items: (data.items || []).map(x => ({ descripcion: x.descripcion, cantidad: x.product_id === it.product_id ? disponible : x.cantidad, precio_unitario: x.precio_unitario, itbis_rate: x.itbis_rate, product_id: x.product_id || '' }))
@@ -2717,7 +2715,7 @@ onKeyDown={e => {
                               <h2>Pedido</h2>
                               <p><b>Cliente:</b> ${data.cliente_nombre || 'Consumidor Final'}</p>
                               <p><b>Fecha:</b> ${new Date(data.creado_en).toLocaleDateString('es-DO')}</p>
-                              <table><thead><tr><th>DescripciÃ³n</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr></thead>
+                              <table><thead><tr><th>Descripción</th><th style="text-align:right">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr></thead>
                               <tbody>${filas}</tbody></table>
                               <div class="total">
                                 <p>Subtotal: RD$${parseFloat(data.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
@@ -2726,23 +2724,23 @@ onKeyDown={e => {
                               </div>
                               <br>
               <div style="display:flex;gap:12px;margin-top:16px">
-                <button onclick="window.print()" style="padding:8px 20px;background:#1e40af;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">ðŸ–¨ï¸ Imprimir</button>
+                <button onclick="window.print()" style="padding:8px 20px;background:#1e40af;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
                 <button onclick="
-                 ${avisoStock ? `alert('${('âš ï¸ ' + avisoStock + 'Se convertira a factura, pero considere reabastecer.').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n')}');` : ''}
-                if(confirm('Â¿Desea convertir este pedido a factura?')){
+                 ${avisoStock ? `alert('${('⚠️ ' + avisoStock + 'Se convertira a factura, pero considere reabastecer.').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n')}');` : ''}
+                if(confirm('¿Desea convertir este pedido a factura?')){
                     fetch('/invoices/pedido/${p.id}/convertir',{method:'PUT',headers:{'Authorization':'Bearer '+sessionStorage.getItem('token'),'Content-Type':'application/json'}})
-                    .then(r=>r.json()).then(d=>{if(d.success){const fid=d.data?.id||d.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('Â¿Desea imprimir esta factura?')){window.location.href='/invoices/'+fid+'/print?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
+                    .then(r=>r.json()).then(d=>{if(d.success){const fid=d.data?.id||d.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('¿Desea imprimir esta factura?')){window.location.href='/invoices/'+fid+'/print?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
                     .catch(()=>alert('Error al convertir'))
                   }
-               " style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">âœ… Convertir a Factura</button>
+               " style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✅ Convertir a Factura</button>
                 <button onclick="
-                  if(confirm('Â¿Desea convertir este pedido a CONDUCE? No se generarÃ¡ NCF.')){
+                  if(confirm('¿Desea convertir este pedido a CONDUCE? No se generará NCF.')){
                     fetch('/invoices/pedido/${p.id}/convertir-conduce',{method:'PUT',headers:{'Authorization':'Bearer '+sessionStorage.getItem('token'),'Content-Type':'application/json'}})
-                    .then(r=>r.json()).then(d=>{if(d.success){const cid=d.data?.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('Conduce '+(d.data?.numero||'')+' creado. Â¿Desea imprimirlo?')){window.location.href='/conduces/'+cid+'/pdf?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
+                    .then(r=>r.json()).then(d=>{if(d.success){const cid=d.data?.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('Conduce '+(d.data?.numero||'')+' creado. ¿Desea imprimirlo?')){window.location.href='/conduces/'+cid+'/pdf?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
                     .catch(()=>alert('Error al convertir a conduce'))
                   }
-                " style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">ðŸ“‹ Convertir a Conduce</button>
-                <button onclick="window.close()" style="padding:8px 20px;background:white;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px">â† Volver</button>
+                " style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">📋 Convertir a Conduce</button>
+                <button onclick="window.close()" style="padding:8px 20px;background:white;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px">← Volver</button>
               </div>
                               </body></html>`)
                             win.document.close()
@@ -2750,7 +2748,7 @@ onKeyDown={e => {
                         }} className="text-blue-600 hover:underline text-xs">Ver</button>
 
                         <button onClick={async () => {
-                          if (!confirm('Â¿Eliminar este pedido?')) return
+                          if (!confirm('¿Eliminar este pedido?')) return
                           try {
                             await API.put(`/invoices/${p.id}/anular`)
                             const res = await API.get('/invoices/pedidos/lista')
@@ -2772,20 +2770,20 @@ onKeyDown={e => {
 
       {tab === 'cotizacion' && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">CotizaciÃ³n</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Cotización</h3>
      {!showCotizacion ? (
             <div className="flex items-center gap-3 mb-4 flex-wrap">
               <button onClick={() => setShowCotizacion(true)}
                 className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-                + Nueva CotizaciÃ³n
+                + Nueva Cotización
               </button>
               <input type="text" value={filtroClienteCot} onChange={e => setFiltroClienteCot(e.target.value)}
-                placeholder="ðŸ” Buscar por cliente..."
+                placeholder="🔍 Buscar por cliente..."
                 className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-56" />
             </div>
           ) : (
             <div className="mb-6 border rounded-lg p-4">
-              <h4 className="font-medium mb-3 text-gray-700">Nueva CotizaciÃ³n</h4>
+              <h4 className="font-medium mb-3 text-gray-700">Nueva Cotización</h4>
               <div className="relative mb-4 max-w-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
           <input type="text" placeholder="Buscar cliente..." id="cot-cliente-input" autoComplete="off" autoFocus
@@ -2858,7 +2856,7 @@ onKeyDown={e => {
               {itemsCot.map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-2 mb-2">
                   <div className="col-span-3 relative">
-                    <input type="text" placeholder="ðŸ” Buscar Articulo..."
+                    <input type="text" placeholder="🔍 Buscar Articulo..."
                       ref={el => cotProductoRefs.current[index] = el}
                       value={buscarProductoCot[index] || ''}
                       onChange={e => {
@@ -2903,14 +2901,14 @@ onKeyDown={e => {
                               setDropdownCot(prev => ({...prev, [index]: false}))
                               setTimeout(() => cotCantidadRefs.current[index]?.focus(), 100)
                             }}>
-                            {p.nombre} â€” RD${parseFloat(p.precio).toLocaleString()}
+                            {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
                   <div className="col-span-3">
-                  <input placeholder="DescripciÃ³n" value={item.descripcion}
+                  <input placeholder="Descripción" value={item.descripcion}
                       readOnly={!!item.product_id}
                       onChange={e => setItemsCot(prev => prev.map((it,i) => i===index ? {...it, descripcion: e.target.value} : it))}
                       className={`w-full border rounded px-2 py-1.5 text-sm ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`} />
@@ -2930,7 +2928,7 @@ onKeyDown={e => {
                         if (item.product_id && e.target.value !== '') {
                           const prod = productos.find(p => p.id === item.product_id)
                           if (prod && parseFloat(e.target.value) < parseFloat(prod.precio)) {
-                            alert(`âš ï¸ El precio no puede ser menor al precio de venta del artÃ­culo: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+                            alert(`⚠️ El precio no puede ser menor al precio de venta del artículo: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
                             setItemsCot(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: prod.precio} : it))
                           }
                         }
@@ -2978,7 +2976,7 @@ onKeyDown={e => {
                         }
                         setBuscarProductoCot(prev => reindexarCot(prev))
                       }}
-                        className="text-red-500 hover:text-red-700 text-lg">Ã—</button>
+                        className="text-red-500 hover:text-red-700 text-lg">×</button>
                     )}
                   </div>
                 </div>
@@ -3023,16 +3021,16 @@ onKeyDown={e => {
                   setTimeout(() => cotProductoRefs.current[itemsCot.length]?.focus(), 150)
                 }}
                   onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); cotGuardarRef.current?.focus() } }}
-                  className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar lÃ­nea</button>
+                  className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
           <button ref={cotGuardarRef} onClick={async () => {
                 const customer_id = cotClienteId || document.getElementById('cot-cliente').value
-                  if (!customer_id) return alert('âš ï¸ Debe seleccionar un cliente registrado de la lista para crear la cotizaciÃ³n.')
+                  if (!customer_id) return alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear la cotización.')
                   const itemsValidos = itemsCot.filter(i => i.descripcion && i.precio_unitario)
                 for (const it of itemsValidos) {
                     if (it.product_id) {
                       const prod = productos.find(p => p.id === it.product_id)
                       if (prod && parseFloat(it.precio_unitario) < parseFloat(prod.precio)) {
-                        return alert(`âš ï¸ El precio de "${it.descripcion}" (RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2})}) es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. CorrÃ­gelo antes de guardar.`)
+                        return alert(`⚠️ El precio de "${it.descripcion}" (RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2})}) es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrígelo antes de guardar.`)
                       }
                     }
                   }
@@ -3054,9 +3052,9 @@ onKeyDown={e => {
                     document.getElementById('cot-cliente').value = ''
                     const res = await API.get('/invoices/cotizaciones/lista')
                     setCotizaciones(res.data.data)
-                  } catch(e) { alert('Error al guardar cotizaciÃ³n') }
+                  } catch(e) { alert('Error al guardar cotización') }
                 }}
-                  className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar CotizaciÃ³n</button>
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar Cotización</button>
                 <button onClick={() => { setShowCotizacion(false); setEditandoCotId(null); setDescuentoPctCot(''); setItemsCot([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}]) }}
                   className="px-4 py-1.5 border rounded text-sm hover:bg-gray-50">Cancelar</button>
               </div>
@@ -3097,7 +3095,7 @@ onKeyDown={e => {
                     <td className="px-4 py-3 flex gap-2">
                       <button onClick={() => handlePDF(c.id)} className="text-blue-600 hover:underline text-xs">PDF</button>
                       <button onClick={async () => {
-                     if (!confirm('Â¿Convertir esta cotizaciÃ³n a factura?')) return
+                     if (!confirm('¿Convertir esta cotización a factura?')) return
                         try {
                           const detCot = await API.get(`/invoices/${c.id}`)
                           const itemsCotz = detCot.data.data.items || []
@@ -3108,18 +3106,18 @@ onKeyDown={e => {
                             const invItem = invList.find(v => v.product_id === it.product_id)
                            const minCot = Math.max(parseFloat(invItem?.stock_minimo || 0), parseFloat(invItem?.prod_stock_minimo || 0))
                             if (invItem && parseFloat(it.cantidad || 0) > parseFloat(invItem.stock_actual || 0)) {
-                              alert(`âš ï¸ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${parseFloat(invItem.stock_actual || 0)}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nSolo puede facturar hasta ${parseFloat(invItem.stock_actual || 0)}.`)
+                              alert(`⚠️ Stock insuficiente para "${it.descripcion}".\n\nDisponible: ${parseFloat(invItem.stock_actual || 0)}\nSolicitado: ${parseFloat(it.cantidad || 0)}\n\nSolo puede facturar hasta ${parseFloat(invItem.stock_actual || 0)}.`)
                               return
                             }
                             if (invItem && minCot > 0 && parseFloat(invItem.stock_actual || 0) <= minCot) {
-                              alert(`âš ï¸ STOCK BAJO: "${it.descripcion}"\n\nQuedan ${parseFloat(invItem.stock_actual || 0)} (mÃ­nimo ${minCot}).\n\nSe convertirÃ¡ a factura, pero considere reabastecer.`)
+                              alert(`⚠️ STOCK BAJO: "${it.descripcion}"\n\nQuedan ${parseFloat(invItem.stock_actual || 0)} (mínimo ${minCot}).\n\nSe convertirá a factura, pero considere reabastecer.`)
                             }
                           }
                           await API.put(`/invoices/cotizacion/${c.id}/convertir`)
                           const res = await API.get('/invoices/cotizaciones/lista')
                           setCotizaciones(res.data.data)
                           fetchData()
-                          alert('Â¡Factura emitida exitosamente!')
+                          alert('¡Factura emitida exitosamente!')
                         } catch(e) { alert('Error al convertir') }
                     }} className="text-green-600 hover:underline text-xs">Convertir a Factura</button>
                       <button onClick={async () => {
@@ -3139,10 +3137,10 @@ onKeyDown={e => {
                           setShowCotizacion(true)
                           setTimeout(() => { const el = document.getElementById('cot-cliente-input'); if (el) el.value = c.cliente_nombre || '' }, 100)
                           window.scrollTo({ top: 0, behavior: 'smooth' })
-                        } catch(e) { alert('Error al cargar la cotizaciÃ³n') }
+                        } catch(e) { alert('Error al cargar la cotización') }
                       }} className="text-orange-600 hover:underline text-xs">Editar</button>
                       <button onClick={async () => {
-                        if (!confirm('Â¿Eliminar esta cotizaciÃ³n?')) return
+                        if (!confirm('¿Eliminar esta cotización?')) return
                         try {
                           await API.put(`/invoices/${c.id}/anular`)
                           const res = await API.get('/invoices/cotizaciones/lista')
@@ -3163,15 +3161,15 @@ onKeyDown={e => {
 
       {tab === 'nota_credito' && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">Nota de CrÃ©dito</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">Nota de Crédito</h3>
           {!showNotaCredito ? (
             <button onClick={() => { setShowNotaCredito(true); setNcFacturaEncontrada(null); setNcItemsSeleccionados([]); setNcMotivo('') }}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 mb-4">
-              + Nueva Nota de CrÃ©dito
+              + Nueva Nota de Crédito
             </button>
           ) : (
             <div className="mb-6 border rounded-lg p-4">
-              <h4 className="font-medium mb-3 text-gray-700">Nueva Nota de CrÃ©dito</h4>
+              <h4 className="font-medium mb-3 text-gray-700">Nueva Nota de Crédito</h4>
               <div className="flex gap-3 items-end mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">NCF de Factura Original</label>
@@ -3199,7 +3197,7 @@ onKeyDown={e => {
                   }
                   const factura = facturas.find(f => (f.ncf||'').toUpperCase() === ncFacturaBuscar.trim())
                   if (!factura) { alert('Factura no encontrada'); return }
-                  if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crÃ©dito a facturas emitidas'); return }
+                  if (factura.estado !== 'emitida') { alert('Solo se puede hacer nota de crédito a facturas emitidas'); return }
            try {
                     const res = await API.get(`/invoices/${factura.id}`)
                     const data = res.data.data
@@ -3227,7 +3225,7 @@ onKeyDown={e => {
                 </button>
                 {ncFacturaEncontrada && (
                   <button onClick={() => setNcItemsSeleccionados(prev => [...prev, { product_id: '', descripcion: '', cantidad: 0, cantidad_nc: 0, precio_unitario: '', itbis_rate: 18, seleccionado: true, manual: true }])}
-                    className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar lÃ­nea</button>
+                    className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
                 )}
               </div>
 
@@ -3243,7 +3241,7 @@ onKeyDown={e => {
                   <table className="w-full text-sm mb-4">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left text-gray-600">âœ“</th>
+                        <th className="px-3 py-2 text-left text-gray-600">✓</th>
                         <th className="px-3 py-2 text-left text-gray-600">Producto</th>
                         <th className="px-3 py-2 text-right text-gray-600">Cant. Orig.</th>
                         <th className="px-3 py-2 text-right text-gray-600">Cant. Devolver</th>
@@ -3260,7 +3258,7 @@ onKeyDown={e => {
                           </td>
                    <td className="px-3 py-2">
                             {item.manual ? (
-                              <input type="text" placeholder="DescripciÃ³n..."
+                              <input type="text" placeholder="Descripción..."
                                 value={item.descripcion}
                                 onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, descripcion: e.target.value} : it))}
                                 className="border rounded px-2 py-1 text-sm w-full" />
@@ -3277,7 +3275,7 @@ onKeyDown={e => {
                                 if (!item.manual && val !== '') {
                                   const maxCant = item.disponible !== undefined ? item.disponible : parseFloat(item.cantidad)
                                   if (parseFloat(val) > maxCant) {
-                                    alert(`âš ï¸ No puede devolver mÃ¡s de ${maxCant.toFixed(0)} (disponible: original ${parseFloat(item.cantidad).toFixed(0)} menos lo devuelto en NC anteriores)`)
+                                    alert(`⚠️ No puede devolver más de ${maxCant.toFixed(0)} (disponible: original ${parseFloat(item.cantidad).toFixed(0)} menos lo devuelto en NC anteriores)`)
                                     val = String(maxCant)
                                   }
                                 }
@@ -3320,7 +3318,7 @@ onKeyDown={e => {
 
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
-                    <input type="text" placeholder="Ej: DevoluciÃ³n de mercancÃ­a..."
+                    <input type="text" placeholder="Ej: Devolución de mercancía..."
                       value={ncMotivo} onChange={e => setNcMotivo(e.target.value)}
                       className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
@@ -3330,9 +3328,9 @@ onKeyDown={e => {
              const itemsNC = ncItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_nc) > 0)
                       if (!itemsNC.length) { alert('Selecciona al menos un producto'); return }
                  const manualIncompleta = itemsNC.find(i => i.manual && (!i.descripcion.trim() || !(parseFloat(i.precio_unitario) > 0)))
-                      if (manualIncompleta) { alert('Las lÃ­neas agregadas deben tener descripciÃ³n y precio'); return }
-                      if (!ncMotivo.trim()) { alert('Ingresa el motivo de la nota de crÃ©dito'); return }
-                      if (!confirm('Â¿Emitir esta Nota de CrÃ©dito?')) return
+                      if (manualIncompleta) { alert('Las líneas agregadas deben tener descripción y precio'); return }
+                      if (!ncMotivo.trim()) { alert('Ingresa el motivo de la nota de crédito'); return }
+                      if (!confirm('¿Emitir esta Nota de Crédito?')) return
                       try {
                        if (ncFacturaEncontrada.es_conduce) {
                           await API.post(`/conduces/${ncFacturaEncontrada.id}/nota-credito`, {
@@ -3349,7 +3347,7 @@ onKeyDown={e => {
                           setNcFacturaEncontrada(null)
                           setNcItemsSeleccionados([])
                           setNcMotivo('')
-                          alert('âœ… Nota de CrÃ©dito de conduce creada correctamente')
+                          alert('✅ Nota de Crédito de conduce creada correctamente')
                           return
                         }
                         const resPost = await API.post('/invoices/nota-credito', {
@@ -3376,10 +3374,10 @@ onKeyDown={e => {
                         setNcGuardadaId(resPost.data.data?.id)
                         setMostrarImprimirNC(true)
                     
-                      } catch(e) { alert(e.response?.data?.mensaje || 'Error al emitir nota de crÃ©dito') }
+                      } catch(e) { alert(e.response?.data?.mensaje || 'Error al emitir nota de crédito') }
                     }}
                       className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">
-                      Emitir Nota de CrÃ©dito
+                      Emitir Nota de Crédito
                     </button>
                     <button onClick={() => setShowNotaCredito(false)}
                       className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
@@ -3393,7 +3391,7 @@ onKeyDown={e => {
             <table className="w-full text-sm mt-4">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-gray-600">NÃºmero NC</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Número NC</th>
                   <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
                   <th className="px-4 py-3 text-right text-gray-600">Total</th>
                   <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
@@ -3423,24 +3421,24 @@ onKeyDown={e => {
             </table>
           )}
           {notasCredito.length === 0 && !showNotaCredito && (
-            <p className="text-gray-400 text-sm text-center py-8">No hay notas de crÃ©dito</p>
+            <p className="text-gray-400 text-sm text-center py-8">No hay notas de crédito</p>
           )}
         </div>
       )}
 
       {tab === 'devoluciones' && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">ðŸ”„ Devoluciones de MercancÃ­a</h3>
-          <p className="text-sm text-gray-500 mb-4">Flujo: AlmacÃ©n registra â†’ Contabilidad aprueba â†’ Se genera Nota de CrÃ©dito</p>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">🔄 Devoluciones de Mercancía</h3>
+          <p className="text-sm text-gray-500 mb-4">Flujo: Almacén registra → Contabilidad aprueba → Se genera Nota de Crédito</p>
 
           {!showDevolucion ? (
             <button onClick={() => { setShowDevolucion(true); setDevFacturaEncontrada(null); setDevItemsSeleccionados([]); setDevMotivo(''); setDevFacturaBuscar('') }}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 mb-4">
-              + Nueva DevoluciÃ³n
+              + Nueva Devolución
             </button>
           ) : (
             <div className="mb-6 border rounded-lg p-4">
-              <h4 className="font-medium mb-3 text-gray-700">Nueva DevoluciÃ³n</h4>
+              <h4 className="font-medium mb-3 text-gray-700">Nueva Devolución</h4>
               <div className="flex gap-3 items-end mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">NCF de Factura Original</label>
@@ -3455,7 +3453,7 @@ onKeyDown={e => {
                   if (busqDev.startsWith('CD-')) {
                     const cdEncDev = conducesVenta.find(cd => (cd.numero||'').toUpperCase() === busqDev)
                     if (!cdEncDev) { alert('Conduce no encontrado: ' + busqDev); return }
-                    if (cdEncDev.facturado) { alert('Este conduce fue convertido en factura. Haga la devoluciÃ³n a la factura.'); return }
+                    if (cdEncDev.facturado) { alert('Este conduce fue convertido en factura. Haga la devolución a la factura.'); return }
                     if (cdEncDev.estado !== 'emitido') { alert('Solo se pueden hacer devoluciones a conduces emitidos'); return }
                     try {
                       const resCdDev = await API.get(`/conduces/${cdEncDev.id}`)
@@ -3496,7 +3494,7 @@ onKeyDown={e => {
                 </button>
                 {devFacturaEncontrada && (
                   <button onClick={() => setDevItemsSeleccionados(prev => [...prev, { product_id: '', descripcion: '', cantidad: 0, cantidad_dev: 0, precio_unitario: '', itbis_rate: 18, seleccionado: true, manual: true }])}
-                    className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar lÃ­nea</button>
+                    className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
                 )}
               </div>
 
@@ -3508,11 +3506,11 @@ onKeyDown={e => {
                     <p><span className="font-medium">Total factura:</span> RD${parseFloat(devFacturaEncontrada.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
                   </div>
 
-                  <p className="text-sm font-medium text-gray-700 mb-2">Selecciona los productos que el cliente estÃ¡ devolviendo:</p>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Selecciona los productos que el cliente está devolviendo:</p>
                   <table className="w-full text-sm mb-4">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left text-gray-600">âœ“</th>
+                        <th className="px-3 py-2 text-left text-gray-600">✓</th>
                         <th className="px-3 py-2 text-left text-gray-600">Producto</th>
                         <th className="px-3 py-2 text-right text-gray-600">Cant. Original</th>
                         <th className="px-3 py-2 text-right text-gray-600">Cant. Devuelta</th>
@@ -3529,7 +3527,7 @@ onKeyDown={e => {
                           </td>
                        <td className="px-3 py-2">
                             {item.manual ? (
-                              <input type="text" placeholder="DescripciÃ³n..."
+                              <input type="text" placeholder="Descripción..."
                                 value={item.descripcion}
                                 onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, descripcion: e.target.value} : it))}
                                 className="border rounded px-2 py-1 text-sm w-full" />
@@ -3546,7 +3544,7 @@ onKeyDown={e => {
                                 if (!item.manual && val !== '') {
                                   const maxCant = item.disponible !== undefined ? item.disponible : parseFloat(item.cantidad)
                                   if (parseFloat(val) > maxCant) {
-                                    alert(`âš ï¸ No puede devolver mÃ¡s de ${maxCant.toFixed(0)} (disponible: original ${parseFloat(item.cantidad).toFixed(0)} menos lo devuelto en devoluciones anteriores)`)
+                                    alert(`⚠️ No puede devolver más de ${maxCant.toFixed(0)} (disponible: original ${parseFloat(item.cantidad).toFixed(0)} menos lo devuelto en devoluciones anteriores)`)
                                     val = String(maxCant)
                                   }
                                 }
@@ -3581,14 +3579,14 @@ onKeyDown={e => {
                         return <>
                           <p className="text-gray-600">Subtotal Dev.: <span className="font-medium">RD${sub.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                           <p className="text-gray-600">ITBIS Dev.: <span className="font-medium">RD${itb.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
-                          <p className="text-lg font-bold text-orange-600">Total DevoluciÃ³n: RD${(sub+itb).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                          <p className="text-lg font-bold text-orange-600">Total Devolución: RD${(sub+itb).toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
                         </>
                       })()}
                     </div>
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de la devoluciÃ³n *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de la devolución *</label>
                     <input type="text" placeholder="Ej: Producto defectuoso, cliente insatisfecho..."
                       value={devMotivo} onChange={e => setDevMotivo(e.target.value)}
                       className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -3599,9 +3597,9 @@ onKeyDown={e => {
                    const itemsDev = devItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_dev) > 0)
                       if (!itemsDev.length) { alert('Selecciona al menos un producto con cantidad mayor a 0'); return }
                       const manualIncompletaDev = itemsDev.find(i => i.manual && (!i.descripcion.trim() || !(parseFloat(i.precio_unitario) > 0)))
-                      if (manualIncompletaDev) { alert('Las lÃ­neas agregadas deben tener descripciÃ³n y precio'); return }
-                      if (!devMotivo.trim()) { alert('Ingresa el motivo de la devoluciÃ³n'); return }
-                      if (!confirm('Â¿Registrar esta devoluciÃ³n? QuedarÃ¡ en estado PENDIENTE esperando aprobaciÃ³n.')) return
+                      if (manualIncompletaDev) { alert('Las líneas agregadas deben tener descripción y precio'); return }
+                      if (!devMotivo.trim()) { alert('Ingresa el motivo de la devolución'); return }
+                      if (!confirm('¿Registrar esta devolución? Quedará en estado PENDIENTE esperando aprobación.')) return
                       let devolucionRegistrada = false
                       let devolucionId = null
                       try {
@@ -3629,19 +3627,19 @@ onKeyDown={e => {
                         setDevMotivo('')
                         const res = await API.get('/devoluciones')
                         setDevoluciones(res.data.data)
-                        alert('âœ… DevoluciÃ³n registrada con estado PENDIENTE')
+                        alert('✅ Devolución registrada con estado PENDIENTE')
                       } catch(e) {
-                        alert('âŒ ' + (e.response?.data?.mensaje || 'Error al registrar devoluciÃ³n'))
+                        alert('❌ ' + (e.response?.data?.mensaje || 'Error al registrar devolución'))
                         return
                       }
 
-                      // ImpresiÃ³n del comprobante (separado del registro para no perder datos si falla el popup)
-                      if (devolucionRegistrada && devolucionId && confirm('Â¿Desea imprimir el comprobante de devoluciÃ³n?')) {
+                      // Impresión del comprobante (separado del registro para no perder datos si falla el popup)
+                      if (devolucionRegistrada && devolucionId && confirm('¿Desea imprimir el comprobante de devolución?')) {
                         try {
                           const resDet = await API.get(`/devoluciones/${devolucionId}`)
                           const dev = resDet.data.data
                           const printW = window.open('', '_blank')
-                          if (!printW) { alert('âš ï¸ El navegador bloqueÃ³ la ventana emergente. Habilita los popups para imprimir.'); return }
+                          if (!printW) { alert('⚠️ El navegador bloqueó la ventana emergente. Habilita los popups para imprimir.'); return }
                           const filas = (dev.items || []).map(it => `
                             <tr>
                               <td>${it.descripcion}</td>
@@ -3650,7 +3648,7 @@ onKeyDown={e => {
                               <td style="text-align:right">RD$${parseFloat(it.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                             </tr>`).join('')
                           printW.document.write(`
-                            <!DOCTYPE html><html><head><title>Comprobante DevoluciÃ³n ${dev.numero}</title>
+                            <!DOCTYPE html><html><head><title>Comprobante Devolución ${dev.numero}</title>
                             <style>
                               @page { size: letter; margin: 0.5in }
                               body{font-family:Arial,sans-serif;padding:20px;color:#1e293b;max-width:8.5in;margin:0 auto}
@@ -3678,7 +3676,7 @@ onKeyDown={e => {
                               @media print{.no-print{display:none}}
                             </style></head><body>
                             <div class="header">
-                              <h1>ðŸ”„ COMPROBANTE DE DEVOLUCIÃ“N</h1>
+                              <h1>🔄 COMPROBANTE DE DEVOLUCIÓN</h1>
                               <div class="numero">${dev.numero}</div>
                             </div>
 
@@ -3690,7 +3688,7 @@ onKeyDown={e => {
                             </div>
 
                             <div class="motivo">
-                              <strong>Motivo de la devoluciÃ³n:</strong><br>
+                              <strong>Motivo de la devolución:</strong><br>
                               ${dev.motivo || 'Sin especificar'}
                             </div>
 
@@ -3708,18 +3706,18 @@ onKeyDown={e => {
                               <div class="totales-box">
                                 <div class="totales-fila"><span>Subtotal:</span><span>RD$${parseFloat(dev.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                                 <div class="totales-fila"><span>ITBIS:</span><span>RD$${parseFloat(dev.itbis).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
-                                <div class="totales-fila total"><span>TOTAL DEVOLUCIÃ“N:</span><span>RD$${parseFloat(dev.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
+                                <div class="totales-fila total"><span>TOTAL DEVOLUCIÓN:</span><span>RD$${parseFloat(dev.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span></div>
                               </div>
                             </div>
 
                             <div class="firmas">
-                              <div class="firma"><div class="linea"></div>ALMACÃ‰N<br>(Recibe mercancÃ­a)</div>
-                              <div class="firma"><div class="linea"></div>CONTABILIDAD<br>(Aprueba devoluciÃ³n)</div>
-                              <div class="firma"><div class="linea"></div>CLIENTE<br>(Entrega mercancÃ­a)</div>
+                              <div class="firma"><div class="linea"></div>ALMACÉN<br>(Recibe mercancía)</div>
+                              <div class="firma"><div class="linea"></div>CONTABILIDAD<br>(Aprueba devolución)</div>
+                              <div class="firma"><div class="linea"></div>CLIENTE<br>(Entrega mercancía)</div>
                             </div>
 
                             <div class="footer">
-                              Este documento NO es una Nota de CrÃ©dito. La NC se emitirÃ¡ tras la aprobaciÃ³n y procesamiento por parte de Contabilidad.<br>
+                              Este documento NO es una Nota de Crédito. La NC se emitirá tras la aprobación y procesamiento por parte de Contabilidad.<br>
                               Impreso el ${new Date().toLocaleString('es-DO')}
                             </div>
 
@@ -3727,12 +3725,12 @@ onKeyDown={e => {
                             </body></html>`)
                           printW.document.close()
                         } catch(e) {
-                          alert('âš ï¸ La devoluciÃ³n se guardÃ³ correctamente pero no se pudo imprimir el comprobante. Puede imprimirlo despuÃ©s desde el botÃ³n Ver.')
+                          alert('⚠️ La devolución se guardó correctamente pero no se pudo imprimir el comprobante. Puede imprimirlo después desde el botón Ver.')
                         }
                       }
                     }}
                       className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                      Registrar DevoluciÃ³n
+                      Registrar Devolución
                     </button>
                     <button onClick={() => setShowDevolucion(false)}
                       className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
@@ -3767,7 +3765,7 @@ onKeyDown={e => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-3 text-left text-gray-600">NÃºmero</th>
+                    <th className="px-3 py-3 text-left text-gray-600">Número</th>
                     <th className="px-3 py-3 text-left text-gray-600">NCF Factura</th>
                     <th className="px-3 py-3 text-left text-gray-600">Cliente</th>
                     <th className="px-3 py-3 text-right text-gray-600">Total</th>
@@ -3804,48 +3802,48 @@ onKeyDown={e => {
                           {d.estado === 'pendiente' && (
                             <>
                               <button onClick={async () => {
-                                if (!confirm('Â¿Aprobar devoluciÃ³n? Los productos regresarÃ¡n al inventario.')) return
+                                if (!confirm('¿Aprobar devolución? Los productos regresarán al inventario.')) return
                                 try {
                                   await API.put(`/devoluciones/${d.id}/aprobar`, {})
                                   const res = await API.get('/devoluciones')
                                   setDevoluciones(res.data.data)
-                                  alert('âœ… DevoluciÃ³n aprobada. Inventario actualizado.')
-                                } catch(e) { alert('âŒ ' + (e.response?.data?.mensaje || 'Error')) }
+                                  alert('✅ Devolución aprobada. Inventario actualizado.')
+                                } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
                               }} className="text-green-600 hover:underline text-xs font-medium">Aprobar</button>
                               <button onClick={async () => {
-                                if (!confirm('Â¿Cancelar esta devoluciÃ³n?')) return
+                                if (!confirm('¿Cancelar esta devolución?')) return
                                 try {
                                   await API.put(`/devoluciones/${d.id}/cancelar`, {})
                                   const res = await API.get('/devoluciones')
                                   setDevoluciones(res.data.data)
-                                } catch(e) { alert('âŒ ' + (e.response?.data?.mensaje || 'Error')) }
+                                } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
                               }} className="text-red-500 hover:underline text-xs">Cancelar</button>
                             </>
                           )}
                           {d.estado === 'aprobada' && (
                             <>
                               <button onClick={async () => {
-                                if (!confirm('Â¿Procesar devoluciÃ³n? Se generarÃ¡ la Nota de CrÃ©dito automÃ¡ticamente.')) return
+                                if (!confirm('¿Procesar devolución? Se generará la Nota de Crédito automáticamente.')) return
                                 try {
                                   const res = await API.put(`/devoluciones/${d.id}/procesar`, {})
                                   const resLista = await API.get('/devoluciones')
                                   setDevoluciones(resLista.data.data)
                                   const resNC = await API.get('/invoices/nota-credito/lista')
                                   setNotasCredito(resNC.data.data)
-                                  alert(`âœ… NC generada: ${res.data.data?.ncf || res.data.data?.numero || res.data.mensaje || ''}`)
+                                  alert(`✅ NC generada: ${res.data.data?.ncf || res.data.data?.numero || res.data.mensaje || ''}`)
                               if (res.data.data?.numero && String(res.data.data.numero).startsWith('NCC')) {
                                     setNccGuardadaId(res.data.data.id)
                                     setMostrarImprimirNcc(true)
                                   }
-                                } catch(e) { alert('âŒ ' + (e.response?.data?.mensaje || 'Error')) }
-                              }} className="text-blue-600 hover:underline text-xs font-medium">Procesar â†’ NC</button>
+                                } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
+                              }} className="text-blue-600 hover:underline text-xs font-medium">Procesar → NC</button>
                               <button onClick={async () => {
-                                if (!confirm('Â¿Cancelar esta devoluciÃ³n? El inventario se revertirÃ¡.')) return
+                                if (!confirm('¿Cancelar esta devolución? El inventario se revertirá.')) return
                                 try {
                                   await API.put(`/devoluciones/${d.id}/cancelar`, {})
                                   const res = await API.get('/devoluciones')
                                   setDevoluciones(res.data.data)
-                                } catch(e) { alert('âŒ ' + (e.response?.data?.mensaje || 'Error')) }
+                                } catch(e) { alert('❌ ' + (e.response?.data?.mensaje || 'Error')) }
                               }} className="text-red-500 hover:underline text-xs">Cancelar</button>
                             </>
                           )}
@@ -3862,16 +3860,16 @@ onKeyDown={e => {
             )
           })()}
 
-          {/* Modal detalle devoluciÃ³n */}
+          {/* Modal detalle devolución */}
           {devDetalle && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">Detalle DevoluciÃ³n {devDetalle.numero}</h3>
+                    <h3 className="text-lg font-semibold text-gray-800">Detalle Devolución {devDetalle.numero}</h3>
                     <p className="text-sm text-gray-500">Estado: <span className="font-medium">{devDetalle.estado.toUpperCase()}</span></p>
                   </div>
-                  <button onClick={() => setDevDetalle(null)} className="text-gray-400 hover:text-gray-700 text-2xl">Ã—</button>
+                  <button onClick={() => setDevDetalle(null)} className="text-gray-400 hover:text-gray-700 text-2xl">×</button>
                 </div>
                 <div className="bg-gray-50 rounded p-3 mb-4 text-sm space-y-1">
                   <p><span className="text-gray-500">Cliente:</span> <span className="font-medium">{devDetalle.cliente_nombre || 'Consumidor Final'}</span></p>
@@ -3919,10 +3917,10 @@ onKeyDown={e => {
                         <td style="text-align:right">RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                         <td style="text-align:right">RD$${parseFloat(it.subtotal).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                       </tr>`).join('')
-                    const empresa = sessionStorage.getItem('tenant_name') || 'Sistema de FacturaciÃ³n'
+                    const empresa = sessionStorage.getItem('tenant_name') || 'Sistema de Facturación'
                     const w = window.open('', '_blank')
                     w.document.write(`
-                      <!DOCTYPE html><html><head><meta charset="UTF-8"><title>DevoluciÃ³n ${d.numero}</title>
+                      <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Devolución ${d.numero}</title>
                       <style>
                         body{font-family:Arial,sans-serif;padding:30px;color:#1e293b;max-width:700px;margin:0 auto}
                         .header{text-align:center;border-bottom:2px solid #ea580c;padding-bottom:12px;margin-bottom:16px}
@@ -3939,7 +3937,7 @@ onKeyDown={e => {
                       </style></head><body>
                       <div class="header">
                         <div class="empresa">${empresa}</div>
-                        <div class="titulo">NOTA DE DEVOLUCIÃ“N ${d.numero}</div>
+                        <div class="titulo">NOTA DE DEVOLUCIÓN ${d.numero}</div>
                         <div class="titulo">Estado: ${d.estado.toUpperCase()}</div>
                       </div>
                       <div class="info">
@@ -3963,7 +3961,7 @@ onKeyDown={e => {
                     w.document.close()
                   }}
                     className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800">
-                    ðŸ–¨ï¸ Imprimir
+                    🖨️ Imprimir
                   </button>
                 </div>
               </div>
@@ -3974,16 +3972,16 @@ onKeyDown={e => {
 
       {tab !== 'fecha' && tab !== 'zona' && tab !== 'vendedor' && tab !== 'producto' && tab !== 'cliente' && tab !== 'chofer' && tab !== 'relacion_vendedor' && tab !== 'cotizacion' && tab !== 'nota_credito' && tab !== 'pedidos' && tab !== 'devoluciones' && (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
-          <p className="text-lg">MÃ³dulo en desarrollo...</p>
-          <p className="text-sm mt-2">PrÃ³ximamente disponible</p>
+          <p className="text-lg">Módulo en desarrollo...</p>
+          <p className="text-sm mt-2">Próximamente disponible</p>
         </div>
       )}
 
-      {/* Modal imprimir Nota de CrÃ©dito */}
+      {/* Modal imprimir Nota de Crédito */}
       {mostrarImprimirNC && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
-            <p className="text-lg font-semibold text-gray-800 mb-6">Â¿Desea imprimir la Nota de CrÃ©dito?</p>
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la Nota de Crédito?</p>
             <div className="flex justify-center gap-6">
    <button
                 autoFocus
@@ -4002,7 +4000,7 @@ onKeyDown={e => {
                   if (e.key === 'Enter') { const token = sessionStorage.getItem('token'); const formato = localStorage.getItem('formato_impresion') || 'media'; let endpoint = '/pdf'; if (formato === 'pos') endpoint = '/pdf-pos'; else if (formato === 'carta') endpoint = '/pdf-carta'; window.open(`/invoices/${ncGuardadaId}${endpoint}?token=${token}`, '_blank'); setMostrarImprimirNC(false) }
                 }}
                 className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 text-sm font-medium">
-                SÃ­
+                Sí
               </button>
           <button
                 id="btn-no-nc"
@@ -4023,7 +4021,7 @@ onKeyDown={e => {
       {mostrarImprimir && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
-            <p className="text-lg font-semibold text-gray-800 mb-6">Â¿Desea imprimir la factura?</p>
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la factura?</p>
             <div className="flex justify-center gap-6">
          
       {modoPOS && (
@@ -4034,7 +4032,7 @@ onKeyDown={e => {
                     imprimirHojaCompleta(facturaGuardadaId)
                     setMostrarImprimir(false)
                   }}>
-                  ðŸ“„ Hoja completa
+                  📄 Hoja completa
                 </button>
               )}
          <button
@@ -4059,7 +4057,7 @@ onKeyDown={e => {
                  if (e.key === 'Enter') { if (modoPOS) { imprimirTicketRawBT(facturaGuardadaId); setMostrarImprimir(false); return } const token = sessionStorage.getItem('token'); const formato = localStorage.getItem('formato_impresion') || 'media'; let endpoint = '/pdf'; if (formato === 'pos') endpoint = '/pdf-pos'; else if (formato === 'carta') endpoint = '/pdf-carta'; window.open(`/invoices/${facturaGuardadaId}${endpoint}?token=${token}`, '_blank'); setMostrarImprimir(false) }
                 }}
              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
-                {modoPOS ? 'ðŸ–¨ï¸ Ticket' : 'SÃ­'}
+                {modoPOS ? '🖨️ Ticket' : 'Sí'}
               </button>
          <button
                 id="btn-no-imprimir"
@@ -4076,13 +4074,13 @@ onKeyDown={e => {
         </div>
       )}
 
-      {/* Modal autorizaciÃ³n descuento */}
+      {/* Modal autorización descuento */}
       {mostrarAutorizacion && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">âš ï¸ AutorizaciÃ³n Requerida</h3>
-              <p className="text-sm text-gray-600 mt-1">Los siguientes productos tienen un precio MENOR al oficial. Se requiere clave de autorizaciÃ³n.</p>
+              <h3 className="text-lg font-bold text-red-600 flex items-center gap-2">⚠️ Autorización Requerida</h3>
+              <p className="text-sm text-gray-600 mt-1">Los siguientes productos tienen un precio MENOR al oficial. Se requiere clave de autorización.</p>
             </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 max-h-48 overflow-y-auto">
@@ -4112,7 +4110,7 @@ onKeyDown={e => {
             )}
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">ðŸ” Clave de AutorizaciÃ³n</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">🔐 Clave de Autorización</label>
               <input type="password"
                 value={claveAutorizacion}
                 onChange={e => setClaveAutorizacion(e.target.value)}
@@ -4132,7 +4130,7 @@ onKeyDown={e => {
                 className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
               <button onClick={handleValidarClave}
                 className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 font-medium">
-                âœ“ Validar y Guardar
+                ✓ Validar y Guardar
               </button>
             </div>
           </div>
@@ -4144,13 +4142,13 @@ onKeyDown={e => {
        {mostrarImprimirNcc && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-96">
-            <p className="text-lg font-semibold text-gray-800 mb-6">Â¿Desea imprimir la Nota de CrÃ©dito del conduce?</p>
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la Nota de Crédito del conduce?</p>
             <div className="flex justify-center gap-6">
               <button autoFocus id="btn-si-imprimir-ncc"
                 onClick={() => { setMostrarImprimirNcc(false); const tokenNcc = sessionStorage.getItem('token'); window.open(`/conduces/nc/${nccGuardadaId}/pdf?token=${tokenNcc}`, '_blank') }}
                 onKeyDown={e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('btn-no-imprimir-ncc')?.focus() } }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
-                SÃ­
+                Sí
               </button>
               <button id="btn-no-imprimir-ncc" onClick={() => setMostrarImprimirNcc(false)}
                 onKeyDown={e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-si-imprimir-ncc')?.focus() } }}
@@ -4165,7 +4163,7 @@ onKeyDown={e => {
       {mostrarConfirmar && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
-            <p className="text-lg font-semibold text-gray-800 mb-6">Â¿Desear Grabar Esta Factura?</p>
+            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desear Grabar Esta Factura?</p>
             <div className="flex justify-center gap-6">
 <button
                 autoFocus
@@ -4176,7 +4174,7 @@ onKeyDown={e => {
                   if (e.key === 'Enter') handleConfirmarSi()
                 }}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium">
-                SÃ­
+                Sí
               </button>
           <button
                 id="btn-volver"
@@ -4277,12 +4275,12 @@ onKeyDown={e => {
                 {/* Info del cliente seleccionado */}
                 {clienteSeleccionado && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="font-medium text-gray-600">RNC/CÃ©dula:</span> {clienteSeleccionado.rnc_cedula || '-'}</div>
-                    <div><span className="font-medium text-gray-600">TelÃ©fono:</span> {clienteSeleccionado.telefono || '-'}</div>
+                    <div><span className="font-medium text-gray-600">RNC/Cédula:</span> {clienteSeleccionado.rnc_cedula || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Teléfono:</span> {clienteSeleccionado.telefono || '-'}</div>
                     <div><span className="font-medium text-gray-600">Negocio:</span> {clienteSeleccionado.email || '-'}</div>
                     <div><span className="font-medium text-gray-600">Tipo:</span> {clienteSeleccionado.tipo?.replace(/_/g, ' ') || '-'}</div>
                     <div><span className="font-medium text-gray-600">Condiciones:</span> {clienteSeleccionado.condiciones?.replace(/_/g, ' ') || '-'}</div>
-                    <div><span className="font-medium text-gray-600">DirecciÃ³n:</span> {clienteSeleccionado.direccion || '-'}</div>
+                    <div><span className="font-medium text-gray-600">Dirección:</span> {clienteSeleccionado.direccion || '-'}</div>
                     <div><span className="font-medium text-gray-600">Vendedor:</span> {vendedores.find(v => v.id === clienteSeleccionado.vendedor_id)?.nombre || '-'}</div>
                     <div><span className="font-medium text-gray-600">Zona:</span> {zonas.find(z => z.id === clienteSeleccionado.zona_id)?.nombre || '-'}</div>
                   </div>
@@ -4291,7 +4289,7 @@ onKeyDown={e => {
                 <div className="hidden">
                   <select name="ncf_tipo" value={form.ncf_tipo} onChange={handleFormChange}>
                     <option value="B01">B01 - Consumidor Final</option>
-                    <option value="B14">B14 - RÃ©gimen Especial</option>
+                    <option value="B14">B14 - Régimen Especial</option>
                     <option value="B15">B15 - Gubernamental</option>
                   </select>
                   <input type="date" name="fecha_vencimiento" value={form.fecha_vencimiento} onChange={handleFormChange} />
@@ -4313,14 +4311,14 @@ onKeyDown={e => {
                             <div className="pos-ticket-desc">{it.descripcion}</div>
                             <button type="button" className="pos-ticket-eliminar"
                               onClick={() => {
-                                if (!confirm('Â¿Eliminar "' + it.descripcion + '" del ticket?')) return
+                                if (!confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
                                 if (items.length > 1) {
                                   eliminarItem(i)
                                 } else {
                                   setItems([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
                                   setBuscarProducto({})
                                 }
-                              }}>âœ•</button>
+                              }}>✕</button>
                           </div>
                        <div className="pos-ticket-detalle">
                             <span>
@@ -4335,7 +4333,7 @@ onKeyDown={e => {
                       ) : null
                     ))}
                     {items.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
-                      <div className="pos-ticket-vacio">Agregue artÃ­culos abajo</div>
+                      <div className="pos-ticket-vacio">Agregue artículos abajo</div>
                     )}
                     <div className="pos-ticket-divider"></div>
                     <div className="pos-ticket-tot"><span>SUBTOTAL</span><span>{subtotal.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
@@ -4353,7 +4351,7 @@ onKeyDown={e => {
                       <div className="col-span-3 relative">
                         <input
                           type="text"
-                          placeholder="ðŸ” Buscar Articulos..."
+                          placeholder="🔍 Buscar Articulos..."
                           ref={el => { buscarProductoRefs.current[index] = el; if (index === 0) buscarProductoRef.current = el }}
                           value={buscarProducto[index] || ''}
                           onChange={e => {
@@ -4375,15 +4373,12 @@ onKeyDown={e => {
                            const idx = productoIndex[index] ?? -1
                               if (idx >= 0 && filtrados[idx]) {
                                 const p = filtrados[idx]
-                       const padreP = p.articulo_padre_id ? productos.find(x => x.id === p.articulo_padre_id) : null
-                                    const factorP = parseFloat(p.factor_empaque || 1) || 1
-                                    const stockP = padreP ? Math.floor(parseFloat(padreP.stock_actual || 0) / factorP) : parseFloat(p.stock_actual || 0)
-                                    if (usuarioSesion?.features?.stock_negativo !== true && stockP <= 0) {
-                                  alert(`âš ï¸ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
+                        if (usuarioSesion?.features?.stock_negativo !== true && parseFloat(p.stock_actual || 0) <= 0) {
+                                  alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
                                   return
                                 }
-                                if (parseFloat(p.stock_minimo || 0) > 0 && stockP <= parseFloat(p.stock_minimo || 0)) {
-                                  alert(`⚠️ STOCK BAJO: "${p.nombre}"\n\nQuedan ${stockP} (mínimo ${parseFloat(p.stock_minimo || 0)}).\n\nSe agregará a la factura, pero considere reabastecer.`)
+                                if (parseFloat(p.stock_minimo || 0) > 0 && parseFloat(p.stock_actual || 0) <= parseFloat(p.stock_minimo || 0)) {
+                                  alert(`⚠️ STOCK BAJO: "${p.nombre}"\n\nQuedan ${parseFloat(p.stock_actual || 0)} (mínimo ${parseFloat(p.stock_minimo || 0)}).\n\nSe agregará a la factura, pero considere reabastecer.`)
                                 }
                             const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
                                 if (yaExisteIdx !== -1) {
@@ -4422,15 +4417,12 @@ onKeyDown={e => {
                                   className={`px-3 py-2 text-sm cursor-pointer ${(productoIndex[index] ?? -1) === productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                                   onMouseEnter={() => setProductoIndex(prev => ({...prev, [index]: productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p)}))}
                     onMouseDown={() => {
-                                    const padreP2 = p.articulo_padre_id ? productos.find(x => x.id === p.articulo_padre_id) : null
-                                    const factorP2 = parseFloat(p.factor_empaque || 1) || 1
-                                    const stockP2 = padreP2 ? Math.floor(parseFloat(padreP2.stock_actual || 0) / factorP2) : parseFloat(p.stock_actual || 0)
-                                    if (usuarioSesion?.features?.stock_negativo !== true && stockP2 <= 0) {
-                                      alert(`âš ï¸ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
+                               if (usuarioSesion?.features?.stock_negativo !== true && parseFloat(p.stock_actual || 0) <= 0) {
+                                      alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar a la factura.`)
                                       return
                                     }
-                                    if (parseFloat(p.stock_minimo || 0) > 0 && stockP2 <= parseFloat(p.stock_minimo || 0)) {
-                                      alert(`⚠️ STOCK BAJO: "${p.nombre}"\n\nQuedan ${stockP2} (mínimo ${parseFloat(p.stock_minimo || 0)}).\n\nSe agregará a la factura, pero considere reabastecer.`)
+                                    if (parseFloat(p.stock_minimo || 0) > 0 && parseFloat(p.stock_actual || 0) <= parseFloat(p.stock_minimo || 0)) {
+                                      alert(`⚠️ STOCK BAJO: "${p.nombre}"\n\nQuedan ${parseFloat(p.stock_actual || 0)} (mínimo ${parseFloat(p.stock_minimo || 0)}).\n\nSe agregará a la factura, pero considere reabastecer.`)
                                     }
                                     const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
                                     if (yaExisteIdx !== -1) {
@@ -4451,14 +4443,14 @@ onKeyDown={e => {
                                       }, 150)
                                     }
                                   }}>
-                                  {p.nombre} â€” RD${parseFloat(p.precio).toLocaleString()}
+                                  {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
                                 </div>
                               ))}
                           </div>
                         )}
                       </div>
                       <div className="col-span-3">
-                       <input name="descripcion" placeholder="DescripciÃ³n" value={item.descripcion} onChange={(e) => handleItemChange(index, e)}
+                       <input name="descripcion" placeholder="Descripción" value={item.descripcion} onChange={(e) => handleItemChange(index, e)}
                           readOnly={!!item.product_id}
                           className={`w-full border rounded px-2 py-1.5 text-sm ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`} />
                       </div>
@@ -4494,7 +4486,7 @@ onKeyDown={e => {
                       <div className="col-span-1 flex items-center justify-center">
                         {items.length > 1 && (
                           <button type="button" onClick={() => eliminarItem(index)}
-                            className="text-red-500 hover:text-red-700 text-lg">Ã—</button>
+                            className="text-red-500 hover:text-red-700 text-lg">×</button>
                         )}
                       </div>
                     </div>
@@ -4508,7 +4500,7 @@ onKeyDown={e => {
                         if (e.key === 'ArrowRight') { e.preventDefault(); guardarRef.current?.focus() }
                         if (e.key === 'Enter') { e.preventDefault(); agregarItem(); setTimeout(() => { const nextIndex = items.length; buscarProductoRefs.current[nextIndex]?.focus() }, 150) }
                       }}
-                      className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar lÃ­nea</button>
+                      className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
                     <button type="submit" ref={guardarRef}
                       onKeyDown={e => {
                         if (e.key === 'ArrowLeft') { e.preventDefault(); agregarLineaRef.current?.focus() }
@@ -4519,7 +4511,7 @@ onKeyDown={e => {
            </div>
                 </div>
 
-                {/* Ticket POS en vivo â€” solo tenants con feature responsive (casa reyes) */}
+                {/* Ticket POS en vivo — solo tenants con feature responsive (casa reyes) */}
                 {modoPOS && (
                   <div className="pos-ticket">
                     <div className="pos-ticket-empresa">{usuarioSesion.empresa || ''}</div>
@@ -4536,19 +4528,19 @@ onKeyDown={e => {
                             <div className="pos-ticket-desc">{it.descripcion}</div>
                             <button type="button" className="pos-ticket-eliminar"
                               onClick={() => {
-                                if (!confirm('Â¿Eliminar "' + it.descripcion + '" del ticket?')) return
+                                if (!confirm('¿Eliminar "' + it.descripcion + '" del ticket?')) return
                                 if (items.length > 1) {
                                   eliminarItem(i)
                                 } else {
                                   setItems([{ descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18, product_id: '' }])
                                   setBuscarProducto({})
                                 }
-                              }}>âœ•</button>
+                              }}>✕</button>
                           </div>
                           <div className="pos-ticket-detalle">
                             <span>
                         <button type="button" className="pos-ticket-mas-menos"
-                                onClick={() => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: Math.max(1, (parseFloat(x.cantidad) || 1) - 1).toFixed(2) } : x))}>âˆ’</button>
+                                onClick={() => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: Math.max(1, (parseFloat(x.cantidad) || 1) - 1).toFixed(2) } : x))}>−</button>
                              <input type="text" inputMode="decimal" value={it.cantidad}
                                 onChange={e => setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: e.target.value } : x))}
                                 onBlur={e => { const v = parseFloat(e.target.value); setItems(prev => prev.map((x, xi) => xi === i ? { ...x, cantidad: isNaN(v) || v <= 0 ? '1.00' : v.toFixed(2) } : x)) }}
@@ -4566,7 +4558,7 @@ onKeyDown={e => {
                       ) : null
                     ))}
                     {items.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
-                      <div className="pos-ticket-vacio">Agregue artÃ­culos arriba</div>
+                      <div className="pos-ticket-vacio">Agregue artículos arriba</div>
                     )}
                     <div className="pos-ticket-divider"></div>
                     <div className="pos-ticket-tot"><span>SUBTOTAL</span><span>{subtotal.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span></div>
@@ -4683,7 +4675,7 @@ onKeyDown={e => {
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                      <td className="px-4 py-3">{parseFloat(f.nc_aplicada) > 0 ? (<span className="text-xs font-medium text-gray-800">Fact: {parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})} âˆ’ NC# {f.nc_numeros || ''}: {parseFloat(f.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}</td>
+                      <td className="px-4 py-3">{parseFloat(f.nc_aplicada) > 0 ? (<span className="text-xs font-medium text-gray-800">Fact: {parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {f.nc_numeros || ''}: {parseFloat(f.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>
                           {f.estado.toUpperCase()}
