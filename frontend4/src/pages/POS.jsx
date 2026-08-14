@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import API from '../services/api'
 
 // ============ HELPERS DE INDEXEDDB (MODO OFFLINE) ============
@@ -1031,7 +1031,9 @@ const abrirCierre = async () => {
 
   // Agregar producto al ticket
 const agregarAlTicket = (producto) => {
-    const stockDisp = parseFloat(producto.stock_actual || 0)
+    const padrePOS = producto.articulo_padre_id ? productos.find(x => x.id === producto.articulo_padre_id) : null
+    const factorPOS = parseFloat(producto.factor_empaque || 1) || 1
+    const stockDisp = padrePOS ? Math.floor(parseFloat(padrePOS.stock_actual || 0) / factorPOS) : parseFloat(producto.stock_actual || 0)
     if (stockDisp <= 0) {
       alert(`SIN EXISTENCIA\n\n"${producto.nombre}" no tiene stock disponible.\n\nStock actual: ${stockDisp}`)
       setBusqueda('')
