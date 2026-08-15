@@ -5,6 +5,7 @@ import { listarDispositivos, imprimirEnDispositivo } from '../utils/bluetoothPri
 export default function Pagos() {
   const [pagos, setPagos] = useState([])
   const [facturas, setFacturas] = useState([])
+  const [todasFacturas, setTodasFacturas] = useState([])
   const [notasCredito, setNotasCredito] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -44,6 +45,7 @@ export default function Pagos() {
         .filter(x => x.estado === 'emitido')
         .map(x => ({ id: x.id, ncf: x.numero, cliente_nombre: x.cliente_nombre, total: x.total, estado: 'emitida', es_conduce: true }))
    setFacturas([...f.data.data.filter(f => f.estado === 'emitida'), ...conducesPago])
+      setTodasFacturas([...(f.data.data || []), ...(cd.data.data || []).map(x => ({ ncf: x.numero, estado: x.estado === 'anulado' ? 'anulada' : (x.estado === 'emitido' ? 'emitida' : 'pagada') }))])
       let ncConducesPago = []
       try {
         const ncCd = await API.get('/conduces/nc/lista')
@@ -318,7 +320,13 @@ id="btn-si-recibo-pago"
                       e.preventDefault()
                       const val = e.target.value.trim().toUpperCase()
                       const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
-                      if (!factura) { setError('Factura no encontrada: ' + val); return }
+                      if (!factura) {
+                        const otra = todasFacturas.find(f => (f.ncf || '').toUpperCase() === val)
+                        if (otra && otra.estado === 'pagada') setError('Esta factura ya esta saldada: ' + val)
+                        else if (otra && otra.estado === 'anulada') setError('Esta factura esta anulada: ' + val)
+                        else setError('Factura no encontrada: ' + val)
+                        return
+                      }
                       setError('')
                 const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                       const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
@@ -334,7 +342,13 @@ id="btn-si-recibo-pago"
                   onClick={() => {
                     const val = document.getElementById('pago-ncf-input').value.trim().toUpperCase()
                     const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
-                    if (!factura) { setError('Factura no encontrada: ' + val); return }
+                    if (!factura) {
+                      const otra2 = todasFacturas.find(f => (f.ncf || '').toUpperCase() === val)
+                      if (otra2 && otra2.estado === 'pagada') setError('Esta factura ya esta saldada: ' + val)
+                      else if (otra2 && otra2.estado === 'anulada') setError('Esta factura esta anulada: ' + val)
+                      else setError('Factura no encontrada: ' + val)
+                      return
+                    }
                     setError('')
               const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                     const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
