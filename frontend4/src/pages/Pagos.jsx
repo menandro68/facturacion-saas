@@ -6,6 +6,7 @@ export default function Pagos() {
   const [pagos, setPagos] = useState([])
   const [facturas, setFacturas] = useState([])
   const [todasFacturas, setTodasFacturas] = useState([])
+  const [esReimpresion, setEsReimpresion] = useState(false)
   const [notasCredito, setNotasCredito] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -171,6 +172,7 @@ if (total <= 0) {
             cliente: facturaSeleccionada?.cliente_nombre || 'Consumidor Final',
             totalFactura: saldoRestante > 0 ? saldoRestante : totalOriginal
           })
+          setEsReimpresion(false)
         setMostrarImprimirPago(true)
       }
     } catch (err) {
@@ -219,6 +221,7 @@ if (total <= 0) {
                       sep,
                       pad(empresa.toUpperCase(), W, 'center'),
                       pad('RECIBO DE PAGO', W, 'center'),
+                      esReimpresion ? pad('** REIMPRESO **', W, 'center') : '',
                       sep,
                       '',
                       `FECHA    : ${fecha}   ${hora}`,
@@ -320,6 +323,10 @@ id="btn-si-recibo-pago"
                       e.preventDefault()
                       const val = e.target.value.trim().toUpperCase()
                       const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
+                     if (factura && String(factura.notas || '').startsWith('POS - Pago:')) {
+                        setError('Esta factura fue cobrada en el Punto de Venta. No admite pagos: ' + val)
+                        return
+                      }
                       if (!factura) {
                         const otra = todasFacturas.find(f => (f.ncf || '').toUpperCase() === val)
                         if (otra && otra.estado === 'pagada') setError('Esta factura ya esta saldada: ' + val)
@@ -342,6 +349,10 @@ id="btn-si-recibo-pago"
                   onClick={() => {
                     const val = document.getElementById('pago-ncf-input').value.trim().toUpperCase()
                     const factura = facturas.find(f => (f.ncf || '').toUpperCase() === val)
+                    if (factura && String(factura.notas || '').startsWith('POS - Pago:')) {
+                      setError('Esta factura fue cobrada en el Punto de Venta. No admite pagos: ' + val)
+                      return
+                    }
                     if (!factura) {
                       const otra2 = todasFacturas.find(f => (f.ncf || '').toUpperCase() === val)
                       if (otra2 && otra2.estado === 'pagada') setError('Esta factura ya esta saldada: ' + val)
@@ -623,9 +634,10 @@ id="btn-si-recibo-pago"
                         cliente: p.cliente_nombre || 'Consumidor Final',
                         totalFactura: p.monto
                       })
-                      setPagoGuardadoId(p.id)
+                  setPagoGuardadoId(p.id)
+                      setEsReimpresion(true)
                       setMostrarImprimirPago(true)
-                    }} className="text-blue-600 hover:underline text-xs">Imprimir</button>
+                    }} className="text-blue-600 hover:underline text-xs">Reimprimir</button>
                   </td>
                   <td className="px-4 py-3">{new Date(p.creado_en).toLocaleDateString()}</td>
                 </tr>

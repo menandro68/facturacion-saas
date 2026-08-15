@@ -163,12 +163,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
    <div className="p-3 sm:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
         <h2 className="text-xl font-bold text-gray-800">Cuentas por Cobrar</h2>
-        {vendedor_id && (
-          <button onClick={() => setTab('cobro_vendedor')}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm flex items-center gap-2">
-            ← Volver
-          </button>
-        )}
+     
         {!vendedor_id && <button onClick={() => {
           const hoy = new Date()
           const emitidas = todasFacturas.filter(f => f.estado === 'emitida')
