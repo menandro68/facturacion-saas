@@ -11,6 +11,8 @@ export default function Productos() {
     codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '',
     articulo_padre_id: '', factor_empaque: '1', nivel_empaque: ''
   })
+  const [buscarPadre, setBuscarPadre] = useState('')
+  const [mostrarPadres, setMostrarPadres] = useState(false)
   const [error, setError] = useState('')
   const [proveedoresList, setProveedoresList] = useState([])
 
@@ -203,13 +205,30 @@ const handleSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Artículo principal</label>
-                  <select name="articulo_padre_id" value={form.articulo_padre_id || ''} onChange={handleChange}
-                    className="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                    <option value="">— Es artículo principal —</option>
-                    {productos.filter(p => p.id !== editando && !p.articulo_padre_id).map(p => (
-                      <option key={p.id} value={p.id}>{p.nombre}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <input type="text" autoComplete="off"
+                      value={form.articulo_padre_id ? (productos.find(p => p.id === form.articulo_padre_id)?.nombre || '') : buscarPadre}
+                      onChange={(e) => { setBuscarPadre(e.target.value); setMostrarPadres(true); if (form.articulo_padre_id) setForm(prev => ({ ...prev, articulo_padre_id: '' })) }}
+                      onFocus={() => setMostrarPadres(true)}
+                      onBlur={() => setTimeout(() => setMostrarPadres(false), 200)}
+                      placeholder="Es artículo principal (escriba para buscar)"
+                      className="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    {form.articulo_padre_id && (
+                      <button type="button" onMouseDown={() => { setForm(prev => ({ ...prev, articulo_padre_id: '', nivel_empaque: '', factor_empaque: '1' })); setBuscarPadre('') }}
+                        className="absolute right-2 top-2 text-gray-400 hover:text-red-600 text-sm font-bold">✕</button>
+                    )}
+                    {mostrarPadres && !form.articulo_padre_id && (
+                      <div className="absolute z-20 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto mt-1">
+                        {productos.filter(p => p.id !== editando && !p.articulo_padre_id && p.nombre.toLowerCase().includes(buscarPadre.toLowerCase())).slice(0, 50).map(p => (
+                          <div key={p.id} onMouseDown={() => { setForm(prev => ({ ...prev, articulo_padre_id: p.id })); setBuscarPadre(''); setMostrarPadres(false) }}
+                            className="px-3 py-2 text-sm cursor-pointer hover:bg-purple-50 border-b last:border-b-0">{p.nombre}</div>
+                        ))}
+                        {productos.filter(p => p.id !== editando && !p.articulo_padre_id && p.nombre.toLowerCase().includes(buscarPadre.toLowerCase())).length === 0 && (
+                          <div className="px-3 py-2 text-sm text-gray-400">Sin resultados</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Nombre del nivel</label>

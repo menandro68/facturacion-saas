@@ -183,10 +183,55 @@ function POS() {
   const tieneRnc = clienteSeleccionado && clienteSeleccionado.rnc_cedula && String(clienteSeleccionado.rnc_cedula).trim() !== ''
   const ncfTipo = tieneRnc ? 'B01' : 'B02'
 
-  // Reloj en vivo
+// Reloj en vivo
   useEffect(() => {
     const timer = setInterval(() => setHoraActual(new Date()), 1000)
     return () => clearInterval(timer)
+  }, [])
+
+  // ESCANER GLOBAL: captura la rafaga del lector sin importar donde este el cursor
+  useEffect(() => {
+    let buffer = ''
+    let ultimaTecla = 0
+    const UMBRAL_MS = 50
+
+    const onKeyDown = (e) => {
+      const activo = document.activeElement
+      if (activo === inputRef.current) return
+      if (e.ctrlKey || e.altKey || e.metaKey) return
+      if (activo && (activo.tagName === 'TEXTAREA' || activo.tagName === 'SELECT')) return
+
+      const ahora = Date.now()
+      const delta = ahora - ultimaTecla
+      ultimaTecla = ahora
+
+      if (e.key === 'Enter') {
+        if (buffer.length >= 3) {
+          e.preventDefault()
+          e.stopPropagation()
+          const codigo = buffer
+          buffer = ''
+          setBusqueda(codigo)
+          setTimeout(() => {
+            if (inputRef.current) {
+              inputRef.current.focus()
+              const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+              inputRef.current.dispatchEvent(ev)
+            }
+          }, 30)
+        } else {
+          buffer = ''
+        }
+        return
+      }
+
+      if (e.key.length !== 1) return
+      if (delta > UMBRAL_MS) buffer = ''
+      buffer += e.key
+    }
+
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])
 
   // Detectar conexión / desconexión

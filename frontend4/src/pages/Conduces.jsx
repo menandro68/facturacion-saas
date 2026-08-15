@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import API from '../services/api'
 
 export default function Conduces() {
@@ -9,10 +9,11 @@ export default function Conduces() {
   const [showForm, setShowForm] = useState(false)
   const [busquedaCliente, setBusquedaCliente] = useState('')
   const [idxCliente, setIdxCliente] = useState(-1)
-  const [busquedaProducto, setBusquedaProducto] = useState('')
-  const [idxProducto, setIdxProducto] = useState(-1)
+  const [buscarProducto, setBuscarProducto] = useState({})
+  const [mostrarDropdownProducto, setMostrarDropdownProducto] = useState({})
+  const [productoIndex, setProductoIndex] = useState({})
   const [form, setForm] = useState({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' })
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState([{ product_id: '', descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18 }])
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -29,6 +30,12 @@ export default function Conduces() {
   const [claveEditar, setClaveEditar] = useState('')
   const [errorClaveEditar, setErrorClaveEditar] = useState('')
   const [conducePendienteEditar, setConducePendienteEditar] = useState(null)
+
+  const buscarProductoRefs = useRef([])
+  const cantidadRefs = useRef([])
+  const agregarLineaRef = useRef(null)
+  const guardarRef = useRef(null)
+
   // Descuento global por porcentaje (mismo patron que Nueva Factura)
   const usuarioSesionCd = (() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } })()
   const esNoAdminCd = usuarioSesionCd?.rol !== 'admin'
@@ -51,20 +58,36 @@ export default function Conduces() {
     API.get('/mantenimiento/choferes').then(r => setChoferes(r.data.data || [])).catch(() => {})
   }, [])
 
-  const agregarItem = (p) => {
-    const existe = items.find(i => i.product_id === p.id)
-    if (existe) {
-      setItems(items.map(i => i.product_id === p.id ? { ...i, cantidad: parseFloat(i.cantidad) + 1 } : i))
-    } else {
-      setItems([...items, { product_id: p.id, descripcion: p.nombre, cantidad: 1 }])
-    }
-    setBusquedaProducto('')
+  const limpiarFormulario = () => {
+    setEditandoId(null)
+    setItems([{ product_id: '', descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18 }])
+    setBuscarProducto({})
+    setMostrarDropdownProducto({})
+    setProductoIndex({})
+    setDescuentoPctCd('')
+    setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' })
   }
+
+  const agregarItem = () => {
+    setItems(prev => [...prev, { product_id: '', descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18 }])
+  }
+
+  const eliminarItem = (index) => {
+    setItems(prev => prev.filter((_, i) => i !== index))
+    setBuscarProducto(prev => { const n = { ...prev }; delete n[index]; return n })
+  }
+
+  const handleItemChange = (index, e) => {
+    const { name, value } = e.target
+    setItems(prev => prev.map((it, i) => i === index ? { ...it, [name]: value } : it))
+  }
+
+  const itemsValidos = () => items.filter(it => it.product_id && parseFloat(it.cantidad || 0) > 0)
 
   const guardar = () => {
     setError(''); setMensaje('')
     if (!form.customer_id) { setError('Seleccione un cliente'); return }
-    if (items.length === 0) { setError('Agregue al menos un articulo'); return }
+    if (itemsValidos().length === 0) { setError('Agregue al menos un articulo'); return }
     setMostrarConfirmarCd(true)
   }
 
@@ -109,18 +132,19 @@ export default function Conduces() {
         chofer_id: form.chofer_id || null,
         notas: form.notas || null,
         descuento_pct: Math.min(Math.max(parseFloat(descuentoPctCd) || 0, 0), 100),
-        items
+        items: itemsValidos().map(it => ({
+          product_id: it.product_id,
+          descripcion: it.descripcion,
+          cantidad: parseFloat(it.cantidad || 0)
+        }))
       }
       const res = editandoId
         ? await API.put(`/conduces/${editandoId}/editar`, payloadCd)
         : await API.post('/conduces', payloadCd)
       setMensaje(editandoId ? 'Conduce actualizado correctamente' : 'Conduce creado correctamente')
       const eraEdicion = !!editandoId
-      setEditandoId(null)
       setShowForm(false)
-      setDescuentoPctCd('')
-      setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' })
-      setItems([])
+      limpiarFormulario()
       cargar()
       const id = res.data.data?.id
       if (id && !eraEdicion) {
@@ -194,7 +218,19 @@ export default function Conduces() {
       const d = res.data.data
       setEditandoId(co.id)
       setForm({ customer_id: d.customer_id || '', cliente_nombre: d.cliente_nombre || '', chofer_id: d.chofer_id || '', notas: '' })
-      setItems((d.items || []).map(i => ({ product_id: i.product_id, descripcion: i.descripcion, cantidad: parseFloat(i.cantidad) })))
+      const itemsCargados = (d.items || []).map(i => ({
+        product_id: i.product_id || '',
+        descripcion: i.descripcion || '',
+        cantidad: parseFloat(i.cantidad),
+        precio_unitario: parseFloat(i.precio_unitario || 0),
+        itbis_rate: parseFloat(i.itbis_rate || 0)
+      }))
+      setItems(itemsCargados.length > 0 ? itemsCargados : [{ product_id: '', descripcion: '', cantidad: 1, precio_unitario: '', itbis_rate: 18 }])
+      const busq = {}
+      itemsCargados.forEach((it, i) => { busq[i] = it.descripcion })
+      setBuscarProducto(busq)
+      setMostrarDropdownProducto({})
+      setProductoIndex({})
       setDescuentoPctCd('')
       setShowForm(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -211,9 +247,21 @@ export default function Conduces() {
   const clientesFiltrados = busquedaCliente
     ? clientes.filter(c => c.nombre.toLowerCase().includes(busquedaCliente.toLowerCase())).slice(0, 8)
     : []
-  const productosFiltrados = busquedaProducto
-    ? productos.filter(p => p.nombre.toLowerCase().includes(busquedaProducto.toLowerCase())).slice(0, 8)
-    : []
+
+  // Totales calculados desde los items (precio con ITBIS incluido)
+  let brutoCd = 0, itbisBrutoCd = 0
+  items.forEach(it => {
+    const precio = parseFloat(it.precio_unitario || 0)
+    const rate = parseFloat(it.itbis_rate || 0)
+    const bruto = precio * parseFloat(it.cantidad || 0)
+    brutoCd += bruto
+    itbisBrutoCd += bruto - (bruto / (1 + rate / 100))
+  })
+  const pctCd = Math.min(Math.max(parseFloat(descuentoPctCd) || 0, 0), 100)
+  const montoDescCd = brutoCd * (pctCd / 100)
+  const netoCd = brutoCd - montoDescCd
+  const itbisNetoCd = itbisBrutoCd * (1 - pctCd / 100)
+  const subNetoCd = netoCd - itbisNetoCd
 
   return (
     <div className="p-6">
@@ -317,7 +365,7 @@ export default function Conduces() {
             onChange={e => setBusquedaConduce(e.target.value.toUpperCase())}
             placeholder="BUSCAR CONDUCE..."
             className="border rounded px-3 py-2 text-sm uppercase w-56 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <button onClick={() => { if (!showForm) { setEditandoId(null); setItems([]); setDescuentoPctCd(''); setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' }) } setShowForm(!showForm) }}
+          <button onClick={() => { if (!showForm) { limpiarFormulario() } setShowForm(!showForm) }}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 whitespace-nowrap">
             + Nuevo Conduce
           </button>
@@ -396,15 +444,15 @@ export default function Conduces() {
                       setIdxCliente(prev => (prev <= 0 ? clientesFiltrados.length - 1 : prev - 1))
                     } else if (e.key === 'Enter') {
                       e.preventDefault()
-                    const c = clientesFiltrados[idxCliente >= 0 ? idxCliente : 0]
-               if (c) { setForm({ ...form, customer_id: c.id, cliente_nombre: c.nombre }); setBusquedaCliente(''); setIdxCliente(-1); setTimeout(() => { const el = document.getElementById('conduce-buscar-articulo'); if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }) } }, 100) }
+                      const c = clientesFiltrados[idxCliente >= 0 ? idxCliente : 0]
+                      if (c) { setForm({ ...form, customer_id: c.id, cliente_nombre: c.nombre }); setBusquedaCliente(''); setIdxCliente(-1); setTimeout(() => { const el = buscarProductoRefs.current[0]; if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }) } }, 100) }
                     }
                   }}
                   className="w-full border border-gray-300 rounded px-3 py-2" />
                 {clientesFiltrados.length > 0 && (
                   <div className="absolute z-10 bg-white border border-gray-300 rounded shadow w-full max-h-48 overflow-auto">
                 {clientesFiltrados.map((c, ci) => (
-                     <div key={c.id} onClick={() => { setForm({ ...form, customer_id: c.id, cliente_nombre: c.nombre }); setBusquedaCliente(''); setIdxCliente(-1); setTimeout(() => document.getElementById('conduce-buscar-articulo')?.focus(), 50) }}
+                     <div key={c.id} onClick={() => { setForm({ ...form, customer_id: c.id, cliente_nombre: c.nombre }); setBusquedaCliente(''); setIdxCliente(-1); setTimeout(() => buscarProductoRefs.current[0]?.focus(), 50) }}
                         className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${ci === idxCliente ? 'bg-blue-100' : ''}`}>
                         {c.nombre} <span className="text-gray-400 text-xs">{c.direccion || ''}</span>
                       </div>
@@ -415,7 +463,7 @@ export default function Conduces() {
             )}
           </div>
 
-      {/* Chofer (oculto) */}
+          {/* Chofer (oculto) */}
           <div className="mb-4 hidden">
             <label className="block text-sm font-medium text-gray-700 mb-1">Chofer (opcional)</label>
             <select value={form.chofer_id} onChange={e => setForm({ ...form, chofer_id: e.target.value })}
@@ -427,128 +475,180 @@ export default function Conduces() {
             </select>
           </div>
 
-          {/* Articulos */}
-          <div className="mb-4 relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Agregar Articulos *</label>
-          <input id="conduce-buscar-articulo" value={busquedaProducto} onChange={e => { setBusquedaProducto(e.target.value); setIdxProducto(-1) }}
-              placeholder="Buscar articulo..."
-              onKeyDown={e => {
-                if (productosFiltrados.length === 0) return
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault()
-                  setIdxProducto(prev => (prev + 1) % productosFiltrados.length)
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault()
-                  setIdxProducto(prev => (prev <= 0 ? productosFiltrados.length - 1 : prev - 1))
-         } else if (e.key === 'Enter') {
-                  e.preventDefault()
-                  const p = productosFiltrados[idxProducto >= 0 ? idxProducto : 0]
-                  if (p) { agregarItem(p); setIdxProducto(-1); setTimeout(() => { const inputs = document.querySelectorAll('.conduce-cantidad-input'); const idxExistente = items.findIndex(i => i.product_id === p.id); const target = idxExistente >= 0 ? inputs[idxExistente] : inputs[inputs.length - 1]; if (target) { target.focus(); target.select() } }, 80) }
-                }
-              }}
-              className="w-full border border-gray-300 rounded px-3 py-2" />
-            {productosFiltrados.length > 0 && (
-              <div className="absolute z-10 bg-white border border-gray-300 rounded shadow w-full max-h-48 overflow-auto">
-              {productosFiltrados.map((p, pi) => (
-                  <div key={p.id} onClick={() => { agregarItem(p); setIdxProducto(-1) }}
-                    className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${pi === idxProducto ? 'bg-blue-100' : ''}`}>{p.nombre}</div>
-                ))}
+          {/* Items en linea (mismo patron que Nueva Factura) */}
+          <div className="mb-4">
+            {items.map((item, index) => (
+              <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+                <div className="col-span-3 relative">
+                  <input
+                    type="text"
+                    placeholder="🔍 Buscar Articulos..."
+                    ref={el => { buscarProductoRefs.current[index] = el }}
+                    value={buscarProducto[index] || ''}
+                    onChange={e => {
+                      setBuscarProducto(prev => ({ ...prev, [index]: e.target.value }))
+                      setMostrarDropdownProducto(prev => ({ ...prev, [index]: e.target.value.length > 0 }))
+                    }}
+                    onBlur={() => setTimeout(() => { setMostrarDropdownProducto(prev => ({ ...prev, [index]: false })); setProductoIndex(prev => ({ ...prev, [index]: -1 })) }, 200)}
+                    onKeyDown={e => {
+                      const filtrados = productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase()))
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        setProductoIndex(prev => ({ ...prev, [index]: Math.min((prev[index] ?? -1) + 1, filtrados.length - 1) }))
+                        setMostrarDropdownProducto(prev => ({ ...prev, [index]: true }))
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        setProductoIndex(prev => ({ ...prev, [index]: Math.max((prev[index] ?? 0) - 1, -1) }))
+                      } else if (e.key === 'Enter') {
+                        e.preventDefault()
+                        const idx = productoIndex[index] ?? -1
+                        if (idx >= 0 && filtrados[idx]) {
+                          const p = filtrados[idx]
+                          const padreP = p.articulo_padre_id ? productos.find(x => x.id === p.articulo_padre_id) : null
+                          const factorP = parseFloat(p.factor_empaque || 1) || 1
+                          const stockP = padreP ? Math.floor(parseFloat(padreP.stock_actual || 0) / factorP) : parseFloat(p.stock_actual || 0)
+                          if (stockP <= 0) {
+                            alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar al conduce.`)
+                            return
+                          }
+                          if (parseFloat(p.stock_minimo || 0) > 0 && stockP <= parseFloat(p.stock_minimo || 0)) {
+                            alert(`⚠️ STOCK BAJO: "${p.nombre}"\n\nQuedan ${stockP} (mínimo ${parseFloat(p.stock_minimo || 0)}).\n\nSe agregará al conduce, pero considere reabastecer.`)
+                          }
+                          const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
+                          if (yaExisteIdx !== -1) {
+                            setItems(prev => prev
+                              .map((it, i) => i === yaExisteIdx ? { ...it, cantidad: parseFloat(it.cantidad || 0) + 1 } : it)
+                              .filter((_, i) => i !== index))
+                            setBuscarProducto(prev => { const n = { ...prev }; delete n[index]; return n })
+                          } else {
+                            setItems(prev => prev.map((it, i) => i === index ? { ...it, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate } : it))
+                            setBuscarProducto(prev => ({ ...prev, [index]: p.nombre }))
+                            setTimeout(() => { const c = cantidadRefs.current[index]; if (c) { c.focus(); c.select() } }, 80)
+                          }
+                          setMostrarDropdownProducto(prev => ({ ...prev, [index]: false }))
+                        }
+                      }
+                    }}
+                    className="w-full border rounded px-2 py-1.5 text-sm" />
+                  {mostrarDropdownProducto[index] && (
+                    <div className="absolute z-20 w-full bg-white border rounded shadow-lg max-h-48 overflow-y-auto mt-1">
+                      {productos.filter(p => p.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).slice(0, 50).map(p => (
+                        <div key={p.id}
+                          className={`px-3 py-2 text-sm cursor-pointer ${productos.filter(x => x.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) === (productoIndex[index] ?? -1) ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
+                          onMouseEnter={() => setProductoIndex(prev => ({ ...prev, [index]: productos.filter(x => x.nombre.toLowerCase().includes((buscarProducto[index] || '').toLowerCase())).indexOf(p) }))}
+                          onMouseDown={() => {
+                            const padreP2 = p.articulo_padre_id ? productos.find(x => x.id === p.articulo_padre_id) : null
+                            const factorP2 = parseFloat(p.factor_empaque || 1) || 1
+                            const stockP2 = padreP2 ? Math.floor(parseFloat(padreP2.stock_actual || 0) / factorP2) : parseFloat(p.stock_actual || 0)
+                            if (stockP2 <= 0) {
+                              alert(`⚠️ "${p.nombre}" no tiene existencia en inventario.\n\nNo se puede agregar al conduce.`)
+                              return
+                            }
+                            if (parseFloat(p.stock_minimo || 0) > 0 && stockP2 <= parseFloat(p.stock_minimo || 0)) {
+                              alert(`⚠️ STOCK BAJO: "${p.nombre}"\n\nQuedan ${stockP2} (mínimo ${parseFloat(p.stock_minimo || 0)}).\n\nSe agregará al conduce, pero considere reabastecer.`)
+                            }
+                            const yaExisteIdx = items.findIndex((it, i) => i !== index && it.product_id === p.id)
+                            if (yaExisteIdx !== -1) {
+                              setItems(prev => prev
+                                .map((it, i) => i === yaExisteIdx ? { ...it, cantidad: parseFloat(it.cantidad || 0) + 1 } : it)
+                                .filter((_, i) => i !== index))
+                              setBuscarProducto(prev => { const n = { ...prev }; delete n[index]; return n })
+                            } else {
+                              setItems(prev => prev.map((it, i) => i === index ? { ...it, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate } : it))
+                              setBuscarProducto(prev => ({ ...prev, [index]: p.nombre }))
+                              setTimeout(() => { const c = cantidadRefs.current[index]; if (c) { c.focus(); c.select() } }, 80)
+                            }
+                            setMostrarDropdownProducto(prev => ({ ...prev, [index]: false }))
+                          }}>
+                          {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="col-span-3">
+                  <input name="descripcion" placeholder="Descripción" value={item.descripcion} onChange={(e) => handleItemChange(index, e)}
+                    readOnly={!!item.product_id}
+                    className={`w-full border rounded px-2 py-1.5 text-sm ${item.product_id ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : ''}`} />
+                </div>
+                <div className="col-span-2">
+                  <input name="cantidad" type="number" placeholder="Cant." step="0.01" value={item.cantidad} onChange={(e) => handleItemChange(index, e)}
+                    ref={el => cantidadRefs.current[index] = el}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        agregarLineaRef.current?.focus()
+                      }
+                    }}
+                    className="w-full border rounded px-2 py-1.5 text-sm text-right" />
+                </div>
+                <div className="col-span-1">
+                  <input name="precio_unitario" type="number" placeholder="Precio" value={item.precio_unitario} onChange={(e) => handleItemChange(index, e)}
+                    className="w-full border rounded px-2 py-1.5 text-sm text-right" />
+                </div>
+                <div className="col-span-2">
+                  <input type="text" readOnly
+                    value={item.precio_unitario && item.cantidad ? 'RD$' + (parseFloat(item.cantidad || 0) * parseFloat(item.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : ''}
+                    placeholder="Subtotal"
+                    className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-right font-medium text-gray-700" />
+                </div>
+                <div className="col-span-1 flex items-center justify-center">
+                  {items.length > 1 && (
+                    <button type="button" onClick={() => eliminarItem(index)}
+                      className="text-red-500 hover:text-red-700 text-lg">×</button>
+                  )}
+                </div>
               </div>
-            )}
+            ))}
+
+            <div className="flex items-center gap-4 mt-1">
+              <button type="button" ref={agregarLineaRef} onClick={agregarItem}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowRight') { e.preventDefault(); guardarRef.current?.focus() }
+                  if (e.key === 'Enter') { e.preventDefault(); agregarItem(); setTimeout(() => { const nextIndex = items.length; buscarProductoRefs.current[nextIndex]?.focus() }, 150) }
+                }}
+                className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
+              <button type="button" ref={guardarRef} onClick={guardar} disabled={guardando}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowLeft') { e.preventDefault(); agregarLineaRef.current?.focus() }
+                }}
+                className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-400">
+           {guardando ? 'Guardando...' : 'Guardar'}
+              </button>
+              <button type="button" onClick={() => { setShowForm(false); limpiarFormulario() }}
+                className="px-4 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400">
+                Cancelar
+              </button>
+            </div>
           </div>
 
-          {items.length > 0 && (
-            <table className="w-full mb-4 border">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-3 py-2 text-left text-sm">Descripcion</th>
-                  <th className="px-3 py-2 text-right text-sm w-32">Cantidad</th>
-                  <th className="px-3 py-2 text-right text-sm w-32">Precio</th>
-                  <th className="px-3 py-2 text-right text-sm w-36">Importe</th>
-                  <th className="px-3 py-2 w-16"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, idx) => {
-                  const prodIt = productos.find(pp => pp.id === it.product_id)
-                  const precioIt = parseFloat(prodIt?.precio || 0)
-                  const importeIt = precioIt * parseFloat(it.cantidad || 0)
-                  return (
-                  <tr key={idx} className="border-t">
-                    <td className="px-3 py-2">{it.descripcion}</td>
-                    <td className="px-3 py-2 text-right">
-                      <input type="number" min="0.01" step="any" value={it.cantidad}
-                        onChange={e => setItems(items.map((x, i) => i === idx ? { ...x, cantidad: e.target.value } : x))}
-                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('conduce-buscar-articulo')?.focus() } }}
-                        className="conduce-cantidad-input w-24 border border-gray-300 rounded px-2 py-1 text-right" />
-                    </td>
-                    <td className="px-3 py-2 text-right">RD${precioIt.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-3 py-2 text-right font-medium">RD${importeIt.toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
-                    <td className="px-3 py-2 text-center">
-                      <button onClick={() => setItems(items.filter((_, i) => i !== idx))}
-                        className="text-red-600 hover:underline text-sm">Quitar</button>
-                    </td>
-                  </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-          {items.length > 0 && (
+          {brutoCd > 0 && (
             <div className="flex justify-end mb-4">
               <div className="text-right bg-gray-50 p-4 rounded-lg text-sm">
-                {(() => {
-                  let brutoCd = 0, itbisBrutoCd = 0
-                  items.forEach(it => {
-                    const pp = productos.find(x => x.id === it.product_id)
-                    const precio = parseFloat(pp?.precio || 0)
-                    const rate = parseFloat(pp?.itbis_rate || 0)
-                    const bruto = precio * parseFloat(it.cantidad || 0)
-                    brutoCd += bruto
-                    itbisBrutoCd += bruto - (bruto / (1 + rate / 100))
-                  })
-                  const pctCd = Math.min(Math.max(parseFloat(descuentoPctCd) || 0, 0), 100)
-                  const montoDescCd = brutoCd * (pctCd / 100)
-                  const netoCd = brutoCd - montoDescCd
-                  const itbisNetoCd = itbisBrutoCd * (1 - pctCd / 100)
-                  const subNetoCd = netoCd - itbisNetoCd
-                  return <>
-                    <p className="text-gray-600">TOTAL BRUTO: <span className="font-medium">RD${brutoCd.toFixed(2)}</span></p>
-                    <div className="flex items-center justify-end gap-2 my-1">
-                      <label className="text-gray-600">Descuento</label>
-                      <input type="number" min="0" max="100" step="any" value={descuentoPctCd}
-                        onChange={e => setDescuentoPctCd(e.target.value)}
-                        placeholder="0"
-                        className="w-16 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                      <span className="text-gray-600">%</span>
-                      <span className="font-medium text-red-600 w-24">-RD${montoDescCd.toFixed(2)}</span>
-                    </div>
-                    <p className="text-gray-600">SUB-TOTAL: <span className="font-medium">RD${subNetoCd.toFixed(2)}</span></p>
-                    <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itbisNetoCd.toFixed(2)}</span></p>
-                    <p className="text-lg font-bold text-gray-800">Total: RD${netoCd.toFixed(2)}</p>
-                  </>
-                })()}
+                <p className="text-gray-600">TOTAL BRUTO: <span className="font-medium">RD${brutoCd.toFixed(2)}</span></p>
+                <div className="flex items-center justify-end gap-2 my-1">
+                  <label className="text-gray-600">Descuento</label>
+                  <input type="number" min="0" max="100" step="any" value={descuentoPctCd}
+                    onChange={e => setDescuentoPctCd(e.target.value)}
+                    placeholder="0"
+                    className="w-16 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  <span className="text-gray-600">%</span>
+                  <span className="font-medium text-red-600 w-24">-RD${montoDescCd.toFixed(2)}</span>
+                </div>
+                <p className="text-gray-600">SUB-TOTAL: <span className="font-medium">RD${subNetoCd.toFixed(2)}</span></p>
+                <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itbisNetoCd.toFixed(2)}</span></p>
+                <p className="text-lg font-bold text-gray-800">Total: RD${netoCd.toFixed(2)}</p>
               </div>
             </div>
           )}
 
-      {/* Notas (oculto) */}
+          {/* Notas (oculto) */}
           <div className="mb-4 hidden">
             <label className="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
             <textarea value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })}
               className="w-full border border-gray-300 rounded px-3 py-2" rows="2" />
           </div>
 
-          <div className="flex gap-3">
-            <button onClick={guardar} disabled={guardando}
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50">
-              {guardando ? 'Guardando...' : 'Guardar Conduce'}
-            </button>
-            <button onClick={() => { setShowForm(false); setEditandoId(null); setItems([]); setDescuentoPctCd(''); setForm({ customer_id: '', cliente_nombre: '', chofer_id: '', notas: '' }) }}
-              className="border border-gray-300 px-6 py-2 rounded hover:bg-gray-50">
-              Cancelar
-            </button>
-          </div>
         </div>
       )}
 
@@ -589,7 +689,7 @@ export default function Conduces() {
                     {co.estado.toUpperCase()}
                   </span>
                 </td>
-             <td className="px-4 py-3">
+                <td className="px-4 py-3">
                   <button onClick={() => verPDF(co.id)} className="text-blue-600 hover:underline text-sm mr-3">PDF</button>
                   {co.estado !== 'anulado' && !co.facturado && (
                     <button onClick={() => solicitarEdicion(co)} className="text-orange-600 hover:underline text-sm mr-3">Editar</button>

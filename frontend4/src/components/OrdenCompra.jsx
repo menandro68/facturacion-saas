@@ -19,6 +19,11 @@ export default function OrdenCompra({ onInventarioUpdate }) {
   const [form, setForm] = useState({ supplier_id: '', fecha_entrega: '', fecha_vencimiento_pago: '', notas: '' })
   const [items, setItems] = useState([{ product_id: '', descripcion: '', cantidad: '', precio_unitario: '' }])
 
+  // Devuelve todos los posibles codigos de un producto (barra / interno)
+  const codigosProductoOC = (p) => [p.codigo_barra, p.codigo_barras, p.barcode, p.codigo]
+    .filter(v => v !== null && v !== undefined && String(v).trim() !== '')
+    .map(v => String(v).trim())
+
   const fetchData = async () => {
     try {
       const [ord, prov, prod] = await Promise.all([
@@ -399,30 +404,57 @@ const handleItemChange = async (idx, field, value) => {
                   <input
                     id={`oc-prod-input-${idx}`}
                     type="text"
-                    placeholder="🔍 Buscar..."
+                    placeholder="🔍 Buscar o escanear..."
                     autoComplete="off"
                     defaultValue={item.descripcion || ''}
                     className="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     onChange={e => {
-                      const val = e.target.value.toLowerCase()
+                      const crudo = e.target.value.trim()
+                      const val = crudo.toLowerCase()
                       const list = document.getElementById(`oc-prod-list-${idx}`)
                       list.innerHTML = ''
-                      if (val) {
-                        const filtrados = productos.filter(p => p.nombre.toLowerCase().includes(val)).slice(0, 10)
-                        filtrados.forEach(p => {
-                          const div = document.createElement('div')
-                          div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
-                          div.textContent = p.nombre
-                          div.onmousedown = () => {
-                            document.getElementById(`oc-prod-input-${idx}`).value = p.nombre
-                            handleItemChange(idx, 'product_id', p.id)
-                            list.innerHTML = ''
-                          }
-                          list.appendChild(div)
-                        })
+                      e.target.dataset.escaneado = ''
+                      if (!val) return
+
+                      // 1) Coincidencia EXACTA por codigo de barra / codigo interno (pistola)
+                      const exacto = productos.find(p => codigosProductoOC(p).some(c => c.toLowerCase() === val))
+                      if (exacto) {
+                        e.target.value = exacto.nombre
+                        e.target.dataset.escaneado = '1'
+                        handleItemChange(idx, 'product_id', exacto.id)
+                        setTimeout(() => {
+                          const inp = document.getElementById(`oc-prod-input-${idx}`)
+                          if (inp) inp.dataset.escaneado = ''
+                          document.getElementById(`oc-prod-cant-${idx}`)?.focus()
+                        }, 80)
+                        return
                       }
+
+                      // 2) Busqueda parcial por nombre o por codigo
+                      const filtrados = productos.filter(p =>
+                        (p.nombre || '').toLowerCase().includes(val) ||
+                        codigosProductoOC(p).some(c => c.toLowerCase().includes(val))
+                      ).slice(0, 10)
+                      filtrados.forEach(p => {
+                        const div = document.createElement('div')
+                        div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50'
+                        const cods = codigosProductoOC(p)
+                        div.textContent = (cods.length ? cods[0] + ' — ' : '') + p.nombre
+                        div.onmousedown = () => {
+                          document.getElementById(`oc-prod-input-${idx}`).value = p.nombre
+                          handleItemChange(idx, 'product_id', p.id)
+                          list.innerHTML = ''
+                        }
+                        list.appendChild(div)
+                      })
                     }}
                     onKeyDown={e => {
+                      if (e.key === 'Enter' && e.currentTarget.dataset.escaneado === '1') {
+                        e.preventDefault()
+                        e.currentTarget.dataset.escaneado = ''
+                        document.getElementById(`oc-prod-cant-${idx}`)?.focus()
+                        return
+                      }
                       const list = document.getElementById(`oc-prod-list-${idx}`)
                       const opciones = list.querySelectorAll('div')
                       if (opciones.length === 0) {

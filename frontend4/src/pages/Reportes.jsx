@@ -468,6 +468,10 @@ const dia = diaLocal(c.fecha_apertura)
                   <div className="text-xs text-gray-500 mb-1">🔄 Devoluciones</div>
                   <div className="text-2xl font-bold text-gray-800">{reporteData.kpis.devoluciones.cantidad}</div>
                   <div className="text-sm text-pink-600 font-medium">RD$ {reporteData.kpis.devoluciones.monto.toLocaleString('es-DO', {minimumFractionDigits: 2})}</div>
+                  <button onClick={() => setModalVer('devoluciones')}
+                    className="absolute top-2 right-2 text-xs bg-pink-600 text-white px-2 py-1 rounded hover:bg-pink-700">
+                    Ver
+                  </button>
                 </div>
                 )}
                 {reporteData.kpis.conduces && reporteData.kpis.conduces.cantidad > 0 && (
@@ -619,6 +623,7 @@ const dia = diaLocal(c.fecha_apertura)
               anulada: { titulo: '❌ Anulaciones', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'anulada'), esPago: false },
               nota_credito: { titulo: '💵 Notas de Crédito', filtro: reporteData.detalle_facturas.filter(f => f.estado === 'nota_credito'), esPago: false },
              conduces: { titulo: '🚚 Conduces', filtro: (reporteData.detalle_conduces || []).map(c => ({ ...c, ncf: c.numero })), esPago: false },
+             devoluciones: { titulo: 'Devoluciones', filtro: (reporteData.detalle_devoluciones || []).map(d => ({ ...d, ncf: d.numero })), esPago: false },
               pagos: { titulo: '💰 Pagos Recibidos', filtro: reporteData.detalle_pagos, esPago: true }
             }
             const c = config[modalVer]
