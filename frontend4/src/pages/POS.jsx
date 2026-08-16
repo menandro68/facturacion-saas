@@ -1782,7 +1782,7 @@ const teclasDescuento = (e) => {
                         </button>
                   <span className="text-xs text-gray-500 ml-1">x RD$ {fmt(tieneDescuento ? l.precio_original : l.precio)}</span>
                       </div>
-                      <p className="font-bold text-sm">RD$ {fmt(l.precio * l.cantidad)}</p>
+                      <p className="font-bold text-sm">RD$ {fmt((tieneDescuento ? l.precio_original : l.precio) * l.cantidad)}</p>
                     </div>
              
                   </div>

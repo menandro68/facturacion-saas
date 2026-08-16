@@ -13,6 +13,8 @@ export default function Clientes() {
   const [error, setError] = useState('')
   const [zonas, setZonas] = useState([])
   const [vendedores, setVendedores] = useState([])
+  const [mostrarListado, setMostrarListado] = useState(false)
+  const [zonaListado, setZonaListado] = useState('todas')
 
   const fetchClientes = async () => {
     try {
@@ -127,6 +129,12 @@ export default function Clientes() {
         >
           + Nuevo Cliente
         </button>
+        <button
+          onClick={() => { setZonaListado('todas'); setMostrarListado(true) }}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm ml-2"
+        >
+          Listado de Clientes
+        </button>
         <input
           type="text"
           placeholder="Buscar..."
@@ -135,6 +143,61 @@ export default function Clientes() {
           className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2"
         />
       </div>
+
+      {mostrarListado && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Listado de Clientes</h3>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Zona</label>
+            <select value={zonaListado} onChange={e => setZonaListado(e.target.value)}
+              className="w-full border rounded px-3 py-2 text-sm mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="todas">-- Todas las zonas --</option>
+              {zonas.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
+            </select>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setMostrarListado(false)}
+                className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              <button onClick={() => {
+                const lista = clientes.filter(c => zonaListado === 'todas' || c.zona_id === zonaListado)
+                if (lista.length === 0) { alert('No hay clientes en esa zona'); return }
+                const nombreZona = zonaListado === 'todas' ? 'TODAS LAS ZONAS' : (zonas.find(z => z.id === zonaListado)?.nombre || '').toUpperCase()
+                const empresa = sessionStorage.getItem('tenant_name') || 'MI EMPRESA'
+                const filas = lista.sort((a,b) => (a.nombre||'').localeCompare(b.nombre||'')).map(c => {
+                  const zn = zonas.find(z => z.id === c.zona_id)?.nombre || '-'
+                  const vn = vendedores.find(v => v.id === c.vendedor_id)?.nombre || '-'
+                  return `<tr><td>${c.nombre||''}</td><td>${c.rnc_cedula||'-'}</td><td>${c.email||'-'}</td><td>${c.telefono||'-'}</td><td>${c.direccion||'-'}</td><td>${zn}</td><td>${vn}</td></tr>`
+                }).join('')
+                const win = window.open('', '_blank')
+                win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Listado de Clientes</title>
+                <style>
+                  body{font-family:Arial,sans-serif;padding:24px;color:#1e293b}
+                  h2{color:#1e40af;margin-bottom:2px}
+                  .sub{color:#64748b;font-size:13px;margin-bottom:16px}
+                  table{width:100%;border-collapse:collapse;font-size:12px}
+                  th{background:#1e40af;color:white;padding:7px;text-align:left}
+                  td{padding:6px 7px;border-bottom:1px solid #e2e8f0}
+                  tr:nth-child(even){background:#f8fafc}
+                  .total{margin-top:14px;font-weight:bold;font-size:14px}
+                  @media print{button{display:none}}
+                </style></head><body>
+                <h2>${empresa}</h2>
+                <div class="sub">LISTADO DE CLIENTES &mdash; ${nombreZona}<br>Fecha: ${new Date().toLocaleDateString('es-DO')}</div>
+                <table><thead><tr><th>Nombre</th><th>RNC/Cedula</th><th>Negocio</th><th>Telefono</th><th>Direccion</th><th>Zona</th><th>Vendedor</th></tr></thead>
+                <tbody>${filas}</tbody></table>
+                <div class="total">Total de clientes: ${lista.length}</div>
+                <div style="margin-top:18px">
+                  <button onclick="window.print()" style="padding:8px 20px;background:#1e40af;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">Imprimir</button>
+                  <button onclick="window.close()" style="padding:8px 20px;background:white;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px;margin-left:8px">Cerrar</button>
+                </div>
+                </body></html>`)
+                win.document.close()
+                setMostrarListado(false)
+              }}
+                className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">Generar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Formulario */}
       {showForm && (

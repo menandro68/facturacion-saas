@@ -909,7 +909,7 @@ const puedeVerSubTab = (subTabId) => {
                 if (fechaFin && fcd > fechaFin) return false
                 return true
               }).map(cd => ({ ...cd, ncf: cd.numero, estado: 'emitida', es_conduce: true }))
-              setRelacionVendedor([...filtradas, ...conducesRel])
+              setRelacionVendedor([...filtradas, ...conducesRel].sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en)))
             }
 }}>
           Buscar
@@ -1351,7 +1351,9 @@ const puedeVerSubTab = (subTabId) => {
                 </tr>
               </thead>
               <tbody>
-         {facturasZona.map(f => (
+         {[...facturasZona.map(x => ({ ...x, _tipo: 'fac' })), ...conducesZona.map(x => ({ ...x, _tipo: 'cd' }))]
+                  .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
+                  .map(item => item._tipo === 'fac' ? (f => (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
 <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
@@ -1359,8 +1361,7 @@ const puedeVerSubTab = (subTabId) => {
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
-                ))}
-           {conducesZona.map(cd => {
+          ))(item) : (cd => {
                   const abonadoCdz = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   const totalCdz = parseFloat(cd.total || 0)
                   const pagadoCdz = abonadoCdz >= totalCdz - 0.01 && totalCdz > 0
@@ -1371,9 +1372,9 @@ const puedeVerSubTab = (subTabId) => {
                     <td className="px-4 py-3">RD${totalCdz.toLocaleString()}{abonadoCdz > 0 && !pagadoCdz && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdz.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdz ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdz ? 'PAGADA' : 'CONDUCE'}</span></td>
                     <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
-                  </tr>
+     </tr>
                   )
-                })}
+                })(item))}
               </tbody>
             </table>
           )}
@@ -1756,16 +1757,17 @@ onKeyDown={e => {
                 </tr>
               </thead>
               <tbody>
-       {facturasVendedor.map(f => (
+       {[...facturasVendedor.map(x => ({ ...x, _tipo: 'fac' })), ...conducesVendedor.map(x => ({ ...x, _tipo: 'cd' }))]
+                  .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
+                  .map(item => item._tipo === 'fac' ? (f => (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                     <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
                     <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
-                  </tr>
-                ))}
-            {conducesVendedor.map(cd => {
+           </tr>
+                ))(item) : (cd => {
                   const abonadoCdv = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   const totalCdv = parseFloat(cd.total || 0)
                   const pagadoCdv = abonadoCdv >= totalCdv - 0.01 && totalCdv > 0
@@ -1775,10 +1777,10 @@ onKeyDown={e => {
                     <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
                     <td className="px-4 py-3">RD${totalCdv.toLocaleString()}{abonadoCdv > 0 && !pagadoCdv && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdv.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdv ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdv ? 'PAGADA' : 'CONDUCE'}</span></td>
-                    <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
+           <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
                   )
-                })}
+                })(item))}
               </tbody>
             </table>
           )}
@@ -1875,15 +1877,16 @@ onKeyDown={e => {
                 </tr>
               </thead>
               <tbody>
-   {facturasCliente.map(f => (
+ {[...facturasCliente.map(x => ({ ...x, _tipo: 'fac' })), ...conducesCliente.map(x => ({ ...x, _tipo: 'cd' }))]
+                  .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
+                  .map(item => item._tipo === 'fac' ? (() => { const f = item; return (
                   <tr key={f.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                     <td className="px-4 py-3">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString()}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
                     <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
-                ))}
-            {conducesCliente.map(cd => {
+                ) })() : (cd => {
                   const abonadoCdc = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                   const totalCdc = parseFloat(cd.total || 0)
                   const pagadoCdc = abonadoCdc >= totalCdc - 0.01 && totalCdc > 0
@@ -1892,10 +1895,10 @@ onKeyDown={e => {
                     <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
                     <td className="px-4 py-3">RD${totalCdc.toLocaleString()}{abonadoCdc > 0 && !pagadoCdc && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdc.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdc ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdc ? 'PAGADA' : 'CONDUCE'}</span></td>
-                    <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
+           <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
                   )
-                })}
+                })(item))}
               </tbody>
             </table>
           )}
@@ -3169,6 +3172,16 @@ onKeyDown={e => {
                           alert('¡Factura emitida exitosamente!')
                         } catch(e) { alert('Error al convertir') }
                     }} className="text-green-600 hover:underline text-xs">Convertir a Factura</button>
+                      <button onClick={async () => {
+                        if (!confirm('Convertir esta cotizacion en CONDUCE?\n\nSe descontara el inventario y no se generara NCF.')) return
+                        try {
+                          const res = await API.put(`/invoices/cotizacion/${c.id}/convertir-conduce`)
+                          alert('Conduce generado: ' + (res.data.data?.numero || ''))
+                          const lst = await API.get('/invoices/cotizaciones/lista')
+                          setCotizaciones(lst.data.data)
+                          fetchData()
+                        } catch(e) { alert(e.response?.data?.mensaje || 'Error al convertir en conduce') }
+                      }} className="text-yellow-600 hover:underline text-xs">Convertir a Conduce</button>
                       <button onClick={async () => {
                         try {
                           const det = await API.get(`/invoices/${c.id}`)
@@ -4697,8 +4710,9 @@ onKeyDown={e => {
                   }
            return todosVF.map(f => f._tipoVF === 'conduce' ? (() => {
                     const abonadoVF = pagosCd.filter(p => p.conduce_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                    const totalVF = parseFloat(f.total || 0)
-                    const pagadoVF = abonadoVF >= totalVF - 0.01 && totalVF > 0
+                    const ncVF = notasCredito.filter(n => n.conduce_id === f.id && n.estado === 'emitida').reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                    const totalVF = parseFloat(f.total || 0) - ncVF
+                    const pagadoVF = abonadoVF >= totalVF - 0.01 && parseFloat(f.total || 0) > 0
                     return (
                     <tr key={'cd-' + f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
