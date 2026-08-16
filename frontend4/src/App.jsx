@@ -202,7 +202,7 @@ const handleEntrarEmpresa = (user) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
 
       {/* Header móvil */}
       <div className="bg-white shadow-md flex items-center justify-between px-4 py-3 md:hidden sticky top-0 z-50">
@@ -258,7 +258,7 @@ const handleEntrarEmpresa = (user) => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar desktop */}
-        <div className="hidden md:flex w-56 bg-white shadow-md flex-col">
+        <div className="hidden md:flex w-56 bg-white shadow-md flex-col h-full overflow-hidden">
      <div className="px-6 py-5 border-b">
             <h1 className="text-lg font-bold text-blue-600">Facturación</h1>
             <div className="flex items-center gap-2 mt-3 bg-blue-50 rounded-lg p-2">
@@ -271,7 +271,7 @@ const handleEntrarEmpresa = (user) => {
               </div>
             </div>
           </div>
-    <nav className="flex-1 p-4">
+    <nav className="flex-1 p-4 overflow-y-scroll">
             {menuItems.map((item) => (
               <button key={item.id} onClick={async () => {
                 

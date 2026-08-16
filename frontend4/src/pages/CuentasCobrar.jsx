@@ -536,7 +536,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 const vendedorNombreSeleccionado = vendedores.find(v => v.id === vendedorId)?.nombre || ''
          const filtradas = pagos.filter(p => {
                   // Filtrar por vendedor del CLIENTE de la factura (no por quien registro el pago)
-                  const factura = todasFacturas.find(f => f.id === p.invoice_id)
+                  const factura = todasFacturas.find(f => f.id === p.invoice_id || f.id === p.conduce_id)
                   if (!factura) return false
                   const cliente = clientes.find(c => c.id === factura.customer_id)
                   if (!cliente) return false
@@ -554,9 +554,10 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 let totalComision = 0
                 const facturasYaProcesadas = new Set()
                 filtradas.forEach(p => {
-                  if (facturasYaProcesadas.has(p.invoice_id)) return
-                  facturasYaProcesadas.add(p.invoice_id)
-                const factura = todasFacturas.find(f => f.id === p.invoice_id)
+               const refId = p.invoice_id || p.conduce_id
+                  if (facturasYaProcesadas.has(refId)) return
+                  facturasYaProcesadas.add(refId)
+                const factura = todasFacturas.find(f => f.id === refId)
                   if (!factura) return
                   // ITBIS neto: ITBIS de la factura menos el ITBIS de la NC (articulos devueltos)
                   totalItbis += parseFloat(factura.itbis || 0) - parseFloat(factura.nc_itbis || 0)
@@ -564,11 +565,11 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   const ncAplicada = parseFloat(factura.nc_aplicada || 0)
                   const totalFactura = parseFloat(factura.total || 0) - ncAplicada
                   const totalPagadoFactura = pagos
-                    .filter(pg => pg.invoice_id === p.invoice_id)
+                    .filter(pg => (pg.invoice_id || pg.conduce_id) === refId)
                     .reduce((s, pg) => s + parseFloat(pg.monto || 0), 0)
         // Solo dar comision si la factura esta pagada al 100% (o mas) del total neto
                   if (totalPagadoFactura < totalFactura - 0.01) return
-           const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === p.invoice_id)
+           const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === refId)
                   // Comision de esta factura (sobre el valor original de los items)
                   let comisionFactura = 0
                   itemsDeFactura.forEach(item => {

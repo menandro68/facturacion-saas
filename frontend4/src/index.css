@@ -59,3 +59,18 @@
     size: A4;
   }
 }
+/* Barra de scroll visible en el menu lateral */
+nav::-webkit-scrollbar {
+  width: 12px;
+}
+nav::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+nav::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 6px;
+  border: 2px solid #e2e8f0;
+}
+nav::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

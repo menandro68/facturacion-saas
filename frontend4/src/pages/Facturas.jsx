@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import API from '../services/api'
 
 export default function Facturas({ vendedor_id = null, modulos_permitidos = null }) {
@@ -48,6 +48,32 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [pedidos, setPedidos] = useState([])
   const [showPedido, setShowPedido] = useState(false)
   const [pedidoEditandoId, setPedidoEditandoId] = useState(null)
+  const [tipoEntregaPed, setTipoEntregaPed] = useState('factura')
+  const [mostrarTipoEntrega, setMostrarTipoEntrega] = useState(false)
+
+  const guardarPedidoFinal = async (tipoEnt) => {
+    setMostrarTipoEntrega(false)
+    const customer_id = pedClienteSeleccionadoId
+    const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
+    try {
+      if (pedidoEditandoId) {
+        await API.put(`/invoices/pedido/${pedidoEditandoId}/editar`, { customer_id: customer_id || null, items: itemsValidos })
+        setPedidoEditandoId(null)
+      } else {
+        await API.post('/invoices/pedido', { customer_id: customer_id || null, items: itemsValidos, tipo_entrega: tipoEnt })
+      }
+      setShowPedido(false)
+      setItemsPed([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
+      setBuscarProductoPed({})
+      const inp = document.getElementById('ped-cliente-input')
+      if (inp) inp.value = ''
+      const hid = document.getElementById('ped-cliente')
+      if (hid) hid.value = ''
+      setPedClienteSeleccionadoId('')
+      const res = await API.get('/invoices/pedidos/lista')
+      setPedidos(res.data.data)
+    } catch(e) { alert('Error al guardar pedido') }
+  }
   const [itemsPed, setItemsPed] = useState([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
   const [buscarProductoPed, setBuscarProductoPed] = useState({})
   const [dropdownPed, setDropdownPed] = useState({})
@@ -2209,6 +2235,7 @@ onKeyDown={e => {
           <div className="mb-6 border rounded-lg p-4 form-nuevo-pedido">
              <h4 className="font-medium mb-3 text-gray-700">Nuevo Pedido</h4>
     
+      
               <div className="relative mb-4 max-w-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
                 <input type="text" placeholder="Buscar cliente..." id="ped-cliente-input" autoComplete="off"
@@ -2508,39 +2535,48 @@ onKeyDown={e => {
                 }}
                   onKeyDown={e => { if (e.key === 'ArrowRight') { e.preventDefault(); pedGuardarRef.current?.focus() } }}
                   className="text-blue-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-1">+ Agregar línea</button>
-            <button ref={pedGuardarRef} onClick={async () => {
+            <button ref={pedGuardarRef} onClick={() => {
                   const customer_id = pedClienteSeleccionadoId
-                  if (!customer_id) return alert('⚠️ Debe seleccionar un cliente registrado de la lista para crear el pedido.')
-                 const itemsValidos = itemsPed.filter(i => i.descripcion && i.precio_unitario)
-                  if (!itemsValidos.length) return alert('Agrega al menos un producto')
-                  for (const it of itemsValidos) {
+                  if (!customer_id) return alert('Debe seleccionar un cliente registrado de la lista para crear el pedido.')
+                  const itemsChk = itemsPed.filter(i => i.descripcion && i.precio_unitario)
+                  if (!itemsChk.length) return alert('Agrega al menos un producto')
+                  for (const it of itemsChk) {
                     if (it.product_id) {
                       const prod = productos.find(p => p.id === it.product_id)
                       if (prod && parseFloat(it.precio_unitario) < parseFloat(prod.precio)) {
-                        return alert(`⚠️ El precio de "${it.descripcion}" (RD$${parseFloat(it.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2})}) es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrígelo antes de guardar.`)
+                        return alert(`El precio de "${it.descripcion}" es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrigelo antes de guardar.`)
                       }
                     }
                   }
-                  try {
-                  if (pedidoEditandoId) {
-                    await API.put(`/invoices/pedido/${pedidoEditandoId}/editar`, { customer_id: customer_id || null, items: itemsValidos })
-                    setPedidoEditandoId(null)
-                  } else {
-                    await API.post('/invoices/pedido', { customer_id: customer_id || null, items: itemsValidos })
-                  }
-                    setShowPedido(false)
-                    setItemsPed([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
-                    setBuscarProductoPed({})
-                    document.getElementById('ped-cliente-input').value = ''
-                    document.getElementById('ped-cliente').value = ''
-                    setPedClienteSeleccionadoId('')
-                    const res = await API.get('/invoices/pedidos/lista')
-                    setPedidos(res.data.data)
-                  } catch(e) { alert('Error al guardar pedido') }
+                  if (pedidoEditandoId) { guardarPedidoFinal('factura'); return }
+                  setMostrarTipoEntrega(true)
                 }}
                   className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar Pedido</button>
                 <button onClick={() => setShowPedido(false)}
                   className="px-4 py-1.5 border rounded text-sm hover:bg-gray-50">Cancelar</button>
+              </div>
+            </div>
+          )}
+      
+  {mostrarTipoEntrega && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm text-center">
+                <p className="text-lg font-bold text-gray-800 mb-2">Tipo de Entrega</p>
+                <p className="text-sm text-gray-500 mb-6">Como se despachara este pedido?</p>
+                <div className="flex flex-col gap-3">
+                  <button onClick={() => guardarPedidoFinal('factura')}
+                    className="w-full py-4 bg-blue-600 text-white rounded-lg font-bold text-base hover:bg-blue-700">
+                    FACTURA
+                  </button>
+                  <button onClick={() => guardarPedidoFinal('conduce')}
+                    className="w-full py-4 bg-teal-600 text-white rounded-lg font-bold text-base hover:bg-teal-700">
+                    CONDUCE
+                  </button>
+                  <button onClick={() => setMostrarTipoEntrega(false)}
+                    className="w-full py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                    Cancelar
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -2572,7 +2608,12 @@ onKeyDown={e => {
                       <span className="text-xs text-gray-400 font-mono">{p.id.slice(0,8)}...</span>
                       <span className="font-bold text-blue-700">RD${parseFloat(p.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>
                     </div>
-                    <p className="text-sm font-medium text-gray-800 mb-1">{p.cliente_nombre || 'Consumidor Final'}</p>
+                   <p className="text-sm font-medium text-gray-800 mb-1">{p.cliente_nombre || 'Consumidor Final'}</p>
+                    <div className="mb-2">
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${p.tipo_entrega === 'conduce' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {p.tipo_entrega === 'conduce' ? 'CONDUCE' : 'FACTURA'}
+                      </span>
+                    </div>
                     <p className="text-xs text-gray-500 mb-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</p>
                     <div className="grid grid-cols-3 gap-2">
                       <button onClick={async () => {
@@ -2654,8 +2695,8 @@ onKeyDown={e => {
               <table className="hidden sm:table w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-gray-600">ID</th>
-                    <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
+                  <th className="px-4 py-3 text-left text-gray-600">Cliente</th>
+                    <th className="px-4 py-3 text-left text-gray-600">Entrega</th>
                     <th className="px-4 py-3 text-right text-gray-600">Total</th>
                     <th className="px-4 py-3 text-left text-gray-600">Fecha</th>
                     <th className="px-4 py-3 text-left text-gray-600">Acciones</th>
@@ -2665,7 +2706,12 @@ onKeyDown={e => {
                   {pedidos.map(p => (
                     <tr key={p.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono text-xs">{p.id.slice(0,8)}...</td>
-                      <td className="px-4 py-3">{p.cliente_nombre || 'Consumidor Final'}</td>
+                    <td className="px-4 py-3">{p.cliente_nombre || 'Consumidor Final'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${p.tipo_entrega === 'conduce' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {p.tipo_entrega === 'conduce' ? 'CONDUCE' : 'FACTURA'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-right font-medium">RD${parseFloat(p.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                       <td className="px-4 py-3">{new Date(p.creado_en).toLocaleDateString('es-DO')}</td>
                       <td className="px-4 py-3 flex gap-2">
@@ -2727,21 +2773,22 @@ onKeyDown={e => {
                               <br>
               <div style="display:flex;gap:12px;margin-top:16px">
                 <button onclick="window.print()" style="padding:8px 20px;background:#1e40af;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
-                <button onclick="
+               ${p.tipo_entrega === 'conduce' ? '' : `<button onclick="
                  ${avisoStock ? `alert('${('⚠️ ' + avisoStock + 'Se convertira a factura, pero considere reabastecer.').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n')}');` : ''}
                 if(confirm('¿Desea convertir este pedido a factura?')){
                     fetch('/invoices/pedido/${p.id}/convertir',{method:'PUT',headers:{'Authorization':'Bearer '+sessionStorage.getItem('token'),'Content-Type':'application/json'}})
                     .then(r=>r.json()).then(d=>{if(d.success){const fid=d.data?.id||d.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('¿Desea imprimir esta factura?')){window.location.href='/invoices/'+fid+'/print?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
                     .catch(()=>alert('Error al convertir'))
                   }
-               " style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✅ Convertir a Factura</button>
-                <button onclick="
+              " style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">✅ Convertir a Factura</button>`}
+               
+                ${p.tipo_entrega === 'conduce' ? `<button onclick="
                   if(confirm('¿Desea convertir este pedido a CONDUCE? No se generará NCF.')){
                     fetch('/invoices/pedido/${p.id}/convertir-conduce',{method:'PUT',headers:{'Authorization':'Bearer '+sessionStorage.getItem('token'),'Content-Type':'application/json'}})
                     .then(r=>r.json()).then(d=>{if(d.success){const cid=d.data?.id;const tok=sessionStorage.getItem('token');if(window.opener){try{window.opener.sessionStorage.setItem('facturas_tab_regreso','pedidos')}catch(e){}window.opener.location.reload()}if(confirm('Conduce '+(d.data?.numero||'')+' creado. ¿Desea imprimirlo?')){window.location.href='/conduces/'+cid+'/pdf?token='+tok}else{window.close()}}else{alert(d.mensaje||'Error')}})
                     .catch(()=>alert('Error al convertir a conduce'))
                   }
-                " style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">📋 Convertir a Conduce</button>
+                " style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">📋 Convertir a Conduce</button>` : ''}
                 <button onclick="window.close()" style="padding:8px 20px;background:white;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:13px">← Volver</button>
               </div>
                               </body></html>`)
