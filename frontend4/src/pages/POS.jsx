@@ -139,6 +139,20 @@ function POS() {
   const [procesando, setProcesando] = useState(false)
   const [errorCobro, setErrorCobro] = useState('')
   const [ventaExitosa, setVentaExitosa] = useState(null)
+  const [ultimaFacturaId, setUltimaFacturaId] = useState(null)
+  const [mostrarCambio, setMostrarCambio] = useState(false)
+  const [pasoCambio, setPasoCambio] = useState(1)
+  const [claveCambio, setClaveCambio] = useState('')
+  const [errorCambio, setErrorCambio] = useState('')
+  const [ncfCambio, setNcfCambio] = useState('')
+  const [facturaCambio, setFacturaCambio] = useState(null)
+  const [itemsDevueltos, setItemsDevueltos] = useState([])
+  const [itemsNuevos, setItemsNuevos] = useState([])
+  const [buscarNuevoCambio, setBuscarNuevoCambio] = useState('')
+  const [metodoCambio, setMetodoCambio] = useState('efectivo')
+  const [procesandoCambio, setProcesandoCambio] = useState(false)
+  const [filaCambio, setFilaCambio] = useState(0)
+  const [idxBuscarCambio, setIdxBuscarCambio] = useState(-1)
 
   // Estados de descuento
   const [mostrarDescuento, setMostrarDescuento] = useState(false)
@@ -526,7 +540,7 @@ useEffect(() => {
 // TECLAS F1 = COBRAR / F2 = DESCUENTO / F3 = CERRAR CAJA / F4 = ELIMINAR (globales en el POS)
   useEffect(() => {
     const manejarTeclasGlobales = (e) => {
-      const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento || mostrarEliminar || mostrarAnular
+      const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento || mostrarEliminar || mostrarAnular || mostrarCambio
       if (e.key === 'F1') {
         e.preventDefault()
         if (caja && !modalAbierto && ticket.length > 0) {
@@ -550,7 +564,39 @@ useEffect(() => {
         if (caja && !modalAbierto && ticket.length > 0) {
           abrirEliminar()
         }
-        } else if (e.key === 'F6') {
+        } else if (e.key === 'F8') {
+        e.preventDefault()
+        if (caja && !modalAbierto) {
+          abrirCambio()
+        }
+      } else if (e.key === 'F7') {
+        e.preventDefault()
+        if (caja && !modalAbierto && ultimaFacturaId) {
+          const token = sessionStorage.getItem('token')
+          const url = `/invoices/${ultimaFacturaId}/pdf-pos?token=${token}&reimpreso=1`
+          const viejoR = document.getElementById('iframe-reimpresion')
+          if (viejoR) viejoR.remove()
+          const ifr = document.createElement('iframe')
+          ifr.id = 'iframe-reimpresion'
+          ifr.style.position = 'fixed'
+          ifr.style.width = '0'
+          ifr.style.height = '0'
+          ifr.style.border = '0'
+          ifr.style.visibility = 'hidden'
+          ifr.src = url
+          ifr.onload = () => {
+            try {
+              ifr.contentWindow.focus()
+              ifr.contentWindow.print()
+            } catch (err) {
+              window.open(url, '_blank')
+            }
+          }
+          document.body.appendChild(ifr)
+        } else if (caja && !modalAbierto) {
+          alert('No hay ticket para reimprimir en esta sesion.')
+        }
+      } else if (e.key === 'F6') {
         e.preventDefault()
         if (caja && !modalAbierto && ticket.length > 0) {
           setClaveAnular('')
@@ -1006,6 +1052,7 @@ useEffect(() => {
       <div class="row"><span>Ventas en efectivo:</span><b>RD$ ${fmt(c.total_efectivo)}</b></div>
       <div class="row"><span>Ventas con tarjeta:</span><b>RD$ ${fmt(c.total_tarjeta)}</b></div>
       <div class="row"><span>Transferencias:</span><b>RD$ ${fmt(c.total_transferencia)}</b></div>
+      ${parseFloat(c.total_cambios || 0) > 0 ? `<div class="row"><span>Cambios de mercancia:</span><b>RD$ ${fmt(c.total_cambios)}</b></div>` : ''}
       <div class="row"><span>Total de ventas:</span><b>RD$ ${fmt(c.total_ventas)}</b></div>
       <div class="row tot"><span>EFECTIVO ESPERADO:</span><span>RD$ ${fmt(c.efectivo_esperado)}</span></div>
       ${filasDesg ? `<h4 style="margin:16px 0 6px">Detalle de Efectivo</h4>
@@ -1071,6 +1118,125 @@ const abrirCierre = async () => {
       console.error('Error cerrando caja:', err)
     } finally {
       setProcesandoCaja(false)
+    }
+  }
+
+  // ===== CAMBIO DE MERCANCIA (F8) =====
+      // Navegacion global por flechas dentro del modal de cambio
+  useEffect(() => {
+    if (!mostrarCambio || pasoCambio !== 3) return
+
+    const onKeyCambio = (e) => {
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+        const modal = document.getElementById('modal-cambio')
+      if (!modal) return
+      const foco = Array.from(modal.querySelectorAll('input, select, button')).filter(x => !x.disabled && x.type !== 'hidden')
+      const el0 = document.activeElement
+      const pos = foco.indexOf(el0)
+      if (pos === -1) return
+      if (el0.id === 'cambio-buscar' && buscarNuevoCambio) return
+            if (el0.tagName === 'SELECT' && e.key === 'ArrowDown') return
+      if (el0.tagName === 'SELECT' && e.key === 'ArrowUp' && el0.selectedIndex > 0) return
+      e.preventDefault()
+      e.stopPropagation()
+      const dir = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1 : -1
+      const sig = foco[pos + dir]
+      if (sig) { sig.focus(); if (sig.select) sig.select() }
+    }
+     window.addEventListener('keydown', onKeyCambio, true)
+    return () => window.removeEventListener('keydown', onKeyCambio, true)
+   }, [mostrarCambio, pasoCambio, itemsDevueltos, itemsNuevos, buscarNuevoCambio])
+
+  const abrirCambio = () => {
+    setPasoCambio(1)
+    setClaveCambio('')
+    setErrorCambio('')
+    setNcfCambio('')
+    setFacturaCambio(null)
+    setItemsDevueltos([])
+    setItemsNuevos([])
+    setBuscarNuevoCambio('')
+    setMetodoCambio('efectivo')
+    setMostrarCambio(true)
+  }
+
+  const validarClaveCambio = async () => {
+    if (!claveCambio.trim()) { setErrorCambio('Ingrese la clave'); return }
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveCambio })
+      if (res.data.valido) { setErrorCambio(''); setPasoCambio(2) }
+      else setErrorCambio('Clave incorrecta')
+    } catch (e) { setErrorCambio('Error al validar clave') }
+  }
+
+  const buscarFacturaCambio = async () => {
+    const val = ncfCambio.trim().toUpperCase()
+    if (!val) { setErrorCambio('Ingrese el NCF'); return }
+    try {
+      const res = await API.get('/invoices')
+      const lista = res.data.data || []
+      const fac = lista.find(f => (f.ncf || '').toUpperCase() === val)
+      if (!fac) { setErrorCambio('Factura no encontrada: ' + val); return }
+      if (fac.estado === 'anulada') { setErrorCambio('Esta factura esta anulada'); return }
+      const dias = Math.floor((Date.now() - new Date(fac.creado_en).getTime()) / 86400000)
+      if (dias > 5) { setErrorCambio(`El plazo para cambios es de 5 dias. Esta factura tiene ${dias} dias.`); return }
+      const det = await API.get(`/invoices/${fac.id}`)
+      const its = (det.data.data.items || []).map(it => ({
+        product_id: it.product_id || '',
+        descripcion: it.descripcion || '',
+        cantidad_original: parseFloat(it.cantidad) || 0,
+        cantidad: 0,
+        precio_unitario: parseFloat(it.precio_unitario) || 0,
+        seleccionado: false
+      }))
+      setFacturaCambio({ ...fac, dias })
+      setItemsDevueltos(its)
+   setErrorCambio('')
+      setPasoCambio(3)
+      setFilaCambio(0)
+      setTimeout(() => { const f = document.querySelectorAll('tr[tabindex="0"]'); f[0]?.focus() }, 150)
+    } catch (e) { setErrorCambio('Error al buscar la factura') }
+  }
+
+  const agregarNuevoCambio = (p) => {
+    const existe = itemsNuevos.find(i => i.product_id === p.id)
+    if (existe) {
+      setItemsNuevos(itemsNuevos.map(i => i.product_id === p.id ? { ...i, cantidad: parseFloat(i.cantidad) + 1 } : i))
+    } else {
+      setItemsNuevos([...itemsNuevos, { product_id: p.id, descripcion: p.nombre, cantidad: 1, precio_unitario: parseFloat(p.precio) || 0 }])
+    }
+    setBuscarNuevoCambio('')
+  }
+
+  const totalDevueltoCambio = itemsDevueltos.filter(i => i.seleccionado && i.cantidad > 0).reduce((s, i) => s + i.cantidad * i.precio_unitario, 0)
+  const totalNuevoCambio = itemsNuevos.reduce((s, i) => s + (parseFloat(i.cantidad) || 0) * (parseFloat(i.precio_unitario) || 0), 0)
+  const diferenciaCambio = totalNuevoCambio - totalDevueltoCambio
+
+  const procesarCambio = async () => {
+    const devs = itemsDevueltos.filter(i => i.seleccionado && i.cantidad > 0)
+    if (devs.length === 0) { setErrorCambio('Seleccione al menos un articulo a devolver'); return }
+    if (itemsNuevos.length === 0) { setErrorCambio('Agregue al menos un articulo nuevo'); return }
+    if (diferenciaCambio < -0.01) { setErrorCambio('La mercancia nueva debe costar igual o mas que la devuelta'); return }
+    for (const d of devs) {
+      if (d.cantidad > d.cantidad_original) { setErrorCambio(`No puede devolver mas de ${d.cantidad_original} de "${d.descripcion}"`); return }
+    }
+    setProcesandoCambio(true)
+    try {
+      const res = await API.post('/pos/cambio', {
+        invoice_id: facturaCambio.id,
+        items_devueltos: devs.map(d => ({ product_id: d.product_id, descripcion: d.descripcion, cantidad: d.cantidad, precio_unitario: d.precio_unitario })),
+        items_nuevos: itemsNuevos,
+        metodo_pago: diferenciaCambio > 0.01 ? metodoCambio : null,
+        autorizado_por: 'Supervisor'
+      })
+      const num = res.data.data?.numero || ''
+      alert(`Cambio ${num} registrado.\n\nDevuelto: RD$${totalDevueltoCambio.toFixed(2)}\nEntregado: RD$${totalNuevoCambio.toFixed(2)}\nDiferencia cobrada: RD$${diferenciaCambio.toFixed(2)}`)
+      setMostrarCambio(false)
+      cargarProductos()
+    } catch (e) {
+      setErrorCambio(e.response?.data?.mensaje || 'Error al procesar el cambio')
+    } finally {
+      setProcesandoCambio(false)
     }
   }
 
@@ -1275,6 +1441,7 @@ const res = await API.post('/invoices', payload)
       } catch (e) {
         console.error('Error registrando desglose de pago:', e)
       }
+    setUltimaFacturaId(factura.id)
       setVentaExitosa({
         offline: false,
         id: factura.id,
@@ -1677,7 +1844,7 @@ const teclasDescuento = (e) => {
                 {cargando ? 'Cargando productos...' : `${productos.length} productos disponibles`}
               </p>
               <p className="text-sm">Escanea o escribe para buscar. Enter agrega al ticket.</p>
-              <p className="text-sm mt-2 font-semibold text-blue-500">⌨️ F1 = COBRAR</p>
+              <p className="text-sm mt-2 font-semibold text-blue-500">⌨️ F1 = COBRAR | F7 = REIMPRIMIR | F8 = CAMBIO</p>
             </div>
           </div>
         </div>
@@ -2035,6 +2202,253 @@ const teclasDescuento = (e) => {
           </div>
         </div>
       )}
+            {mostrarCambio && (
+        <div id="modal-cambio" className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-purple-700 px-5 py-3 flex justify-between items-center">
+              <h3 className="text-white font-bold">CAMBIO DE MERCANCIA {facturaCambio ? `- ${facturaCambio.ncf}` : ''}</h3>
+              <button onClick={() => setMostrarCambio(false)} className="text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-5 overflow-y-auto">
+              {errorCambio && <div className="bg-red-100 text-red-700 p-2 rounded mb-3 text-sm font-medium">{errorCambio}</div>}
+
+              {pasoCambio === 1 && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-3">Esta operacion requiere autorizacion del supervisor.</p>
+                  <label className="block text-sm font-semibold text-gray-600 mb-1">Clave de autorizacion</label>
+                  <input type="password" autoFocus value={claveCambio}
+                    onChange={e => { setClaveCambio(e.target.value); setErrorCambio('') }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); validarClaveCambio() } }}
+                    placeholder="Clave del administrador"
+                    className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                  <div className="flex gap-3 mt-5">
+                    <button onClick={() => setMostrarCambio(false)}
+                      className="flex-1 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
+                    <button onClick={validarClaveCambio}
+                      className="flex-1 px-4 py-2 bg-purple-700 text-white rounded-lg text-sm font-bold hover:bg-purple-800">Validar</button>
+                  </div>
+                </div>
+              )}
+
+              {pasoCambio === 2 && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-3">Busque el ticket original. Plazo maximo: 5 dias.</p>
+                  <label className="block text-sm font-semibold text-gray-600 mb-1">NCF del ticket</label>
+                  <div className="flex gap-2">
+                    <input type="text" autoFocus value={ncfCambio}
+                      onChange={e => { setNcfCambio(e.target.value.toUpperCase()); setErrorCambio('') }}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); buscarFacturaCambio() } }}
+                      placeholder="B0200000001"
+                      className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                    <button onClick={buscarFacturaCambio}
+                      className="px-5 py-2 bg-purple-700 text-white rounded-lg text-sm font-bold hover:bg-purple-800">Buscar</button>
+                  </div>
+                  <button onClick={() => setMostrarCambio(false)}
+                    className="w-full mt-4 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
+                </div>
+              )}
+
+              {pasoCambio === 3 && facturaCambio && (
+                <div>
+                  <div className="bg-purple-50 border border-purple-200 rounded p-3 mb-4 text-sm">
+                    <p><b>Cliente:</b> {facturaCambio.cliente_nombre || 'Consumidor Final'}</p>
+                    <p><b>Fecha:</b> {new Date(facturaCambio.creado_en).toLocaleDateString('es-DO')} ({facturaCambio.dias} dia(s))</p>
+                  </div>
+
+                  <p className="text-sm font-bold text-gray-700 mb-2">1. Marque lo que devuelve</p>
+                  <table className="w-full text-sm mb-4 border">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-2 py-2"></th>
+                        <th className="px-2 py-2 text-left">Producto</th>
+                        <th className="px-2 py-2 text-right">Orig.</th>
+                        <th className="px-2 py-2 text-right w-24">Devolver</th>
+                        <th className="px-2 py-2 text-right">Precio</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                     {itemsDevueltos.map((it, idx) => (
+                        <tr key={idx} className={`border-t ${filaCambio === idx ? 'bg-purple-100' : ''}`}
+                          tabIndex={0}
+                          onKeyDown={e => {
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault()
+                              if (idx < itemsDevueltos.length - 1) setFilaCambio(idx + 1)
+                              else document.getElementById('cambio-buscar')?.focus()
+                            } else if (e.key === 'ArrowUp') {
+                              e.preventDefault()
+                              if (idx > 0) setFilaCambio(idx - 1)
+                            } else if (e.key === 'ArrowRight') {
+                              e.preventDefault()
+                              setItemsDevueltos(prev => prev.map((x, i) => i === idx ? { ...x, seleccionado: true, cantidad: x.cantidad_original } : x))
+                              setTimeout(() => document.getElementById(`cambio-cant-${idx}`)?.focus(), 50)
+                            } else if (e.key === 'ArrowLeft') {
+                              e.preventDefault()
+                              setItemsDevueltos(prev => prev.map((x, i) => i === idx ? { ...x, seleccionado: false, cantidad: 0 } : x))
+                            }
+                          }}>
+                          <td className="px-2 py-2 text-center">
+                            <input type="checkbox" checked={it.seleccionado}
+                              onChange={e => setItemsDevueltos(prev => prev.map((x, i) => i === idx ? { ...x, seleccionado: e.target.checked, cantidad: e.target.checked ? x.cantidad_original : 0 } : x))} />
+                          </td>
+                          <td className="px-2 py-2">{it.descripcion}</td>
+                          <td className="px-2 py-2 text-right">{it.cantidad_original}</td>
+                          <td className="px-2 py-2 text-right">
+                           <input type="text" inputMode="decimal" value={it.cantidad}
+                              id={`cambio-cant-${idx}`}
+                              disabled={!it.seleccionado}
+                              onFocus={e => e.target.select()}
+                                                     onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  document.getElementById('cambio-buscar')?.focus()
+                                }
+                              }}
+                              onChange={e => setItemsDevueltos(prev => prev.map((x, i) => i === idx ? { ...x, cantidad: parseFloat(e.target.value) || 0 } : x))}
+                              className="w-20 border rounded px-2 py-1 text-right disabled:bg-gray-100" />
+                          </td>
+                          <td className="px-2 py-2 text-right">RD${it.precio_unitario.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <p className="text-sm font-bold text-gray-700 mb-2">2. Que se lleva</p>
+                  <div className="relative mb-3">
+                  <input type="text" value={buscarNuevoCambio}
+                      id="cambio-buscar"
+                      onChange={e => { setBuscarNuevoCambio(e.target.value); setIdxBuscarCambio(-1) }}
+                      onKeyDown={e => {
+                        const filt = productos.filter(p => p.nombre.toLowerCase().includes(buscarNuevoCambio.toLowerCase())).slice(0, 8)
+                                     if (e.key === 'ArrowDown' && buscarNuevoCambio) {
+                          e.preventDefault()
+                          if (filt.length > 0) setIdxBuscarCambio(prev => Math.min(prev + 1, filt.length - 1))
+                        } else if (e.key === 'ArrowUp' && buscarNuevoCambio) {
+                          e.preventDefault()
+                          if (idxBuscarCambio > 0) setIdxBuscarCambio(idxBuscarCambio - 1)
+                          else setIdxBuscarCambio(-1)
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (idxBuscarCambio >= 0 && filt[idxBuscarCambio]) {
+                            agregarNuevoCambio(filt[idxBuscarCambio])
+                            setIdxBuscarCambio(-1)
+                          } else if (!buscarNuevoCambio && itemsNuevos.length > 0) {
+                            procesarCambio()
+                          }
+                                           }
+                      }}
+                      placeholder="Buscar articulo... (Enter vacio = procesar)"
+                      className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                    {buscarNuevoCambio && (
+                      <div className="absolute z-20 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
+                        {productos.filter(p => p.nombre.toLowerCase().includes(buscarNuevoCambio.toLowerCase())).slice(0, 8).map(p => (
+                         <div key={p.id} onMouseDown={() => agregarNuevoCambio(p)}
+                            className={`px-3 py-2 text-sm cursor-pointer border-b last:border-b-0 ${productos.filter(x => x.nombre.toLowerCase().includes(buscarNuevoCambio.toLowerCase())).slice(0, 8).indexOf(p) === idxBuscarCambio ? 'bg-purple-200 font-medium' : 'hover:bg-purple-50'}`}>
+                            {p.nombre} - RD${parseFloat(p.precio).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {itemsNuevos.length > 0 && (
+                    <table className="w-full text-sm mb-4 border">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="px-2 py-2 text-left">Producto</th>
+                          <th className="px-2 py-2 text-right w-24">Cant.</th>
+                          <th className="px-2 py-2 text-right">Precio</th>
+                          <th className="px-2 py-2 text-right">Importe</th>
+                          <th className="px-2 py-2 w-16"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemsNuevos.map((it, idx) => (
+                          <tr key={idx} className="border-t">
+                            <td className="px-2 py-2">{it.descripcion}</td>
+                            <td className="px-2 py-2 text-right">
+                             <input type="text" inputMode="decimal" value={it.cantidad}
+                                id={`cambio-nuevo-cant-${idx}`}
+                                onFocus={e => e.target.select()}
+                                                   onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    document.getElementById('cambio-buscar')?.focus()
+                                  } else if (e.key === 'Delete') {
+                                    e.preventDefault()
+                                    setItemsNuevos(prev => prev.filter((_, i) => i !== idx))
+                                    setTimeout(() => document.getElementById('cambio-buscar')?.focus(), 50)
+                                  }
+                                }}
+                                onChange={e => setItemsNuevos(prev => prev.map((x, i) => i === idx ? { ...x, cantidad: e.target.value } : x))}
+                                className="w-20 border rounded px-2 py-1 text-right" />
+                            </td>
+                            <td className="px-2 py-2 text-right">RD${parseFloat(it.precio_unitario).toFixed(2)}</td>
+                            <td className="px-2 py-2 text-right font-medium">RD${((parseFloat(it.cantidad) || 0) * parseFloat(it.precio_unitario)).toFixed(2)}</td>
+                            <td className="px-2 py-2 text-center">
+                              <button onClick={() => setItemsNuevos(prev => prev.filter((_, i) => i !== idx))}
+                                className="text-red-600 hover:underline text-xs">Quitar</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  <div className="bg-gray-50 rounded-lg p-4 text-sm">
+                    <div className="flex justify-between"><span>Devuelto:</span><span className="font-medium">RD${totalDevueltoCambio.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Se lleva:</span><span className="font-medium">RD${totalNuevoCambio.toFixed(2)}</span></div>
+                    <div className={`flex justify-between text-lg font-bold mt-2 pt-2 border-t ${diferenciaCambio < -0.01 ? 'text-red-600' : 'text-green-700'}`}>
+                      <span>DIFERENCIA A COBRAR:</span><span>RD${diferenciaCambio.toFixed(2)}</span>
+                    </div>
+                    {diferenciaCambio < -0.01 && <p className="text-red-600 text-xs mt-2 font-semibold">La mercancia nueva debe costar igual o mas que la devuelta.</p>}
+                  </div>
+
+                  {diferenciaCambio > 0.01 && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-semibold text-gray-600 mb-1">Metodo de pago de la diferencia</label>
+                      <select value={metodoCambio} onChange={e => setMetodoCambio(e.target.value)}
+                        id="cambio-metodo"
+                                           onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            const b = document.getElementById('cambio-procesar')
+                            if (b && !b.disabled) b.focus()
+                            else document.getElementById('cambio-cancelar')?.focus()
+                          }
+                        }}
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta</option>
+                        <option value="transferencia">Transferencia</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 mt-5">
+                   <button onClick={() => setMostrarCambio(false)}
+                      id="cambio-cancelar"
+                      onKeyDown={e => {
+                        if (e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('cambio-procesar')?.focus() }
+                        else if (e.key === 'ArrowUp') { e.preventDefault(); const m = document.getElementById('cambio-metodo'); if (m) m.focus(); else document.getElementById('cambio-buscar')?.focus() }
+                      }}
+                      className="flex-1 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancelar</button>
+                    <button onClick={procesarCambio} disabled={procesandoCambio || diferenciaCambio < -0.01}
+                      id="cambio-procesar"
+                      onKeyDown={e => {
+                        if (e.key === 'ArrowLeft') { e.preventDefault(); document.getElementById('cambio-cancelar')?.focus() }
+                        else if (e.key === 'ArrowUp') { e.preventDefault(); const m = document.getElementById('cambio-metodo'); if (m) m.focus(); else document.getElementById('cambio-buscar')?.focus() }
+                      }}
+                      className="flex-1 px-4 py-2 bg-purple-700 text-white rounded-lg text-sm font-bold hover:bg-purple-800 disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-purple-300">
+                      {procesandoCambio ? 'Procesando...' : 'PROCESAR CAMBIO'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {mostrarEliminar && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
        <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onKeyDown={(e) => {
@@ -2180,16 +2594,30 @@ const teclasDescuento = (e) => {
                   </div>
                   <div className="flex gap-1 flex-shrink-0 ml-2">
                     {clienteSeleccionado && (
-                      <button
+                                        <button
+                        id="cobro-quitar-cliente"
                         onClick={quitarCliente}
-                        className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold hover:bg-red-200"
+                        onKeyDown={e => {
+                          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            document.getElementById('cobro-cliente')?.focus()
+                          }
+                        }}
+                        className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold hover:bg-red-200 focus:outline-none focus:ring-4 focus:ring-red-300"
                         title="Volver a Consumidor Final"
                       >
                         ✕
                       </button>
                     )}
-                    <button
+                                     <button
                      id="cobro-cliente"
+                      onKeyDown={e => {
+                        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                          const q = document.getElementById('cobro-quitar-cliente')
+                          if (q) { e.preventDefault(); e.stopPropagation(); q.focus() }
+                        }
+                      }}
                       onClick={() => setMostrarBuscarCliente(!mostrarBuscarCliente)}
                   className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
                     >
@@ -2563,6 +2991,12 @@ const teclasDescuento = (e) => {
                   <span className="text-gray-500">🏦 Transferencias:</span>
                   <span className="font-bold">RD$ {fmt(resumenCaja.total_transferencia)}</span>
                 </div>
+                {parseFloat(resumenCaja.total_cambios || 0) > 0 && (
+                  <div className="flex justify-between py-1 text-sm">
+                    <span className="text-gray-500">🔄 Cambios de mercancia:</span>
+                    <span className="font-bold">RD$ {fmt(resumenCaja.total_cambios)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between py-1 text-sm border-t mt-2 pt-2">
                   <span className="text-gray-500">Total de ventas:</span>
                   <span className="font-bold">RD$ {fmt(resumenCaja.total_ventas)}</span>

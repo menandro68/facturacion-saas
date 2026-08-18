@@ -169,7 +169,6 @@ const handleEntrarEmpresa = (user) => {
     { id: 'productos', label: '📦 Articulos', modulo: 'productos' },
     { id: 'facturas', label: '🧾 Facturas', modulo: 'facturas' },
    ...(usuario?.features?.orden_compra_menu === true ? [{ id: 'orden_compra_menu', label: '🛍️ Factura Suplidor', modulo: 'inventario' }] : []),
-   ...(usuario?.features?.ocultar_pos === true ? [] : [{ id: 'pos', label: '🛒 Punto de Venta', modulo: 'facturas' }]),
     { id: 'conduces', label: '🚚 Conduce', modulo: 'conduces' },
     { id: 'pagos', label: '💰 Pagos', modulo: 'pagos' },
     { id: 'reportes', label: '📈 Reportes', modulo: 'reportes' },
