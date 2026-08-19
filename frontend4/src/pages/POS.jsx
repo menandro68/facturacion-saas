@@ -571,30 +571,8 @@ useEffect(() => {
         }
       } else if (e.key === 'F7') {
         e.preventDefault()
-        if (caja && !modalAbierto && ultimaFacturaId) {
-          const token = sessionStorage.getItem('token')
-          const url = `/invoices/${ultimaFacturaId}/pdf-pos?token=${token}&reimpreso=1`
-          const viejoR = document.getElementById('iframe-reimpresion')
-          if (viejoR) viejoR.remove()
-          const ifr = document.createElement('iframe')
-          ifr.id = 'iframe-reimpresion'
-          ifr.style.position = 'fixed'
-          ifr.style.width = '0'
-          ifr.style.height = '0'
-          ifr.style.border = '0'
-          ifr.style.visibility = 'hidden'
-          ifr.src = url
-          ifr.onload = () => {
-            try {
-              ifr.contentWindow.focus()
-              ifr.contentWindow.print()
-            } catch (err) {
-              window.open(url, '_blank')
-            }
-          }
-          document.body.appendChild(ifr)
-        } else if (caja && !modalAbierto) {
-          alert('No hay ticket para reimprimir en esta sesion.')
+        if (caja && !modalAbierto) {
+          reimprimirUltimoTicket()
         }
       } else if (e.key === 'F6') {
         e.preventDefault()
@@ -894,6 +872,27 @@ useEffect(() => {
       setProcesandoEliminar(false)
     }
   }
+   // Navegacion por flechas dentro del modal de anular ticket
+  useEffect(() => {
+    if (!mostrarAnular) return
+    const onKeyAnular = (e) => {
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      const orden = ['anular-clave', 'anular-cancelar', 'anular-confirmar']
+      const activo = document.activeElement?.id
+      const pos = orden.indexOf(activo)
+      if (pos === -1) return
+      e.preventDefault()
+      e.stopPropagation()
+      const paso = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1 : -1
+      for (let i = pos + paso; i >= 0 && i < orden.length; i += paso) {
+        const el = document.getElementById(orden[i])
+        if (el && !el.disabled) { setTimeout(() => { el.focus(); if (el.select) el.select() }, 20); return }
+      }
+    }
+    window.addEventListener('keydown', onKeyAnular, true)
+    return () => window.removeEventListener('keydown', onKeyAnular, true)
+  }, [mostrarAnular, procesandoAnular])
+
   // Anular ticket completo (valida clave)
   const confirmarAnularTicket = async () => {
     if (procesandoAnular) return
@@ -1124,12 +1123,21 @@ const abrirCierre = async () => {
   // ===== CAMBIO DE MERCANCIA (F8) =====
       // Navegacion global por flechas dentro del modal de cambio
   useEffect(() => {
-    if (!mostrarCambio || pasoCambio !== 3) return
+       if (!mostrarCambio) return
 
     const onKeyCambio = (e) => {
-      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+          if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Backspace'].includes(e.key)) return
         const modal = document.getElementById('modal-cambio')
       if (!modal) return
+      if (e.key === 'Backspace') {
+        const act = document.activeElement
+        if (act && act.type === 'checkbox' && act.id && act.id.startsWith('cambio-check-')) {
+          e.preventDefault()
+          e.stopPropagation()
+          act.click()
+        }
+        return
+      }
       const foco = Array.from(modal.querySelectorAll('input, select, button')).filter(x => !x.disabled && x.type !== 'hidden')
       const el0 = document.activeElement
       const pos = foco.indexOf(el0)
@@ -1145,7 +1153,59 @@ const abrirCierre = async () => {
     }
      window.addEventListener('keydown', onKeyCambio, true)
     return () => window.removeEventListener('keydown', onKeyCambio, true)
-   }, [mostrarCambio, pasoCambio, itemsDevueltos, itemsNuevos, buscarNuevoCambio])
+     }, [mostrarCambio, pasoCambio, itemsDevueltos, itemsNuevos, buscarNuevoCambio, facturaCambio])
+
+      // Al cerrar el modal de cambio, devolver el foco al buscador de productos
+  const cambioAbiertoRef = useRef(false)
+  useEffect(() => {
+    if (mostrarCambio) {
+      cambioAbiertoRef.current = true
+    } else if (cambioAbiertoRef.current) {
+      cambioAbiertoRef.current = false
+      setTimeout(() => { inputRef.current?.focus() }, 100)
+    }
+  }, [mostrarCambio])
+
+    const reimprimirUltimoTicket = async () => {
+    let facturaId = ultimaFacturaId
+    if (!facturaId) {
+      try {
+        const res = await API.get('/pos/ultima-factura')
+        if (res.data?.data?.id) {
+          facturaId = res.data.data.id
+          setUltimaFacturaId(facturaId)
+        }
+      } catch (err) {
+        alert('No se pudo consultar el ultimo ticket.')
+        return
+      }
+    }
+    if (!facturaId) {
+      alert('No hay ticket para reimprimir en esta caja.')
+      return
+    }
+    const token = sessionStorage.getItem('token')
+    const url = `/invoices/${facturaId}/pdf-pos?token=${token}&reimpreso=1`
+    const viejoR = document.getElementById('iframe-reimpresion')
+    if (viejoR) viejoR.remove()
+    const ifr = document.createElement('iframe')
+    ifr.id = 'iframe-reimpresion'
+    ifr.style.position = 'fixed'
+    ifr.style.width = '0'
+    ifr.style.height = '0'
+    ifr.style.border = '0'
+    ifr.style.visibility = 'hidden'
+    ifr.src = url
+    ifr.onload = () => {
+      try {
+        ifr.contentWindow.focus()
+        ifr.contentWindow.print()
+      } catch (err) {
+        window.open(url, '_blank')
+      }
+    }
+    document.body.appendChild(ifr)
+  }
 
   const abrirCambio = () => {
     setPasoCambio(1)
@@ -2186,12 +2246,14 @@ const teclasDescuento = (e) => {
               />
               {errorAnular && <p className="text-red-600 text-sm mt-2 font-semibold">{errorAnular}</p>}
               <div className="flex gap-3 mt-5">
-                <button
+                            <button
+                  id="anular-cancelar"
                   onClick={() => setMostrarAnular(false)}
                   className="flex-1 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">
                   Cancelar (Esc)
                 </button>
-                <button
+                             <button
+                  id="anular-confirmar"
                   onClick={confirmarAnularTicket}
                   disabled={procesandoAnular}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 disabled:opacity-50">
@@ -2288,8 +2350,9 @@ const teclasDescuento = (e) => {
                             }
                           }}>
                           <td className="px-2 py-2 text-center">
-                            <input type="checkbox" checked={it.seleccionado}
-                              onChange={e => setItemsDevueltos(prev => prev.map((x, i) => i === idx ? { ...x, seleccionado: e.target.checked, cantidad: e.target.checked ? x.cantidad_original : 0 } : x))} />
+                                                      <input type="checkbox" checked={it.seleccionado}
+                              id={`cambio-check-${idx}`}
+                              onChange={() => setItemsDevueltos(prev => prev.map((x, i) => i === idx ? { ...x, seleccionado: !x.seleccionado, cantidad: !x.seleccionado ? x.cantidad_original : 0 } : x))} />
                           </td>
                           <td className="px-2 py-2">{it.descripcion}</td>
                           <td className="px-2 py-2 text-right">{it.cantidad_original}</td>
