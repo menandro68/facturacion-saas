@@ -872,7 +872,28 @@ useEffect(() => {
       setProcesandoEliminar(false)
     }
   }
-   // Navegacion por flechas dentro del modal de anular ticket
+    // Navegacion por flechas dentro del modal de eliminar articulo
+  useEffect(() => {
+    if (!mostrarEliminar) return
+    const onKeyElim = (e) => {
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      const orden = ['elim-codigo', 'elim-cantidad', 'elim-clave', 'elim-cancelar', 'elim-confirmar']
+      const activo = document.activeElement?.id
+      const pos = orden.indexOf(activo)
+      if (pos === -1) return
+      e.preventDefault()
+      e.stopPropagation()
+      const paso = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1 : -1
+      for (let i = pos + paso; i >= 0 && i < orden.length; i += paso) {
+        const el = document.getElementById(orden[i])
+        if (el && !el.disabled) { setTimeout(() => { el.focus(); if (el.select) el.select() }, 20); return }
+      }
+    }
+    window.addEventListener('keydown', onKeyElim, true)
+    return () => window.removeEventListener('keydown', onKeyElim, true)
+  }, [mostrarEliminar, procesandoEliminar, codigoEliminar])
+
+  // Navegacion por flechas dentro del modal de anular ticket
   useEffect(() => {
     if (!mostrarAnular) return
     const onKeyAnular = (e) => {
@@ -1131,10 +1152,14 @@ const abrirCierre = async () => {
       if (!modal) return
       if (e.key === 'Backspace') {
         const act = document.activeElement
-        if (act && act.type === 'checkbox' && act.id && act.id.startsWith('cambio-check-')) {
+              if (act && act.id && (act.id.startsWith('cambio-check-') || act.id.startsWith('cambio-quitar-'))) {
           e.preventDefault()
           e.stopPropagation()
+          const eraQuitar = act.id.startsWith('cambio-quitar-')
           act.click()
+          if (eraQuitar) {
+            setTimeout(() => { document.getElementById('cambio-buscar')?.focus() }, 60)
+          }
         }
         return
       }
@@ -1155,7 +1180,29 @@ const abrirCierre = async () => {
     return () => window.removeEventListener('keydown', onKeyCambio, true)
      }, [mostrarCambio, pasoCambio, itemsDevueltos, itemsNuevos, buscarNuevoCambio, facturaCambio])
 
-      // Al cerrar el modal de cambio, devolver el foco al buscador de productos
+        // Al cerrar el modal de eliminar articulo, devolver el foco al buscador de productos
+  const eliminarAbiertoRef = useRef(false)
+  useEffect(() => {
+    if (mostrarEliminar) {
+      eliminarAbiertoRef.current = true
+    } else if (eliminarAbiertoRef.current) {
+      eliminarAbiertoRef.current = false
+      setTimeout(() => { inputRef.current?.focus() }, 100)
+    }
+  }, [mostrarEliminar])
+
+  // Al cerrar el modal de anular ticket, devolver el foco al buscador de productos
+  const anularAbiertoRef = useRef(false)
+  useEffect(() => {
+    if (mostrarAnular) {
+      anularAbiertoRef.current = true
+    } else if (anularAbiertoRef.current) {
+      anularAbiertoRef.current = false
+      setTimeout(() => { inputRef.current?.focus() }, 100)
+    }
+  }, [mostrarAnular])
+
+  // Al cerrar el modal de cambio, devolver el foco al buscador de productos
   const cambioAbiertoRef = useRef(false)
   useEffect(() => {
     if (mostrarCambio) {
@@ -1200,8 +1247,10 @@ const abrirCierre = async () => {
       try {
         ifr.contentWindow.focus()
         ifr.contentWindow.print()
+        setTimeout(() => { inputRef.current?.focus() }, 100)
       } catch (err) {
         window.open(url, '_blank')
+        setTimeout(() => { inputRef.current?.focus() }, 100)
       }
     }
     document.body.appendChild(ifr)
@@ -2449,7 +2498,8 @@ const teclasDescuento = (e) => {
                             <td className="px-2 py-2 text-right">RD${parseFloat(it.precio_unitario).toFixed(2)}</td>
                             <td className="px-2 py-2 text-right font-medium">RD${((parseFloat(it.cantidad) || 0) * parseFloat(it.precio_unitario)).toFixed(2)}</td>
                             <td className="px-2 py-2 text-center">
-                              <button onClick={() => setItemsNuevos(prev => prev.filter((_, i) => i !== idx))}
+                                                            <button id={`cambio-quitar-${idx}`}
+                                onClick={() => setItemsNuevos(prev => prev.filter((_, i) => i !== idx))}
                                 className="text-red-600 hover:underline text-xs">Quitar</button>
                             </td>
                           </tr>
@@ -2569,7 +2619,10 @@ const teclasDescuento = (e) => {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-400 text-center mb-3">Ese código no está en el ticket</p>
+                  <div className="mb-3 border-2 border-orange-400 bg-orange-50 rounded-lg p-3 text-center">
+                    <p className="text-sm font-bold text-orange-700">ARTICULO NO ESTA EN ESTE TICKET</p>
+                    <p className="text-xs text-orange-600 mt-1">No se puede eliminar. Verifique el codigo.</p>
+                  </div>
                 )
               )}
 

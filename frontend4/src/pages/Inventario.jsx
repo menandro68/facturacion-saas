@@ -48,7 +48,22 @@ export default function Inventario({ modulos_permitidos = null }) {
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+   useEffect(() => { fetchData() }, [])
+
+  // Refrescar inventario en linea: al volver a la pestana y cada 30 segundos
+  useEffect(() => {
+    const alVolver = () => { if (document.visibilityState === 'visible') fetchData() }
+    document.addEventListener('visibilitychange', alVolver)
+    window.addEventListener('focus', alVolver)
+    const intervalo = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchData()
+    }, 30000)
+    return () => {
+      document.removeEventListener('visibilitychange', alVolver)
+      window.removeEventListener('focus', alVolver)
+      clearInterval(intervalo)
+    }
+  }, [])
 
   const handleFormChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })

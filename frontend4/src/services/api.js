@@ -10,8 +10,14 @@ API.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  if ((config.method || 'get').toLowerCase() === 'get') {
+    config.headers['Cache-Control'] = 'no-cache'
+    config.headers['Pragma'] = 'no-cache'
+    config.params = { ...(config.params || {}), _t: Date.now() }
+  }
   return config
 })
+
 
 // Función helper: esperar N milisegundos
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
