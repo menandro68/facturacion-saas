@@ -1165,9 +1165,25 @@ const abrirCierre = async () => {
       }
       const foco = Array.from(modal.querySelectorAll('input, select, button')).filter(x => !x.disabled && x.type !== 'hidden')
       const el0 = document.activeElement
-      const pos = foco.indexOf(el0)
+         const pos = foco.indexOf(el0)
+      if (buscarNuevoCambio && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && el0.id !== 'cambio-buscar') {
+        const b = document.getElementById('cambio-buscar')
+        if (b) { e.preventDefault(); e.stopPropagation(); b.focus(); return }
+      }
       if (pos === -1) return
-      if (el0.id === 'cambio-buscar' && buscarNuevoCambio) return
+      if (el0.id === 'cambio-buscar' && buscarNuevoCambio) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          const t = buscarNuevoCambio.trim().toLowerCase()
+          const lista = productos.filter(p => (p.nombre || '').toLowerCase().includes(t) || (p.codigo || '').toLowerCase().includes(t)).slice(0, 8)
+          if (lista.length > 0) {
+            e.preventDefault()
+            e.stopPropagation()
+            if (e.key === 'ArrowDown') setIdxBuscarCambio(prev => Math.min(prev + 1, lista.length - 1))
+            else setIdxBuscarCambio(prev => Math.max(prev - 1, 0))
+          }
+        }
+        return
+      }
             if (el0.tagName === 'SELECT' && e.key === 'ArrowDown') return
       if (el0.tagName === 'SELECT' && e.key === 'ArrowUp' && el0.selectedIndex > 0) return
       e.preventDefault()
@@ -1178,7 +1194,7 @@ const abrirCierre = async () => {
     }
      window.addEventListener('keydown', onKeyCambio, true)
     return () => window.removeEventListener('keydown', onKeyCambio, true)
-     }, [mostrarCambio, pasoCambio, itemsDevueltos, itemsNuevos, buscarNuevoCambio, facturaCambio])
+         }, [mostrarCambio, pasoCambio, itemsDevueltos, itemsNuevos, buscarNuevoCambio, facturaCambio, productos])
 
         // Al cerrar el modal de eliminar articulo, devolver el foco al buscador de productos
   const eliminarAbiertoRef = useRef(false)
@@ -1338,10 +1354,44 @@ const abrirCierre = async () => {
         metodo_pago: diferenciaCambio > 0.01 ? metodoCambio : null,
         autorizado_por: 'Supervisor'
       })
-      const num = res.data.data?.numero || ''
-      alert(`Cambio ${num} registrado.\n\nDevuelto: RD$${totalDevueltoCambio.toFixed(2)}\nEntregado: RD$${totalNuevoCambio.toFixed(2)}\nDiferencia cobrada: RD$${diferenciaCambio.toFixed(2)}`)
-      setMostrarCambio(false)
-      cargarProductos()
+        const num = res.data.data?.numero || ''
+      const cambioId = res.data.data?.id
+         setMostrarCambio(false)
+      setBusqueda('')
+      setResultados([])
+      setSeleccionado(0)
+      try {
+        const rp = await API.get('/products')
+        setProductos(rp.data.data || [])
+      } catch (e2) { console.error('Error recargando productos:', e2) }
+      if (cambioId) {
+        const token = sessionStorage.getItem('token')
+        const url = `/pos/cambio/${cambioId}/ticket?token=${token}`
+        console.log('TICKET CAMBIO URL:', url)
+        const viejoC = document.getElementById('iframe-cambio')
+        if (viejoC) viejoC.remove()
+        const ifc = document.createElement('iframe')
+        ifc.id = 'iframe-cambio'
+        ifc.style.position = 'fixed'
+        ifc.style.width = '0'
+        ifc.style.height = '0'
+        ifc.style.border = '0'
+        ifc.style.visibility = 'hidden'
+        ifc.src = url
+        ifc.onload = () => {
+          try {
+            ifc.contentWindow.focus()
+            ifc.contentWindow.print()
+          } catch (err) {
+            window.open(url, '_blank')
+          }
+                 setBusqueda('')
+          setResultados([])
+          setSeleccionado(0)
+          setTimeout(() => { setBusqueda(''); setResultados([]); inputRef.current?.focus() }, 150)
+        }
+        document.body.appendChild(ifc)
+      }
     } catch (e) {
       setErrorCambio(e.response?.data?.mensaje || 'Error al procesar el cambio')
     } finally {
@@ -1397,7 +1447,8 @@ const agregarAlTicket = (producto) => {
   }
 
   // Teclas en la búsqueda
-  const manejarTeclas = (e) => {
+   const manejarTeclas = (e) => {
+    if (mostrarCambio || mostrarEliminar || mostrarAnular) return
     if (e.key === 'Enter') {
       e.preventDefault()
       const texto = busqueda.trim().toLowerCase()
@@ -1536,7 +1587,8 @@ if (procesando) return
         product_id: l.id,
         descripcion: l.nombre,
         cantidad: l.cantidad,
-        precio_unitario: l.precio,
+                precio_unitario: l.precio,
+        precio_original: l.precio_original,
         itbis_rate: l.itbis_rate
       }))
     }
@@ -1633,6 +1685,15 @@ if (e.key === 'Escape') {
     }
     if (e.key !== 'Enter') return
     const el = document.activeElement
+    if (el && el.id && el.id.startsWith('metodo-')) {
+      e.preventDefault()
+      if (formaPago === 'efectivo') {
+        document.getElementById('cobro-recibido')?.focus()
+      } else {
+        confirmarCobro()
+      }
+      return
+    }
     if (el && el.tagName === 'BUTTON') return
     e.preventDefault()
     if (el && el.id && el.id.startsWith('mixto-')) {
@@ -2431,7 +2492,8 @@ const teclasDescuento = (e) => {
                       id="cambio-buscar"
                       onChange={e => { setBuscarNuevoCambio(e.target.value); setIdxBuscarCambio(-1) }}
                       onKeyDown={e => {
-                        const filt = productos.filter(p => p.nombre.toLowerCase().includes(buscarNuevoCambio.toLowerCase())).slice(0, 8)
+                                               const txtB = buscarNuevoCambio.trim().toLowerCase()
+                        const filt = productos.filter(p => (p.nombre || '').toLowerCase().includes(txtB) || (p.codigo || '').toLowerCase().includes(txtB)).slice(0, 8)
                                      if (e.key === 'ArrowDown' && buscarNuevoCambio) {
                           e.preventDefault()
                           if (filt.length > 0) setIdxBuscarCambio(prev => Math.min(prev + 1, filt.length - 1))
@@ -2441,8 +2503,12 @@ const teclasDescuento = (e) => {
                           else setIdxBuscarCambio(-1)
                         } else if (e.key === 'Enter') {
                           e.preventDefault()
+                                                  const exacto = productos.find(p => (p.codigo || '').toLowerCase() === txtB)
                           if (idxBuscarCambio >= 0 && filt[idxBuscarCambio]) {
                             agregarNuevoCambio(filt[idxBuscarCambio])
+                            setIdxBuscarCambio(-1)
+                          } else if (exacto) {
+                            agregarNuevoCambio(exacto)
                             setIdxBuscarCambio(-1)
                           } else if (!buscarNuevoCambio && itemsNuevos.length > 0) {
                             procesarCambio()
@@ -2453,9 +2519,9 @@ const teclasDescuento = (e) => {
                       className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400" />
                     {buscarNuevoCambio && (
                       <div className="absolute z-20 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
-                        {productos.filter(p => p.nombre.toLowerCase().includes(buscarNuevoCambio.toLowerCase())).slice(0, 8).map(p => (
+                                               {productos.filter(p => (p.nombre || '').toLowerCase().includes(buscarNuevoCambio.trim().toLowerCase()) || (p.codigo || '').toLowerCase().includes(buscarNuevoCambio.trim().toLowerCase())).slice(0, 8).map(p => (
                          <div key={p.id} onMouseDown={() => agregarNuevoCambio(p)}
-                            className={`px-3 py-2 text-sm cursor-pointer border-b last:border-b-0 ${productos.filter(x => x.nombre.toLowerCase().includes(buscarNuevoCambio.toLowerCase())).slice(0, 8).indexOf(p) === idxBuscarCambio ? 'bg-purple-200 font-medium' : 'hover:bg-purple-50'}`}>
+                            className={`px-3 py-2 text-sm cursor-pointer border-b last:border-b-0 ${productos.filter(x => (x.nombre || '').toLowerCase().includes(buscarNuevoCambio.trim().toLowerCase()) || (x.codigo || '').toLowerCase().includes(buscarNuevoCambio.trim().toLowerCase())).slice(0, 8).indexOf(p) === idxBuscarCambio ? 'bg-purple-200 font-medium' : 'hover:bg-purple-50'}`}>
                             {p.nombre} - RD${parseFloat(p.precio).toLocaleString('es-DO', { minimumFractionDigits: 2 })}
                           </div>
                         ))}
