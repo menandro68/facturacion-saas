@@ -88,8 +88,8 @@ if (tipo === 'cajero') {
       }
 
       const payload = tipo === 'admin'
-        ? { email: form.email, password: form.password, rol_esperado: 'admin' }
-        : { usuario: form.usuario, password: form.password, rol_esperado: tipo }
+             ? { email: (form.email || '').trim(), password: form.password, rol_esperado: 'admin' }
+        : { usuario: (form.usuario || '').trim(), password: form.password, rol_esperado: tipo }
 
       const res = await API.post('/auth/login', payload)
       

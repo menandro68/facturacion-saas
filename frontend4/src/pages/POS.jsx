@@ -188,6 +188,8 @@ function POS() {
   const codigoEliminarRef = useRef(null)
   const ticketRef = useRef(null)
   const sincronizandoRef = useRef(false)
+  const productosRef = useRef([])
+  const agregarNuevoCambioRef = useRef(() => {})
 
   const usuario = JSON.parse(sessionStorage.getItem('usuario') || '{}')
   // Cajero (solo_pos): no ve montos del turno, solo cuenta el efectivo e imprime
@@ -210,7 +212,7 @@ function POS() {
     const UMBRAL_MS = 50
 
     const onKeyDown = (e) => {
-      const activo = document.activeElement
+         const activo = document.activeElement
       if (activo === inputRef.current) return
       if (e.ctrlKey || e.altKey || e.metaKey) return
       if (activo && (activo.tagName === 'TEXTAREA' || activo.tagName === 'SELECT')) return
@@ -219,12 +221,21 @@ function POS() {
       const delta = ahora - ultimaTecla
       ultimaTecla = ahora
 
-      if (e.key === 'Enter') {
+         if (e.key === 'Enter') {
         if (buffer.length >= 3) {
           e.preventDefault()
           e.stopPropagation()
           const codigo = buffer
           buffer = ''
+          if (document.getElementById('modal-cambio')) {
+            const prod = productosRef.current.find(p => (p.codigo || '').toLowerCase() === codigo.trim().toLowerCase())
+            if (prod) {
+              agregarNuevoCambioRef.current(prod)
+              setBuscarNuevoCambio('')
+              setTimeout(() => document.getElementById('cambio-buscar')?.focus(), 20)
+            }
+            return
+          }
           setBusqueda(codigo)
           setTimeout(() => {
             if (inputRef.current) {
@@ -1272,6 +1283,9 @@ const abrirCierre = async () => {
     document.body.appendChild(ifr)
   }
 
+    useEffect(() => { productosRef.current = productos }, [productos])
+ 
+
   const abrirCambio = () => {
     setPasoCambio(1)
     setClaveCambio('')
@@ -1332,6 +1346,8 @@ const abrirCierre = async () => {
     }
     setBuscarNuevoCambio('')
   }
+
+    useEffect(() => { agregarNuevoCambioRef.current = agregarNuevoCambio })
 
   const totalDevueltoCambio = itemsDevueltos.filter(i => i.seleccionado && i.cantidad > 0).reduce((s, i) => s + i.cantidad * i.precio_unitario, 0)
   const totalNuevoCambio = itemsNuevos.reduce((s, i) => s + (parseFloat(i.cantidad) || 0) * (parseFloat(i.precio_unitario) || 0), 0)
@@ -1550,10 +1566,8 @@ if (procesando) return
         setErrorCobro('Debe ingresar al menos un monto')
         return
       }
-      if (Math.abs(faltaMixto) > 0.009) {
-        setErrorCobro(faltaMixto > 0
-          ? `Faltan RD$ ${fmt(faltaMixto)} por cubrir`
-          : `El monto excede el total en RD$ ${fmt(Math.abs(faltaMixto))}`)
+        if (faltaMixto > 0.009) {
+        setErrorCobro(`Faltan RD$ ${fmt(faltaMixto)} por cubrir`)
         return
       }
       if (!enLinea) {
@@ -1581,8 +1595,8 @@ if (procesando) return
       notas: `POS - Pago: ${etiquetaPago}${notaDescuento}`,
    fecha_vencimiento: '',
       estado: 'emitida',
-      monto_recibido: modoMixto ? totalGeneral : (formaPago === 'efectivo' ? recibido : totalGeneral),
-      devuelta: modoMixto ? 0 : (formaPago === 'efectivo' ? Math.max(0, devuelta) : 0),
+          monto_recibido: modoMixto ? totalMixto : (formaPago === 'efectivo' ? recibido : totalGeneral),
+      devuelta: modoMixto ? Math.max(0, -faltaMixto) : (formaPago === 'efectivo' ? Math.max(0, devuelta) : 0),
       items: ticket.map(l => ({
         product_id: l.id,
         descripcion: l.nombre,
@@ -2490,7 +2504,7 @@ const teclasDescuento = (e) => {
                   <div className="relative mb-3">
                   <input type="text" value={buscarNuevoCambio}
                       id="cambio-buscar"
-                      onChange={e => { setBuscarNuevoCambio(e.target.value); setIdxBuscarCambio(-1) }}
+                                       onChange={e => { setBuscarNuevoCambio(e.target.value); setIdxBuscarCambio(-1) }}
                       onKeyDown={e => {
                                                const txtB = buscarNuevoCambio.trim().toLowerCase()
                         const filt = productos.filter(p => (p.nombre || '').toLowerCase().includes(txtB) || (p.codigo || '').toLowerCase().includes(txtB)).slice(0, 8)
@@ -2943,7 +2957,7 @@ const teclasDescuento = (e) => {
                     <div className={`flex justify-between font-bold ${
                       Math.abs(faltaMixto) < 0.01 ? 'text-green-600' : faltaMixto > 0 ? 'text-red-600' : 'text-orange-600'
                     }`}>
-                      <span>{Math.abs(faltaMixto) < 0.01 ? '✅ Cubierto' : faltaMixto > 0 ? 'Falta por cubrir:' : 'Excede por:'}</span>
+                                           <span>{Math.abs(faltaMixto) < 0.01 ? '✅ Cubierto' : faltaMixto > 0 ? 'Falta por cubrir:' : 'Devuelta:'}</span>
                       <span className="text-lg">RD$ {fmt(Math.abs(faltaMixto))}</span>
                     </div>
                   </div>

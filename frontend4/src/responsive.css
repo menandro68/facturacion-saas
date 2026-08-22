@@ -772,3 +772,10 @@ body.tenant-responsive .grid.grid-cols-12:has(input[placeholder*="Buscar Art"]) 
   }
 }
 
+
+/* Ticket POS movil: letras mas gruesas y en negrita */
+body.tenant-responsive .pos-ticket,
+body.tenant-responsive .pos-ticket * {
+  font-weight: 900 !important;
+  -webkit-text-stroke: 0.6px currentColor;
+}

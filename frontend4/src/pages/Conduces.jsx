@@ -685,9 +685,14 @@ export default function Conduces() {
                 <td className="px-4 py-3">RD${parseFloat(co.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
                 <td className="px-4 py-3">{new Date(co.creado_en).toLocaleDateString('es-DO')}</td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${co.estado === 'anulado' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                    {co.estado.toUpperCase()}
-                  </span>
+                                   {(() => {
+                    const pagadoCd = co.estado !== 'anulado' && parseFloat(co.monto_pagado || 0) >= parseFloat(co.total || 0) - 0.01 && parseFloat(co.total || 0) > 0
+                    return (
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${co.estado === 'anulado' ? 'bg-red-100 text-red-700' : pagadoCd ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                        {pagadoCd ? 'PAGADO' : co.estado.toUpperCase()}
+                      </span>
+                    )
+                  })()}
                 </td>
                 <td className="px-4 py-3">
                   <button onClick={() => verPDF(co.id)} className="text-blue-600 hover:underline text-sm mr-3">PDF</button>

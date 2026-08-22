@@ -5,7 +5,9 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   // Feature Flag por tenant: modo POS responsive (solo empresas con features.responsive = true)
   const usuarioSesion = useMemo(() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } }, [])
   const modoPOS = usuarioSesion?.features?.responsive === true
-  const [posLineaAbierta, setPosLineaAbierta] = useState(true)
+    const [posLineaAbierta, setPosLineaAbierta] = useState(true)
+  const [condicionPago, setCondicionPago] = useState('credito')
+  const [montoAbono, setMontoAbono] = useState('')
   const [tab, setTab] = useState(() => {
     const tabGuardado = sessionStorage.getItem('facturas_tab_regreso')
     if (tabGuardado) {
@@ -454,7 +456,26 @@ const handleSubmit = async (e) => {
       // Solo enviar lineas completas (el flujo POS deja una linea vacia al final)
       // Los precios van ORIGINALES: el backend calcula el descuento
       const itemsEnviar = items.filter(it => it.descripcion && parseFloat(it.cantidad) > 0 && parseFloat(it.precio_unitario) > 0)
-      const res = await API.post('/invoices', { ...form, items: itemsEnviar, descuento_pct: pctFinal, estado: 'emitida' })
+           const res = await API.post('/invoices', { ...form, items: itemsEnviar, descuento_pct: pctFinal, estado: 'emitida' })
+      if (modoPOS && condicionPago !== 'credito') {
+        const facCreada = res.data.data || res.data
+        const totalFac = parseFloat(facCreada.total || 0)
+        const montoPago = condicionPago === 'contado' ? totalFac : (parseFloat(montoAbono) || 0)
+        if (montoPago > 0 && facCreada.id) {
+          try {
+            await API.post('/payments', {
+              invoice_id: facCreada.id,
+              monto: montoPago > totalFac ? totalFac : montoPago,
+              metodo: 'efectivo',
+              notas: condicionPago === 'contado' ? 'Pago de contado' : 'Abono inicial'
+            })
+          } catch (ePago) {
+            alert('La factura se guardo, pero no se pudo registrar el pago. Registrelo desde el modulo Pagos.')
+          }
+        }
+      }
+      setCondicionPago('credito')
+      setMontoAbono('')
       setShowForm(false)
       setDescuentoPct('')
       setForm({ customer_id: '', ncf_tipo: 'B01', notas: '', fecha_vencimiento: '' })
@@ -2642,8 +2663,8 @@ onKeyDown={e => {
                           }, 200)
                         } catch(e) { alert('Error al cargar pedido: ' + (e.response?.data?.mensaje || e.message)) }
                      }} className="bg-blue-600 text-white py-2.5 rounded-lg text-xs font-medium text-center leading-tight">✏️ Editar</button>
+                                         {!vendedor_id && (
                       <button onClick={async () => {
-                        if (vendedor_id) { alert('Usted no tiene permiso para este módulo'); return }
                       if (!confirm('¿Convertir este pedido a factura?')) return
                         try {
                           const detPed = await API.get(`/invoices/${p.id}`)
@@ -2681,7 +2702,8 @@ onKeyDown={e => {
                           fetchData()
                           alert('¡Factura emitida exitosamente!')
                        } catch(e) { alert('Error al convertir: ' + (e.response?.data?.mensaje || e.message)) }
-                     }} className="bg-green-600 text-white py-2.5 rounded-lg text-xs font-medium text-center leading-tight">Convertir</button>
+                                         }} className="bg-green-600 text-white py-2.5 rounded-lg text-xs font-medium text-center leading-tight">Convertir</button>
+                      )}
                       <button onClick={async () => {
                         if (!confirm('¿Eliminar este pedido?')) return
                         try {
@@ -2708,8 +2730,7 @@ onKeyDown={e => {
                 <tbody>
                   {pedidos.map(p => (
                     <tr key={p.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3 font-mono text-xs">{p.id.slice(0,8)}...</td>
-                    <td className="px-4 py-3">{p.cliente_nombre || 'Consumidor Final'}</td>
+                                         <td className="px-4 py-3">{p.cliente_nombre || 'Consumidor Final'}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-bold ${p.tipo_entrega === 'conduce' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}`}>
                           {p.tipo_entrega === 'conduce' ? 'CONDUCE' : 'FACTURA'}
@@ -3394,8 +3415,8 @@ onKeyDown={e => {
                       if (!ncMotivo.trim()) { alert('Ingresa el motivo de la nota de crédito'); return }
                       if (!confirm('¿Emitir esta Nota de Crédito?')) return
                       try {
-                       if (ncFacturaEncontrada.es_conduce) {
-                          await API.post(`/conduces/${ncFacturaEncontrada.id}/nota-credito`, {
+                                             if (ncFacturaEncontrada.es_conduce) {
+                          const resNcCd = await API.post(`/conduces/${ncFacturaEncontrada.id}/nota-credito`, {
                             motivo: ncMotivo,
                             items: itemsNC.map(it => ({
                               product_id: it.product_id,
@@ -3409,7 +3430,12 @@ onKeyDown={e => {
                           setNcFacturaEncontrada(null)
                           setNcItemsSeleccionados([])
                           setNcMotivo('')
-                          alert('✅ Nota de Crédito de conduce creada correctamente')
+                                                   alert('✅ Nota de Crédito de conduce creada correctamente')
+                                                 const ncCdId = resNcCd.data.data?.id
+                          if (ncCdId) {
+                            setNccGuardadaId(ncCdId)
+                            setMostrarImprimirNcc(true)
+                          }
                           return
                         }
                         const resPost = await API.post('/invoices/nota-credito', {
@@ -4407,7 +4433,7 @@ onKeyDown={e => {
           
 
              {/* Items */}
-                <div className={modoPOS && !posLineaAbierta ? "mb-4 pos-entrada-cerrada" : "mb-4"}>
+                                <div className={modoPOS && !posLineaAbierta ? "mb-4 pos-entrada-cerrada" : "mb-4"} style={{ display: 'flex', flexDirection: 'column-reverse' }}>
                   {items.map((item, index) => (
                     <div key={index} className={`grid grid-cols-12 gap-2 mb-2 ${modoPOS && index !== items.length - 1 ? 'pos-item-anterior' : ''}`}>
                       <div className="col-span-3 relative">
@@ -4580,6 +4606,28 @@ onKeyDown={e => {
                 </div>
 
                 {/* Ticket POS en vivo — solo tenants con feature responsive (casa reyes) */}
+                              {modoPOS && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {[['contado','CONTADO'],['abono','ABONO'],['credito','CREDITO']].map(([v,l]) => (
+                        <button key={v} type="button"
+                          onClick={() => { setCondicionPago(v); if (v !== 'abono') setMontoAbono('') }}
+                          style={{
+                            flex: 1, padding: '10px 4px', borderRadius: '8px', fontWeight: 700, fontSize: '13px',
+                            border: condicionPago === v ? '2px solid #2563eb' : '2px solid #cbd5e1',
+                            background: condicionPago === v ? '#2563eb' : '#fff',
+                            color: condicionPago === v ? '#fff' : '#334155'
+                          }}>{l}</button>
+                      ))}
+                    </div>
+                    {condicionPago === 'abono' && (
+                      <input type="number" step="0.01" min="0" value={montoAbono}
+                        onChange={e => setMontoAbono(e.target.value)}
+                        placeholder="Monto del abono"
+                        style={{ width: '100%', marginTop: '8px', padding: '10px', borderRadius: '8px', border: '2px solid #cbd5e1', fontSize: '15px', textAlign: 'right', fontWeight: 700 }} />
+                    )}
+                  </div>
+                )}
                 {modoPOS && (
                   <div className="pos-ticket">
                     <div className="pos-ticket-empresa">{usuarioSesion.empresa || ''}</div>
@@ -4587,8 +4635,9 @@ onKeyDown={e => {
                       Cliente: {(clientes.find(c => String(c.id) === String(form.customer_id))?.nombre) || 'Consumidor Final'}
                     </div>
                     <div className="pos-ticket-divider"></div>
-                    <div className="pos-ticket-cols"><span>DESCRIPCION</span><span>VALOR</span></div>
+                                   <div className="pos-ticket-cols"><span>DESCRIPCION</span><span>VALOR</span></div>
                     <div className="pos-ticket-divider"></div>
+                    <div style={{ display: 'flex', flexDirection: 'column-reverse' }}>
                     {items.map((it, i) => (
                       (it.descripcion || it.precio_unitario) ? (
                         <div key={i} className="pos-ticket-linea">
@@ -4623,8 +4672,9 @@ onKeyDown={e => {
                             <span>{(parseFloat(it.cantidad || 0) * parseFloat(it.precio_unitario || 0)).toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
                           </div>
                         </div>
-                      ) : null
+                                        ) : null
                     ))}
+                    </div>
                     {items.filter(it => it.descripcion || it.precio_unitario).length === 0 && (
                       <div className="pos-ticket-vacio">Agregue artículos arriba</div>
                     )}

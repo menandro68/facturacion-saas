@@ -338,7 +338,11 @@ id="btn-si-recibo-pago"
                 const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                       const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                       const pagosDeFactura = pagos.filter(p => (p.invoice_id === factura.id || p.conduce_id === factura.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                  const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                                   const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                      if (balanceReal <= 0.01) {
+                        setError((factura.es_conduce ? 'Este conduce ya esta saldado: ' : 'Esta factura ya esta saldada: ') + val)
+                        return
+                      }
                       setForm(prev => ({ ...prev, invoice_id: factura.es_conduce ? '' : factura.id, conduce_id: factura.es_conduce ? factura.id : '', monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
                document.getElementById('pago-ncf-resultado').innerHTML =
                         `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
@@ -364,7 +368,11 @@ id="btn-si-recibo-pago"
               const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                     const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                     const pagosDeFactura = pagos.filter(p => (p.invoice_id === factura.id || p.conduce_id === factura.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                  const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                                  const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                    if (balanceReal <= 0.01) {
+                      setError((factura.es_conduce ? 'Este conduce ya esta saldado: ' : 'Esta factura ya esta saldada: ') + val)
+                      return
+                    }
                     setForm(prev => ({ ...prev, invoice_id: factura.es_conduce ? '' : factura.id, conduce_id: factura.es_conduce ? factura.id : '', monto: balanceReal > 0 ? balanceReal.toFixed(2) : '', balance_max: balanceReal > 0 ? balanceReal : 0 }))
                     document.getElementById('pago-ncf-resultado').innerHTML =
                       `<span class="text-green-600 font-medium">✓ ${factura.ncf} — ${factura.cliente_nombre || 'Consumidor Final'} — RD$${balanceReal.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>`
