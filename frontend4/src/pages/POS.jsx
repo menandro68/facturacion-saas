@@ -1409,7 +1409,9 @@ const abrirCierre = async () => {
         document.body.appendChild(ifc)
       }
     } catch (e) {
-      setErrorCambio(e.response?.data?.mensaje || 'Error al procesar el cambio')
+      const msjErr = e.response?.data?.mensaje || 'Error al procesar el cambio'
+      setErrorCambio(msjErr)
+      alert(msjErr)
     } finally {
       setProcesandoCambio(false)
     }

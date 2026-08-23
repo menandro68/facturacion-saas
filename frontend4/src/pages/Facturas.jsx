@@ -583,6 +583,11 @@ const handlePDF = (id) => {
   }
 
 const handleImprimir = (id) => {
+    if (modoPOS) {
+      setFacturaGuardadaId(id)
+      setMostrarImprimir(true)
+      return
+    }
     const token = sessionStorage.getItem('token')
     let endpoint = '/pdf'
     if (formatoImpresion === 'pos') endpoint = '/pdf-pos'
@@ -1384,13 +1389,14 @@ const puedeVerSubTab = (subTabId) => {
                   </tr>
           ))(item) : (cd => {
                   const abonadoCdz = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                  const totalCdz = parseFloat(cd.total || 0)
+                                    const ncCdz = notasCredito.filter(n => n.conduce_id === cd.id && n.estado === 'emitida').reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                  const totalCdz = parseFloat(cd.total || 0) - ncCdz
                   const pagadoCdz = abonadoCdz >= totalCdz - 0.01 && totalCdz > 0
                   return (
                   <tr key={'cdz-' + cd.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
                     <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
-                    <td className="px-4 py-3">RD${totalCdz.toLocaleString()}{abonadoCdz > 0 && !pagadoCdz && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdz.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
+                                       <td className="px-4 py-3">{ncCdz > 0 ? (<span className="text-xs font-medium text-gray-800">Cond: {parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {(notasCredito.filter(n => n.conduce_id === cd.id && n.estado === 'emitida').map(n => n.numero).join(', ')) || ''}: {ncCdz.toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${totalCdz.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${totalCdz.toLocaleString()}</span>)}{abonadoCdz > 0 && !pagadoCdz && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdz.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdz ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdz ? 'PAGADA' : 'CONDUCE'}</span></td>
                     <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
      </tr>
@@ -1766,7 +1772,7 @@ onKeyDown={e => {
             </div>
       
     </div>
-          {facturasVendedor.length > 0 && (
+                    {(facturasVendedor.length > 0 || conducesVendedor.length > 0) && (
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -1790,13 +1796,14 @@ onKeyDown={e => {
            </tr>
                 ))(item) : (cd => {
                   const abonadoCdv = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                  const totalCdv = parseFloat(cd.total || 0)
+                                    const ncCdv = notasCredito.filter(n => n.conduce_id === cd.id && n.estado === 'emitida').reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                  const totalCdv = parseFloat(cd.total || 0) - ncCdv
                   const pagadoCdv = abonadoCdv >= totalCdv - 0.01 && totalCdv > 0
                   return (
                   <tr key={'cdv-' + cd.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
                     <td className="px-4 py-3">{cd.cliente_nombre || 'Consumidor Final'}</td>
-                    <td className="px-4 py-3">RD${totalCdv.toLocaleString()}{abonadoCdv > 0 && !pagadoCdv && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdv.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
+                                        <td className="px-4 py-3">{ncCdv > 0 ? (<span className="text-xs font-medium text-gray-800">Cond: {parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {(notasCredito.filter(n => n.conduce_id === cd.id && n.estado === 'emitida').map(n => n.numero).join(', ')) || ''}: {ncCdv.toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${totalCdv.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${totalCdv.toLocaleString()}</span>)}{abonadoCdv > 0 && !pagadoCdv && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdv.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdv ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdv ? 'PAGADA' : 'CONDUCE'}</span></td>
            <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
@@ -1909,12 +1916,13 @@ onKeyDown={e => {
                   </tr>
                 ) })() : (cd => {
                   const abonadoCdc = pagosCd.filter(p => p.conduce_id === cd.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
-                  const totalCdc = parseFloat(cd.total || 0)
+                                   const ncCdc = notasCredito.filter(n => n.conduce_id === cd.id && n.estado === 'emitida').reduce((s, n) => s + parseFloat(n.total || 0), 0)
+                  const totalCdc = parseFloat(cd.total || 0) - ncCdc
                   const pagadoCdc = abonadoCdc >= totalCdc - 0.01 && totalCdc > 0
                   return (
                   <tr key={'cdc-' + cd.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono">{cd.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
-                    <td className="px-4 py-3">RD${totalCdc.toLocaleString()}{abonadoCdc > 0 && !pagadoCdc && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdc.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
+                                        <td className="px-4 py-3">{ncCdc > 0 ? (<span className="text-xs font-medium text-gray-800">Cond: {parseFloat(cd.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {(notasCredito.filter(n => n.conduce_id === cd.id && n.estado === 'emitida').map(n => n.numero).join(', ')) || ''}: {ncCdc.toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${totalCdc.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${totalCdc.toLocaleString()}</span>)}{abonadoCdc > 0 && !pagadoCdc && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoCdc.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${pagadoCdc ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoCdc ? 'PAGADA' : 'CONDUCE'}</span></td>
            <td className="px-4 py-3">{new Date(cd.creado_en).toLocaleDateString('es-DO')}</td>
                   </tr>
@@ -2223,12 +2231,27 @@ onKeyDown={e => {
                   </tr>
                 </thead>
                 <tbody>
-{relacionVendedor.map(f => (
+{relacionVendedor.filter(f => {
+                    if (f.estado === 'pagada') return false
+                    const netoF = parseFloat(f.total_neto != null ? f.total_neto : f.total || 0)
+                    const abonF = f.es_conduce
+                      ? pagosCd.filter(p => p.conduce_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      : 0
+                    if (f.es_conduce && netoF > 0 && abonF >= netoF - 0.01) return false
+                    return true
+                  }).map(f => (
                     <tr key={f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.ncf || 'BORRADOR'}</td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                      <td className="px-4 py-3 text-right font-medium">RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}{parseFloat(f.nc_aplicada) > 0 && <span className="text-xs text-red-500 ml-1">(NC)</span>}</td>
-                      <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${estadoColor(f.estado)}`}>{f.estado.toUpperCase()}</span></td>
+                                            <td className="px-4 py-3 text-right font-medium">{parseFloat(f.nc_aplicada || 0) > 0 ? (<span className="text-xs font-medium text-gray-800">{f.es_conduce ? 'Cond' : 'Fact'}: {parseFloat(f.total).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {f.nc_numeros || ''}: {parseFloat(f.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${parseFloat(f.total_neto != null ? f.total_neto : f.total).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}</td>
+                                    <td className="px-4 py-3">{(() => {
+                        const netoRv = parseFloat(f.total_neto != null ? f.total_neto : f.total || 0)
+                        const abonRv = f.es_conduce
+                          ? pagosCd.filter(p => p.conduce_id === f.id && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                          : 0
+                        const pagRv = f.es_conduce && abonRv >= netoRv - 0.01 && netoRv > 0
+                        return <span className={`px-2 py-1 rounded text-xs font-medium ${pagRv ? 'bg-green-100 text-green-700' : estadoColor(f.estado)}`}>{pagRv ? 'PAGADA' : f.estado.toUpperCase()}</span>
+                      })()}</td>
                       <td className="px-4 py-3">{new Date(f.creado_en).toLocaleDateString('es-DO')}</td>
                     </tr>
                   ))}
@@ -3429,8 +3452,18 @@ onKeyDown={e => {
                           setNcFacturaBuscar('')
                           setNcFacturaEncontrada(null)
                           setNcItemsSeleccionados([])
-                          setNcMotivo('')
-                                                   alert('✅ Nota de Crédito de conduce creada correctamente')
+                                                 setNcMotivo('')
+                          try {
+                            const rCd = await API.get('/conduces')
+                            setConducesVenta(rCd.data.data || [])
+                            const rNcCd = await API.get('/conduces/nc/lista')
+                            const rNcFac = await API.get('/invoices/nota-credito/lista')
+                            setNotasCredito([
+                              ...(rNcFac.data.data || []),
+                              ...((rNcCd.data.data || []).map(n => ({ ...n, ncf: n.numero, es_conduce_nc: true })))
+                            ])
+                          } catch (eRef) { console.error('Error refrescando listas:', eRef) }
+                          alert('✅ Nota de Crédito de conduce creada correctamente')
                                                  const ncCdId = resNcCd.data.data?.id
                           if (ncCdId) {
                             setNccGuardadaId(ncCdId)
@@ -4767,7 +4800,7 @@ onKeyDown={e => {
                     <tr key={'cd-' + f.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono">{f.numero || 'CD'} <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-bold">CONDUCE</span></td>
                       <td className="px-4 py-3">{f.cliente_nombre || 'Consumidor Final'}</td>
-                      <td className="px-4 py-3">RD${totalVF.toLocaleString('es-DO',{minimumFractionDigits:2})}{abonadoVF > 0 && !pagadoVF && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoVF.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
+                                            <td className="px-4 py-3">{ncVF > 0 ? (<span className="text-xs font-medium text-gray-800">Cond: {parseFloat(f.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {(notasCredito.filter(n => n.conduce_id === f.id && n.estado === 'emitida').map(n => n.numero).join(', ')) || ''}: {ncVF.toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${totalVF.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>) : (<span>RD${totalVF.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>)}{abonadoVF > 0 && !pagadoVF && <span className="text-xs text-green-600 ml-1">(Abonado: RD${abonadoVF.toLocaleString('es-DO',{minimumFractionDigits:2})})</span>}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${pagadoVF ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>{pagadoVF ? 'PAGADA' : 'CONDUCE'}</span>
                       </td>
