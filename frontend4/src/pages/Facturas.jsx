@@ -205,13 +205,61 @@ const buscarClienteRef = useRef(null)
       t += linea('TOTAL ITBIS', parseFloat(f.itbis || 0).toFixed(2))
       t += '\x1b\x21\x10' // doble alto
       t += linea('TOTAL', 'RD$' + parseFloat(f.total || 0).toFixed(2))
-      t += '\x1b\x21\x00'
+        t += '\x1b\x21\x00'
+           let pagadoTk = 0
+      try {
+        const rPagos = await API.get(`/payments/invoice/${facturaId}`)
+        const listaPagos = rPagos.data.data || rPagos.data || []
+        pagadoTk = listaPagos.reduce((acc, p) => acc + parseFloat(p.monto || 0), 0)
+      } catch (ePagos) {
+        pagadoTk = 0
+      }
+      const balanceTk = parseFloat(f.total || 0) - pagadoTk
+      if (pagadoTk > 0 && balanceTk > 0.009) {
+        t += linea('ABONO', pagadoTk.toFixed(2))
+        t += linea('BALANCE', balanceTk.toFixed(2))
+      }
       t += divisor
       t += centrar('Factura No.: ' + (f.numero_factura || f.id))
       t += centrar('GRACIAS POR SU COMPRA')
       t += '\n\n\n'
-      const b64 = btoa(unescape(encodeURIComponent(t)))
-      window.location.href = 'rawbt:base64,' + b64
+           const b64 = btoa(unescape(encodeURIComponent(t)))
+       const bt = window.bluetoothSerial
+      if (!bt) {
+        const urlRawbt = 'rawbt:base64,' + b64
+        window.location.href = urlRawbt
+        return
+      }
+            const perms = window.cordova && window.cordova.plugins && window.cordova.plugins.permissions
+      const listar = () => {
+      bt.list((dispositivos) => {
+        const guardada = localStorage.getItem('impresora_bt_mac')
+        let destino = dispositivos.find(d => d.address === guardada)
+            if (!destino) {
+          if (!dispositivos || dispositivos.length === 0) {
+            alert('No hay impresoras emparejadas. Empareje la impresora en los ajustes Bluetooth del telefono.')
+            return
+          }
+          const impresora = dispositivos.find(d => /printer|pos|kprinter|thermal|bt/i.test(d.name || ''))
+          destino = impresora || dispositivos[0]
+          localStorage.setItem('impresora_bt_mac', destino.address)
+        }
+        bt.connect(destino.address, () => {
+          bt.write(t, () => {
+            setTimeout(() => bt.disconnect(() => {}, () => {}), 1200)
+          }, (eW) => { alert('Error al enviar: ' + eW) })
+        }, () => {
+          localStorage.removeItem('impresora_bt_mac')
+          alert('No se pudo conectar a la impresora. Verifique que este encendida y emparejada.')
+        })
+           }, (eL) => { alert('No se pudo listar dispositivos Bluetooth: ' + eL) })
+      }
+      if (perms) {
+        const requeridos = [perms.BLUETOOTH_CONNECT, perms.BLUETOOTH_SCAN]
+        perms.requestPermissions(requeridos, () => { listar() }, () => { listar() })
+      } else {
+        listar()
+      }
     } catch (e) {
       alert('Error al imprimir: ' + e.message)
     }
@@ -345,7 +393,13 @@ const buscarClienteRef = useRef(null)
     t += lineaTot('TOTAL DESC.', f.descuento_monto || 0) + '\r\n'
     t += lineaTot('SUB-TOTAL', f.subtotal) + '\r\n'
     t += lineaTot('TOTAL ITBIS', f.itbis) + '\r\n'
-    t += NEGRITA_ON + lineaTot('NETO RD$:', f.total) + NEGRITA_OFF + '\r\n'
+        t += NEGRITA_ON + lineaTot('NETO RD$:', f.total) + NEGRITA_OFF + '\r\n'
+           const pagadoHc = parseFloat(f.pagos_total || 0)
+    const balanceHc = parseFloat(f.total || 0) - pagadoHc
+    if (pagadoHc > 0 && balanceHc > 0.009) {
+      t += lineaTot('ABONO', pagadoHc) + '\r\n'
+      t += NEGRITA_ON + lineaTot('BALANCE:', balanceHc) + NEGRITA_OFF + '\r\n'
+    }
     t += '\r\n\r\n\r\n'
     t += '      ____________________                    ____________________' + '\r\n'
     t += '          Entregado por                           Recibido por' + '\r\n'
@@ -357,8 +411,15 @@ const buscarClienteRef = useRef(null)
 
   const imprimirHojaCompleta = async (facturaId) => {
     try {
-           const res = await API.get(`/invoices/${facturaId}`)
+                 const res = await API.get(`/invoices/${facturaId}`)
       const f = res.data.data || res.data
+      try {
+        const rPg = await API.get(`/payments/invoice/${facturaId}`)
+        const lstPg = rPg.data.data || rPg.data || []
+        f.pagos_total = lstPg.reduce((acc, p) => acc + parseFloat(p.monto || 0), 0)
+      } catch (ePg) {
+        f.pagos_total = 0
+      }
        if (localStorage.getItem('impresora_ip')) {
         try {
           const tokenPdf = sessionStorage.getItem('token')
@@ -4888,7 +4949,13 @@ onKeyDown={e => {
                         </div>
                         <p className="text-gray-600">SUB-TOTAL: <span className="font-medium">RD${subNetoFac.toFixed(2)}</span></p>
                         <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itbisNetoFac.toFixed(2)}</span></p>
-                        <p className="text-lg font-bold text-gray-800">Total: RD${netoFac.toFixed(2)}</p>
+                                               <p className="text-lg font-bold text-gray-800">Total: RD${netoFac.toFixed(2)}</p>
+                        {condicionPago === 'abono' && parseFloat(montoAbono || 0) > 0 && (
+                          <>
+                            <p className="text-green-700 font-medium">Abono: RD${parseFloat(montoAbono || 0).toFixed(2)}</p>
+                            <p className="text-red-600 font-bold">Balance pendiente: RD${(netoFac - parseFloat(montoAbono || 0)).toFixed(2)}</p>
+                          </>
+                        )}
                       </>
                     })()}
                   </div>
