@@ -686,7 +686,8 @@ export default function Conduces() {
                 <td className="px-4 py-3">{new Date(co.creado_en).toLocaleDateString('es-DO')}</td>
                 <td className="px-4 py-3">
                                    {(() => {
-                    const pagadoCd = co.estado !== 'anulado' && parseFloat(co.monto_pagado || 0) >= parseFloat(co.total || 0) - 0.01 && parseFloat(co.total || 0) > 0
+                                       const netoCd = parseFloat(co.total_neto != null ? co.total_neto : co.total || 0)
+                    const pagadoCd = co.estado !== 'anulado' && parseFloat(co.monto_pagado || 0) >= netoCd - 0.01 && netoCd > 00
                     return (
                       <span className={`px-2 py-1 rounded text-xs font-medium ${co.estado === 'anulado' ? 'bg-red-100 text-red-700' : pagadoCd ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                         {pagadoCd ? 'PAGADO' : co.estado.toUpperCase()}

@@ -218,10 +218,156 @@ const buscarClienteRef = useRef(null)
   }
 
   // Hoja completa con diálogo de impresión nativo (solo modo POS / casa reyes)
+   // Prueba: enviar texto RAW a la impresora de red por el puerto 9100
+  const probarImpresoraRed = () => {
+    const ip = prompt('IP de la impresora:', localStorage.getItem('impresora_ip') || '192.168.0.115')
+    if (!ip) return
+    localStorage.setItem('impresora_ip', ip)
+    const sockets = window.chrome && window.chrome.sockets && window.chrome.sockets.tcp
+    if (!sockets) { alert('El plugin de red no esta disponible. Use la APK actualizada.'); return }
+    sockets.create({}, (info) => {
+      sockets.connect(info.socketId, ip, 9100, (result) => {
+        if (result < 0) { alert('No se pudo conectar a ' + ip + ':9100'); return }
+        const texto = 'PRUEBA DE IMPRESION\r\nSistema de Facturacion\r\n\r\n\r\n\f'
+        const buf = new ArrayBuffer(texto.length)
+        const view = new Uint8Array(buf)
+        for (let i = 0; i < texto.length; i++) view[i] = texto.charCodeAt(i)
+        sockets.send(info.socketId, buf, () => {
+          sockets.close(info.socketId, () => alert('Enviado a la impresora'))
+        })
+      })
+    })
+  }
+
+   // Impresion directa a impresora de red (puerto 9100) desde el celular
+  const enviarARed = (texto) => new Promise((resolve, reject) => {
+    const ip = localStorage.getItem('impresora_ip')
+    const sockets = window.chrome && window.chrome.sockets && window.chrome.sockets.tcp
+    if (!ip || !sockets) { reject(new Error('sin_impresora_red')); return }
+    sockets.create({}, (info) => {
+      sockets.connect(info.socketId, ip, 9100, (result) => {
+        if (result < 0) { reject(new Error('no_conecta')); return }
+        const buf = new ArrayBuffer(texto.length)
+        const view = new Uint8Array(buf)
+        for (let i = 0; i < texto.length; i++) view[i] = texto.charCodeAt(i) & 0xFF
+        sockets.send(info.socketId, buf, () => {
+          sockets.close(info.socketId, () => resolve(true))
+        })
+      })
+    })
+  })
+
+    const enviarBinarioARed = (arrayBuffer) => new Promise((resolve, reject) => {
+    const ip = localStorage.getItem('impresora_ip')
+    const sockets = window.chrome && window.chrome.sockets && window.chrome.sockets.tcp
+    if (!ip || !sockets) { reject(new Error('sin_impresora_red')); return }
+    sockets.create({}, (info) => {
+      sockets.connect(info.socketId, ip, 9100, (result) => {
+        if (result < 0) { reject(new Error('no_conecta')); return }
+        sockets.send(info.socketId, arrayBuffer, () => {
+          setTimeout(() => sockets.close(info.socketId, () => resolve(true)), 1500)
+        })
+      })
+    })
+  })
+
+   const facturaATexto = (f) => {
+    const ESC = '\x1B'
+    const NEGRITA_ON = ESC + 'E' + '\x01'
+    const NEGRITA_OFF = ESC + 'E' + '\x00'
+    const L = 80
+    const cen = (t) => { const s = Math.max(0, Math.floor((L - t.length) / 2)); return ' '.repeat(s) + t }
+    const der = (izq, der2) => { const e = Math.max(1, L - izq.length - der2.length); return izq + ' '.repeat(e) + der2 }
+    const fmt2 = (n) => parseFloat(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    let t = ''
+        t += ESC + '@'
+     const izqDer = (a, b) => { const e = Math.max(1, L - a.length - b.length); return a + ' '.repeat(e) + b }
+    const tit = {
+      'B01': 'FACTURA CREDITO FISCAL',
+      'B02': 'FACTURA CONSUMIDOR FINAL',
+      'B15': 'FACTURA GUBERNAMENTAL',
+      'E31': 'FACTURA CREDITO FISCAL ELECTRONICA',
+      'E32': 'FACTURA DE CONSUMO ELECTRONICA'
+    }[f.ncf_tipo] || 'FACTURA'
+        const nomEmp = (f.empresa_nombre || usuarioSesion.empresa || '').toUpperCase()
+    const espHdr = Math.max(1, L - nomEmp.length - tit.length)
+    t += NEGRITA_ON + nomEmp + NEGRITA_OFF + ' '.repeat(espHdr) + NEGRITA_ON + tit + NEGRITA_OFF + '\r\n'
+    t += izqDer('RNC: ' + (f.empresa_rnc || ''), 'NCF: ' + (f.ncf || '')) + '\r\n'
+    t += izqDer('Tel: ' + (f.empresa_telefono || ''), 'Estado: ' + String(f.estado || '').toUpperCase()) + '\r\n'
+    t += izqDer((f.empresa_email || ''), 'Fecha: ' + new Date(f.creado_en).toLocaleDateString('es-DO')) + '\r\n'
+       const noFact = 'FACTURA No.: ' + String(f.numero_factura || '').padStart(8, '0')
+        const dirEmp = String(f.empresa_direccion || '').substring(0, L - noFact.length - 8)
+    t += izqDer(dirEmp, noFact) + '\r\n'
+      t += '\r\n'
+    const COL = 40
+    const cortar = (s) => String(s || '').substring(0, COL - 2)
+    const colIzq = []
+    const colDer = []
+    colIzq.push(cortar(f.cliente_nombre || 'Consumidor Final'))
+    colIzq.push('RNC/Cedula: ' + (f.rnc_cedula || ''))
+    colIzq.push('Tel:        ' + (f.cliente_telefono || ''))
+    colIzq.push('Dir:        ' + cortar(f.cliente_direccion))
+    colDer.push(cortar(f.condiciones || 'Contado'))
+    colDer.push('Vendedor: ' + (f.vendedor_nombre || ''))
+    colDer.push('Negocio:  ' + cortar(f.nombre_negocio))
+    t += NEGRITA_ON + 'CLIENTE'.padEnd(COL) + 'CONDICIONES DE PAGO' + NEGRITA_OFF + '\r\n'
+    const filasEnc = Math.max(colIzq.length, colDer.length)
+    for (let i = 0; i < filasEnc; i++) {
+      const a = (colIzq[i] || '').padEnd(COL)
+      const b = colDer[i] || ''
+      t += a + b + '\r\n'
+    }
+    t += '\r\n'
+    t += '-'.repeat(L) + '\r\n'
+    t += NEGRITA_ON + 'DESCRIPCION'.padEnd(30) + 'CANT'.padStart(6) + 'P. UNIT'.padStart(11) + 'SUBTOTAL'.padStart(11) + 'ITBIS'.padStart(10) + 'TOTAL'.padStart(12) + NEGRITA_OFF + '\r\n'
+    t += '-'.repeat(L) + '\r\n'
+    for (const it of (f.items || [])) {
+      const cantN = parseFloat(it.cantidad || 0)
+      const preN = parseFloat(it.precio_unitario || 0)
+      const subN = cantN * preN
+      const itbN = parseFloat(it.itbis || 0)
+      const totN = subN + itbN
+      t += (it.descripcion || '').substring(0, 29).padEnd(30)
+      t += fmt2(cantN).padStart(6)
+      t += fmt2(preN).padStart(11)
+      t += fmt2(subN).padStart(11)
+      t += fmt2(itbN).padStart(10)
+      t += fmt2(totN).padStart(12)
+      t += '\r\n'
+    }
+    t += '-'.repeat(L) + '\r\n'
+    const brutoT = parseFloat(f.subtotal || 0) + parseFloat(f.descuento_monto || 0)
+    const lineaTot = (et, val) => {
+      const der3 = ('RD$ ' + fmt2(val)).padStart(16)
+           return ''.padEnd(L - 14 - 16) + et.padEnd(14) + der3
+    }
+    t += lineaTot('TOTAL BRUTO', brutoT) + '\r\n'
+    t += lineaTot('TOTAL DESC.', f.descuento_monto || 0) + '\r\n'
+    t += lineaTot('SUB-TOTAL', f.subtotal) + '\r\n'
+    t += lineaTot('TOTAL ITBIS', f.itbis) + '\r\n'
+    t += NEGRITA_ON + lineaTot('NETO RD$:', f.total) + NEGRITA_OFF + '\r\n'
+    t += '\r\n\r\n\r\n'
+    t += '      ____________________                    ____________________' + '\r\n'
+    t += '          Entregado por                           Recibido por' + '\r\n'
+    t += '\r\n'
+        t += ''+ '\r\n'
+    t += '\r\n\r\n\f'
+    return t
+  }
+
   const imprimirHojaCompleta = async (facturaId) => {
     try {
-      const res = await API.get(`/invoices/${facturaId}`)
+           const res = await API.get(`/invoices/${facturaId}`)
       const f = res.data.data || res.data
+       if (localStorage.getItem('impresora_ip')) {
+        try {
+          const tokenPdf = sessionStorage.getItem('token')
+                await enviarARed(facturaATexto(f))
+          return
+        } catch (eRed) {
+          alert('No se pudo imprimir en la impresora de red. Se abrira la vista para imprimir.')
+        }
+      }
       const filas = (f.items || []).map(it => `
         <tr>
           <td>${it.descripcion}</td>
@@ -4142,8 +4288,9 @@ onKeyDown={e => {
       {mostrarImprimir && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-8 text-center w-80">
-            <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la factura?</p>
-            <div className="flex justify-center gap-6">
+                     <p className="text-lg font-semibold text-gray-800 mb-6">¿Desea imprimir la factura?</p>
+       
+           <div className="flex justify-center gap-6">
          
       {modoPOS && (
                 <button
