@@ -134,6 +134,7 @@ function POS() {
 
   // Estados del cobro
   const [mostrarCobro, setMostrarCobro] = useState(false)
+  const [cobroEsCambio, setCobroEsCambio] = useState(false)
   const [formaPago, setFormaPago] = useState('efectivo')
   const [montoRecibido, setMontoRecibido] = useState('')
   const [procesando, setProcesando] = useState(false)
@@ -1353,7 +1354,20 @@ const abrirCierre = async () => {
   const totalNuevoCambio = itemsNuevos.reduce((s, i) => s + (parseFloat(i.cantidad) || 0) * (parseFloat(i.precio_unitario) || 0), 0)
   const diferenciaCambio = totalNuevoCambio - totalDevueltoCambio
 
-  const procesarCambio = async () => {
+   const procesarCambio = () => {
+    const devsV = itemsDevueltos.filter(i => i.seleccionado && i.cantidad > 0)
+    if (devsV.length === 0) { setErrorCambio('Seleccione al menos un articulo a devolver'); return }
+    if (itemsNuevos.length === 0) { setErrorCambio('Agregue al menos un articulo nuevo'); return }
+    if (diferenciaCambio < -0.01) { setErrorCambio('La mercancia nueva debe costar igual o mas que la devuelta'); return }
+    for (const d of devsV) {
+      if (d.cantidad > d.cantidad_original) { setErrorCambio(`No puede devolver mas de ${d.cantidad_original} de "${d.descripcion}"`); return }
+    }
+    setErrorCambio('')
+    setCobroEsCambio(true)
+    setMostrarCobro(true)
+  }
+
+  const ejecutarCambio = async () => {
     const devs = itemsDevueltos.filter(i => i.seleccionado && i.cantidad > 0)
     if (devs.length === 0) { setErrorCambio('Seleccione al menos un articulo a devolver'); return }
     if (itemsNuevos.length === 0) { setErrorCambio('Agregue al menos un articulo nuevo'); return }
@@ -1367,7 +1381,9 @@ const abrirCierre = async () => {
         invoice_id: facturaCambio.id,
         items_devueltos: devs.map(d => ({ product_id: d.product_id, descripcion: d.descripcion, cantidad: d.cantidad, precio_unitario: d.precio_unitario })),
         items_nuevos: itemsNuevos,
-        metodo_pago: diferenciaCambio > 0.01 ? metodoCambio : null,
+                     metodo_pago: diferenciaCambio > 0.01 ? formaPago : null,
+        monto_recibido: recibido || 0,
+        devuelta: Math.max(0, recibido - diferenciaCambio),
         autorizado_por: 'Supervisor'
       })
         const num = res.data.data?.numero || ''
@@ -1540,7 +1556,7 @@ const cambiarCantidad = (id, nuevaCantidad) => {
   const descuentoTotalTicket = totalOriginalTicket - totalGeneral
 // Devuelta
   const recibido = parseFloat(montoRecibido) || 0
-  const devuelta = recibido - totalGeneral
+    const devuelta = recibido - (cobroEsCambio ? diferenciaCambio : totalGeneral)
 
   // Pago mixto: suma de los métodos y lo que falta por cubrir
   const totalMixto = ['efectivo', 'tarjeta', 'transferencia']
@@ -1561,7 +1577,8 @@ setFormaPago('efectivo')
   }
 
   // Confirmar cobro → crear FACTURA REAL (o guardar offline)
-  const confirmarCobro = async () => {
+    const confirmarCobro = async () => {
+    if (cobroEsCambio) { setMostrarCobro(false); setCobroEsCambio(false); ejecutarCambio(); return }
 if (procesando) return
     if (modoMixto) {
       if (totalMixto <= 0) {
@@ -2599,7 +2616,7 @@ const teclasDescuento = (e) => {
                     {diferenciaCambio < -0.01 && <p className="text-red-600 text-xs mt-2 font-semibold">La mercancia nueva debe costar igual o mas que la devuelta.</p>}
                   </div>
 
-                  {diferenciaCambio > 0.01 && (
+                                   {false && (
                     <div className="mt-4">
                       <label className="block text-sm font-semibold text-gray-600 mb-1">Metodo de pago de la diferencia</label>
                       <select value={metodoCambio} onChange={e => setMetodoCambio(e.target.value)}
@@ -2758,8 +2775,8 @@ const teclasDescuento = (e) => {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[92vh] flex flex-col" onKeyDown={teclasCobro}>
             {/* HEADER FIJO */}
             <div className="bg-green-600 text-white px-4 py-2 rounded-t-xl flex justify-between items-center flex-shrink-0">
-              <h2 className="text-base font-bold">💰 COBRAR — RD$ {fmt(totalGeneral)}</h2>
-              <button onClick={() => setMostrarCobro(false)} className="text-white text-2xl leading-none font-bold">✕</button>
+                            <h2 className="text-base font-bold">💰 COBRAR — RD$ {fmt(cobroEsCambio ? diferenciaCambio : totalGeneral)}</h2>
+                           <button onClick={() => { setMostrarCobro(false); setCobroEsCambio(false) }} className="text-white text-2xl leading-none font-bold">✕</button>
             </div>
 
             {/* CONTENIDO SCROLLEABLE */}
@@ -3025,7 +3042,7 @@ const teclasDescuento = (e) => {
             {/* BOTONES FIJOS ABAJO (siempre visibles) */}
             <div className="p-3 border-t flex gap-2 flex-shrink-0 bg-white rounded-b-xl">
               <button
-                onClick={() => setMostrarCobro(false)}
+                    onClick={() => { setMostrarCobro(false); setCobroEsCambio(false) }}
            id="cobro-cancelar"
                 disabled={procesando}
                 className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-400"
@@ -3033,8 +3050,8 @@ const teclasDescuento = (e) => {
                 Cancelar (Esc)
               </button>
         <button
-                id="cobro-confirmar"
-                onClick={confirmarCobro}
+                                id="cobro-confirmar"
+                                onClick={confirmarCobro}
                 disabled={procesando}
                 className={`flex-1 py-2.5 rounded-lg font-bold text-white focus:outline-none focus:ring-4 focus:ring-green-300 ${
                   procesando ? 'bg-green-400 cursor-wait' : 'bg-green-600 hover:bg-green-700'
