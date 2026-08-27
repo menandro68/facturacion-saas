@@ -92,6 +92,52 @@ useEffect(() => {
     if (v < 0) return 'FALTANTE RD$ ' + fmtCaja(Math.abs(v))
     return 'SOBRANTE RD$ ' + fmtCaja(v)
   }
+   const imprimirCuadreCaja = (c) => {
+    const w = window.open('', '_blank')
+    if (!w) { alert('Habilite las ventanas emergentes para imprimir.'); return }
+    const dif = parseFloat(c.diferencia) || 0
+    const colorD = Math.abs(dif) < 0.01 ? '#16a34a' : (dif < 0 ? '#dc2626' : '#2563eb')
+    const fila = (et, val) => `<tr><td>${et}</td><td class="r">RD$ ${fmtCaja(val)}</td></tr>`
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cuadre de Caja</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:24px;color:#1e293b;max-width:620px;margin:0 auto}
+        h2{color:#1e40af;text-align:center;margin-bottom:4px}
+        .sub{text-align:center;color:#64748b;font-size:13px;margin-bottom:18px}
+        table{width:100%;border-collapse:collapse;font-size:14px}
+        td{padding:7px 8px;border-bottom:1px solid #e2e8f0}
+        .r{text-align:right}
+        .tot td{font-weight:bold;background:#f1f5f9;font-size:15px}
+        .cua td{font-weight:bold;font-size:16px;color:${colorD};background:#f8fafc}
+        .firma{margin-top:60px;display:flex;justify-content:space-around;text-align:center;font-size:13px}
+        .firma div{border-top:1px solid #333;padding-top:6px;width:200px}
+        @media print{button{display:none}}
+      </style></head><body>
+      <h2>CUADRE DE CAJA</h2>
+      <div class="sub">
+        Operador: <b>${c.usuario_nombre || 'N/D'}</b><br>
+        Apertura: ${fmtFechaCaja(c.fecha_apertura)}<br>
+        Cierre: ${fmtFechaCaja(c.fecha_cierre)}<br>
+        Facturas: ${c.cantidad_facturas || 0}
+      </div>
+      <table>
+        ${fila('Monto de apertura', c.monto_apertura)}
+        ${fila('Ventas en efectivo', c.total_efectivo)}
+        ${fila('Ventas con tarjeta', c.total_tarjeta)}
+        ${fila('Ventas por transferencia', c.total_transferencia)}
+        <tr class="tot"><td>TOTAL VENTAS</td><td class="r">RD$ ${fmtCaja(c.total_ventas)}</td></tr>
+        ${fila('Efectivo esperado en gaveta', c.efectivo_esperado)}
+        <tr><td>Efectivo contado</td><td class="r">${c.efectivo_contado === null || c.efectivo_contado === undefined ? '-' : 'RD$ ' + fmtCaja(c.efectivo_contado)}</td></tr>
+        <tr class="cua"><td>CUADRE</td><td class="r">${txtDif(c.diferencia)}</td></tr>
+      </table>
+      <div class="firma">
+        <div>Entregado por</div>
+        <div>Recibido por</div>
+      </div>
+      <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
+      </body></html>`)
+    w.document.close()
+  }
+
   const claseDif = (d) => {
     if (d === null || d === undefined || d === '') return 'text-gray-400'
     const v = parseFloat(d)
@@ -897,7 +943,7 @@ const dia = diaLocal(c.fecha_apertura)
                     <th className="px-3 py-2 text-left">Operador</th>
                     <th className="px-3 py-2 text-left">Apertura</th>
                     <th className="px-3 py-2 text-left">Cierre</th>
-                    <th className="px-3 py-2 text-center">Facturas</th>
+                    <th className="px-3 py-2 text-center">Fact.</th>
                     <th className="px-3 py-2 text-right">Monto Apertura</th>
                     <th className="px-3 py-2 text-right">💵 Efectivo</th>
                     <th className="px-3 py-2 text-right">💳 Tarjeta</th>
@@ -905,7 +951,8 @@ const dia = diaLocal(c.fecha_apertura)
                     <th className="px-3 py-2 text-right">Total Ventas</th>
                     <th className="px-3 py-2 text-right">Gaveta</th>
                     <th className="px-3 py-2 text-right">Contado</th>
-                    <th className="px-3 py-2 text-center">Cuadre</th>
+                                   <th className="px-3 py-2 text-center">Cuadre</th>
+                    <th className="px-3 py-2 text-center"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -929,7 +976,14 @@ const dia = diaLocal(c.fecha_apertura)
                       <td className="px-3 py-2 text-right font-bold">RD$ {fmtCaja(c.total_ventas)}</td>
                       <td className="px-3 py-2 text-right font-bold text-green-600">RD$ {fmtCaja(c.efectivo_esperado)}</td>
                       <td className="px-3 py-2 text-right">{c.efectivo_contado === null || c.efectivo_contado === undefined ? <span className="text-gray-400">-</span> : 'RD$ ' + fmtCaja(c.efectivo_contado)}</td>
-                      <td className={`px-3 py-2 text-center font-bold ${claseDif(c.diferencia)}`}>{txtDif(c.diferencia)}</td>
+                                      <td className={`px-3 py-2 text-center font-bold ${claseDif(c.diferencia)}`}>{txtDif(c.diferencia)}</td>
+                      <td className="px-3 py-2 text-center">
+                        <button onClick={() => imprimirCuadreCaja(c)}
+                          title="Imprimir este cuadre"
+                          className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-2 py-1 rounded">
+                          Imprimir
+                        </button>
+                      </td>
                 </tr>
                   ))}
                 </tbody>
@@ -948,7 +1002,8 @@ const dia = diaLocal(c.fecha_apertura)
                     <td className="px-3 py-3 text-right">RD$ {fmtCaja(totCajas.contado)}</td>
                     <td className={`px-3 py-3 text-center ${totCajas.diferencia > 0.01 ? 'text-blue-300' : totCajas.diferencia < -0.01 ? 'text-red-300' : 'text-green-300'}`}>
                       {Math.abs(totCajas.diferencia) < 0.01 ? 'CUADRA' : totCajas.diferencia < 0 ? `FALTANTE RD$ ${fmtCaja(Math.abs(totCajas.diferencia))}` : `SOBRANTE RD$ ${fmtCaja(totCajas.diferencia)}`}
-                    </td>
+                                 </td>
+                    <td className="px-3 py-3"></td>
                   </tr>
                 </tfoot>
               </table>

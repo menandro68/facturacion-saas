@@ -135,6 +135,9 @@ function POS() {
   // Estados del cobro
   const [mostrarCobro, setMostrarCobro] = useState(false)
   const [cobroEsCambio, setCobroEsCambio] = useState(false)
+  const [ultimoCambioId, setUltimoCambioId] = useState(null)
+  const ultimoCambioRef = useRef(null)
+  const cobroEsCambioRef = useRef(false)
   const [formaPago, setFormaPago] = useState('efectivo')
   const [montoRecibido, setMontoRecibido] = useState('')
   const [procesando, setProcesando] = useState(false)
@@ -552,7 +555,7 @@ useEffect(() => {
 // TECLAS F1 = COBRAR / F2 = DESCUENTO / F3 = CERRAR CAJA / F4 = ELIMINAR (globales en el POS)
   useEffect(() => {
     const manejarTeclasGlobales = (e) => {
-      const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento || mostrarEliminar || mostrarAnular || mostrarCambio
+            const modalAbierto = mostrarCobro || ventaExitosa || mostrarCierre || mostrarDescuento || mostrarEliminar || mostrarAnular || mostrarCambio
       if (e.key === 'F1') {
         e.preventDefault()
         if (caja && !modalAbierto && ticket.length > 0) {
@@ -892,7 +895,7 @@ useEffect(() => {
       const orden = ['elim-codigo', 'elim-cantidad', 'elim-clave', 'elim-cancelar', 'elim-confirmar']
       const activo = document.activeElement?.id
       const pos = orden.indexOf(activo)
-      if (pos === -1) return
+         if (pos === -1) return
       e.preventDefault()
       e.stopPropagation()
       const paso = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1 : -1
@@ -1182,7 +1185,16 @@ const abrirCierre = async () => {
         const b = document.getElementById('cambio-buscar')
         if (b) { e.preventDefault(); e.stopPropagation(); b.focus(); return }
       }
-      if (pos === -1) return
+         if (pos === -1) {
+        if (foco.length > 0) {
+          e.preventDefault()
+          e.stopPropagation()
+          const inicioC = (e.key === 'ArrowUp' || e.key === 'ArrowLeft') ? foco.length - 1 : 0
+          const primC = foco[inicioC]
+          if (primC) { primC.focus(); if (primC.select) primC.select() }
+        }
+        return
+      }
       if (el0.id === 'cambio-buscar' && buscarNuevoCambio) {
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
           const t = buscarNuevoCambio.trim().toLowerCase()
@@ -1196,17 +1208,45 @@ const abrirCierre = async () => {
         }
         return
       }
-            if (el0.tagName === 'SELECT' && e.key === 'ArrowDown') return
+        if (el0.tagName === 'SELECT' && e.key === 'ArrowDown') return
       if (el0.tagName === 'SELECT' && e.key === 'ArrowUp' && el0.selectedIndex > 0) return
       e.preventDefault()
       e.stopPropagation()
       const dir = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1 : -1
-      const sig = foco[pos + dir]
-      if (sig) { sig.focus(); if (sig.select) sig.select() }
+           if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && el0.id && el0.id.startsWith('cambio-check-')) {
+        const nC = parseInt(el0.id.replace('cambio-check-', ''), 10)
+        const sigC = document.getElementById('cambio-check-' + (nC + dir))
+        e.preventDefault()
+        e.stopPropagation()
+        if (sigC) { sigC.focus(); return }
+        if (dir === 1) { document.getElementById('cambio-buscar')?.focus() }
+        return
+      }
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && el0.id && el0.id.startsWith('cambio-cant-')) {
+        const nDev = parseInt(el0.id.replace('cambio-cant-', ''), 10)
+        const destino = document.getElementById('cambio-cant-' + (nDev + dir))
+        if (destino) { destino.focus(); destino.select && destino.select(); return }
+        if (dir === 1) { document.getElementById('cambio-buscar')?.focus(); return }
+      }
+      let idx = pos + dir
+      while (idx >= 0 && idx < foco.length) {
+        const cand = foco[idx]
+        if (cand && cand.offsetParent !== null) { cand.focus(); if (cand.select) cand.select(); break }
+        idx += dir
+      }
     }
-     window.addEventListener('keydown', onKeyCambio, true)
+       window.addEventListener('keydown', onKeyCambio, true)
     return () => window.removeEventListener('keydown', onKeyCambio, true)
          }, [mostrarCambio, pasoCambio, itemsDevueltos, itemsNuevos, buscarNuevoCambio, facturaCambio, productos])
+
+  useEffect(() => {
+    if (!mostrarCambio) return
+    const t = setTimeout(() => {
+      const prim = document.getElementById('cambio-check-0')
+      if (prim) prim.focus()
+    }, 250)
+    return () => clearTimeout(t)
+  }, [mostrarCambio, itemsDevueltos.length])
 
         // Al cerrar el modal de eliminar articulo, devolver el foco al buscador de productos
   const eliminarAbiertoRef = useRef(false)
@@ -1241,7 +1281,37 @@ const abrirCierre = async () => {
     }
   }, [mostrarCambio])
 
-    const reimprimirUltimoTicket = async () => {
+      const reimprimirUltimoTicket = async () => {
+     const cambioGuardado = localStorage.getItem('pos_ultimo_cambio')
+    if (cambioGuardado) {
+      const tokenC = sessionStorage.getItem('token')
+      const urlC = `/pos/cambio/${cambioGuardado}/ticket?token=${tokenC}`
+      const viejoRC = document.getElementById('iframe-reimpresion')
+      if (viejoRC) viejoRC.remove()
+      const ifrC = document.createElement('iframe')
+      ifrC.id = 'iframe-reimpresion'
+      ifrC.style.position = 'fixed'
+      ifrC.style.width = '0'
+      ifrC.style.height = '0'
+      ifrC.style.border = '0'
+      ifrC.style.visibility = 'hidden'
+      ifrC.src = urlC
+         ifrC.onload = () => {
+        try {
+          ifrC.contentWindow.focus()
+          ifrC.contentWindow.print()
+        } catch (err) {
+          window.open(urlC, '_blank')
+        }
+        setTimeout(() => {
+          window.focus()
+          document.body.focus()
+          inputRef.current?.focus()
+        }, 800)
+      }
+      document.body.appendChild(ifrC)
+      return
+    }
     let facturaId = ultimaFacturaId
     if (!facturaId) {
       try {
@@ -1275,11 +1345,14 @@ const abrirCierre = async () => {
       try {
         ifr.contentWindow.focus()
         ifr.contentWindow.print()
-        setTimeout(() => { inputRef.current?.focus() }, 100)
       } catch (err) {
         window.open(url, '_blank')
-        setTimeout(() => { inputRef.current?.focus() }, 100)
       }
+      setTimeout(() => {
+        window.focus()
+        document.body.focus()
+        inputRef.current?.focus()
+      }, 800)
     }
     document.body.appendChild(ifr)
   }
@@ -1319,9 +1392,17 @@ const abrirCierre = async () => {
       if (!fac) { setErrorCambio('Factura no encontrada: ' + val); return }
       if (fac.estado === 'anulada') { setErrorCambio('Esta factura esta anulada'); return }
       const dias = Math.floor((Date.now() - new Date(fac.creado_en).getTime()) / 86400000)
-      if (dias > 5) { setErrorCambio(`El plazo para cambios es de 5 dias. Esta factura tiene ${dias} dias.`); return }
+           if (dias > 5) { setErrorCambio(`El plazo para cambios es de 5 dias. Esta factura tiene ${dias} dias.`); return }
+      try {
+        const rCam = await API.get(`/pos/cambio/por-factura/${fac.id}`)
+        const yaCambio = rCam.data?.data
+        if (yaCambio) {
+          setErrorCambio(`Esta factura ya tiene un cambio registrado (${yaCambio.numero}). Solo se permite un cambio por factura.`)
+          return
+        }
+      } catch (eCam) { }
       const det = await API.get(`/invoices/${fac.id}`)
-      const its = (det.data.data.items || []).map(it => ({
+           const its = (det.data.data.items || []).map(it => ({
         product_id: it.product_id || '',
         descripcion: it.descripcion || '',
         cantidad_original: parseFloat(it.cantidad) || 0,
@@ -1362,8 +1443,10 @@ const abrirCierre = async () => {
     for (const d of devsV) {
       if (d.cantidad > d.cantidad_original) { setErrorCambio(`No puede devolver mas de ${d.cantidad_original} de "${d.descripcion}"`); return }
     }
-    setErrorCambio('')
+     setErrorCambio('')
     setCobroEsCambio(true)
+    cobroEsCambioRef.current = true
+    setMostrarCambio(false)
     setMostrarCobro(true)
   }
 
@@ -1387,7 +1470,8 @@ const abrirCierre = async () => {
         autorizado_por: 'Supervisor'
       })
         const num = res.data.data?.numero || ''
-      const cambioId = res.data.data?.id
+            const cambioId = res.data.data?.id
+            if (cambioId) { setUltimoCambioId(cambioId); ultimoCambioRef.current = cambioId; localStorage.setItem('pos_ultimo_cambio', cambioId) }
          setMostrarCambio(false)
       setBusqueda('')
       setResultados([])
@@ -1417,17 +1501,23 @@ const abrirCierre = async () => {
           } catch (err) {
             window.open(url, '_blank')
           }
-                 setBusqueda('')
+              setBusqueda('')
           setResultados([])
           setSeleccionado(0)
-          setTimeout(() => { setBusqueda(''); setResultados([]); inputRef.current?.focus() }, 150)
+          setTimeout(() => {
+            setBusqueda('')
+            setResultados([])
+            window.focus()
+            document.body.focus()
+            inputRef.current?.focus()
+          }, 800)
         }
         document.body.appendChild(ifc)
       }
-    } catch (e) {
+     } catch (e) {
       const msjErr = e.response?.data?.mensaje || 'Error al procesar el cambio'
       setErrorCambio(msjErr)
-      alert(msjErr)
+      setMostrarCambio(true)
     } finally {
       setProcesandoCambio(false)
     }
@@ -1578,7 +1668,7 @@ setFormaPago('efectivo')
 
   // Confirmar cobro → crear FACTURA REAL (o guardar offline)
     const confirmarCobro = async () => {
-    if (cobroEsCambio) { setMostrarCobro(false); setCobroEsCambio(false); ejecutarCambio(); return }
+        if (cobroEsCambioRef.current) { cobroEsCambioRef.current = false; setMostrarCobro(false); setCobroEsCambio(false); ejecutarCambio(); return }
 if (procesando) return
     if (modoMixto) {
       if (totalMixto <= 0) {
@@ -1635,7 +1725,10 @@ const res = await API.post('/invoices', payload)
       } catch (e) {
         console.error('Error registrando desglose de pago:', e)
       }
-    setUltimaFacturaId(factura.id)
+        setUltimaFacturaId(factura.id)
+        setUltimoCambioId(null)
+       ultimoCambioRef.current = null
+    localStorage.removeItem('pos_ultimo_cambio')
       setVentaExitosa({
         offline: false,
         id: factura.id,
@@ -2476,13 +2569,17 @@ const teclasDescuento = (e) => {
                         <tr key={idx} className={`border-t ${filaCambio === idx ? 'bg-purple-100' : ''}`}
                           tabIndex={0}
                           onKeyDown={e => {
-                            if (e.key === 'ArrowDown') {
+                                                  if (e.key === 'ArrowDown') {
                               e.preventDefault()
-                              if (idx < itemsDevueltos.length - 1) setFilaCambio(idx + 1)
+                              e.stopPropagation()
+                              const sigFila = document.getElementById(`cambio-check-${idx + 1}`)
+                              if (sigFila) sigFila.focus()
                               else document.getElementById('cambio-buscar')?.focus()
                             } else if (e.key === 'ArrowUp') {
                               e.preventDefault()
-                              if (idx > 0) setFilaCambio(idx - 1)
+                              e.stopPropagation()
+                              const antFila = document.getElementById(`cambio-check-${idx - 1}`)
+                              if (antFila) antFila.focus()
                             } else if (e.key === 'ArrowRight') {
                               e.preventDefault()
                               setItemsDevueltos(prev => prev.map((x, i) => i === idx ? { ...x, seleccionado: true, cantidad: x.cantidad_original } : x))
@@ -2776,7 +2873,7 @@ const teclasDescuento = (e) => {
             {/* HEADER FIJO */}
             <div className="bg-green-600 text-white px-4 py-2 rounded-t-xl flex justify-between items-center flex-shrink-0">
                             <h2 className="text-base font-bold">💰 COBRAR — RD$ {fmt(cobroEsCambio ? diferenciaCambio : totalGeneral)}</h2>
-                           <button onClick={() => { setMostrarCobro(false); setCobroEsCambio(false) }} className="text-white text-2xl leading-none font-bold">✕</button>
+                                       <button onClick={() => { setMostrarCobro(false); setCobroEsCambio(false); cobroEsCambioRef.current = false }} className="text-white text-2xl leading-none font-bold">✕</button>
             </div>
 
             {/* CONTENIDO SCROLLEABLE */}
@@ -3042,7 +3139,7 @@ const teclasDescuento = (e) => {
             {/* BOTONES FIJOS ABAJO (siempre visibles) */}
             <div className="p-3 border-t flex gap-2 flex-shrink-0 bg-white rounded-b-xl">
               <button
-                    onClick={() => { setMostrarCobro(false); setCobroEsCambio(false) }}
+                                   onClick={() => { setMostrarCobro(false); setCobroEsCambio(false); cobroEsCambioRef.current = false }}
            id="cobro-cancelar"
                 disabled={procesando}
                 className="flex-1 py-2.5 rounded-lg font-bold border-2 border-gray-300 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-400"
@@ -3136,7 +3233,7 @@ const teclasDescuento = (e) => {
                       iframe.style.border = '0'
                       iframe.style.visibility = 'hidden'
                       iframe.src = url
-                      iframe.onload = () => {
+                                       iframe.onload = () => {
                         try {
                           iframe.contentWindow.focus()
                           iframe.contentWindow.print()
@@ -3144,6 +3241,11 @@ const teclasDescuento = (e) => {
                           console.error('Error imprimiendo:', e)
                           window.open(url, '_blank')
                         }
+                        setTimeout(() => {
+                          window.focus()
+                          document.body.focus()
+                          inputRef.current?.focus()
+                        }, 800)
                       }
                  document.body.appendChild(iframe)
                       nuevaVenta()
