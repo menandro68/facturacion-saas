@@ -29,7 +29,34 @@ function App() {
     const u = sessionStorage.getItem('usuario')
     return u ? JSON.parse(u) : null
   })
-  const [pagina, setPagina] = useState('facturas')
+   const [pagina, setPagina] = useState('facturas')
+
+  // Cierre de sesion automatico por inactividad (10 min) — excluye el POS
+  useEffect(() => {
+    if (!usuario) return
+    if (pagina === 'pos') return
+    const LIMITE = 10 * 60 * 1000
+    let temporizador
+    const cerrarPorInactividad = () => {
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('usuario')
+      sessionStorage.removeItem('es_matriz')
+      sessionStorage.removeItem('empresaSeleccionada')
+      localStorage.removeItem('empresaSeleccionada')
+      setUsuario(null)
+    }
+    const reiniciar = () => {
+      clearTimeout(temporizador)
+      temporizador = setTimeout(cerrarPorInactividad, LIMITE)
+    }
+    const eventos = ['mousedown', 'keydown', 'wheel', 'touchstart', 'scroll']
+    eventos.forEach(ev => window.addEventListener(ev, reiniciar, true))
+    reiniciar()
+    return () => {
+      clearTimeout(temporizador)
+      eventos.forEach(ev => window.removeEventListener(ev, reiniciar, true))
+    }
+  }, [usuario, pagina])
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [listadoPrecios, setListadoPrecios] = useState(null)
   const [mostrarSelector, setMostrarSelector] = useState(() => {

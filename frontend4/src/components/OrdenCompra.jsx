@@ -832,22 +832,26 @@ const handleItemChange = async (idx, field, value) => {
             <h3 className="text-lg font-semibold mb-4">Recibir Orden de Compra</h3>
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">No. Factura del Proveedor</label>
-              <input autoFocus value={recibirForm.factura_proveedor}
+                           <input autoFocus value={recibirForm.factura_proveedor}
+                id="oc-factura-prov"
                 onChange={e => setRecibirForm({ ...recibirForm, factura_proveedor: e.target.value })}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('oc-ncf-prov')?.focus() } }}
                 placeholder="Ej: FACT-00123 (opcional)"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">NCF (Comprobante Fiscal)</label>
-              <input value={recibirForm.ncf_proveedor}
+                          <input value={recibirForm.ncf_proveedor}
+                id="oc-ncf-prov"
                 onChange={e => setRecibirForm({ ...recibirForm, ncf_proveedor: e.target.value })}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('oc-recibir')?.focus() } }}
                 placeholder="Ej: B0100000123 (opcional)"
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="flex gap-3 justify-end">
               <button onClick={() => setModalRecibir(null)}
                 className="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar</button>
-              <button onClick={handleConfirmarRecibir}
+                  <button id="oc-recibir" onClick={handleConfirmarRecibir}
                 className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">✓ Recibir</button>
             </div>
           </div>

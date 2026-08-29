@@ -593,7 +593,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 if (cobTbodyEl) cobTbodyEl.innerHTML = filtradas.length === 0
                   ? '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">No hay facturas pagadas</td></tr>'
                   : filtradas.map(p => {
-                    const factura = todasFacturas.find(f => f.id === p.invoice_id)
+                                        const factura = todasFacturas.find(f => f.id === p.invoice_id || (p.conduce_id && f.id === p.conduce_id))
                     return `<tr class="border-t hover:bg-gray-50">
                       <td class="px-4 py-3 font-mono text-sm">${factura?.ncf || 'N/A'}</td>
                       <td class="px-4 py-3 text-sm">${factura?.cliente_nombre || p.cliente_nombre || 'Consumidor Final'}</td>
@@ -921,7 +921,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
             </button>
             <button className={`bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 ${vendedor_id ? 'hidden' : ''}`}
               onClick={() => {
-                const vendedorNombre = vendedores.find(v => v.id === document.getElementById('cxc-vendedor').value)?.nombre || ''
+                               const idVend = document.getElementById('cxc-vendedor')?.value || ''
+                const vendedorNombre = (vendedores.find(v => v.id === idVend)?.nombre) || (document.getElementById('cxc-vendedor-input')?.value || '')
               const resumenHtml = document.getElementById('cxc-resultado')?.innerHTML || ''
                 const tbodyHtml = document.getElementById('cxc-tbody')?.innerHTML || ''
                 const printW = window.open('', '_blank')

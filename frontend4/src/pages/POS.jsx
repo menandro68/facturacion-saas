@@ -1690,10 +1690,15 @@ if (procesando) return
     setProcesando(true)
     setErrorCobro('')
     const METODOS_MIX = ['efectivo', 'tarjeta', 'transferencia']
-    const detallePagos = modoMixto
-      ? METODOS_MIX.filter(m => (parseFloat(pagosMixto[m]) || 0) > 0)
-          .map(m => ({ metodo: m, monto: parseFloat(pagosMixto[m]) }))
-      : [{ metodo: formaPago, monto: totalGeneral }]
+     let detallePagos
+    if (modoMixto) {
+      const noEfec = (parseFloat(pagosMixto.tarjeta) || 0) + (parseFloat(pagosMixto.transferencia) || 0)
+      const efecReal = Math.max(0, totalGeneral - noEfec)
+      const ajustado = { efectivo: efecReal, tarjeta: parseFloat(pagosMixto.tarjeta) || 0, transferencia: parseFloat(pagosMixto.transferencia) || 0 }
+      detallePagos = METODOS_MIX.filter(m => ajustado[m] > 0).map(m => ({ metodo: m, monto: ajustado[m] }))
+    } else {
+      detallePagos = [{ metodo: formaPago, monto: totalGeneral }]
+    }
     const etiquetaPago = modoMixto
       ? 'Mixto (' + detallePagos.map(p => `${p.metodo === 'efectivo' ? 'Efectivo' : p.metodo === 'tarjeta' ? 'Tarjeta' : 'Transferencia'} RD$ ${p.monto.toFixed(2)}`).join(' + ') + ')'
       : (formaPago === 'efectivo' ? 'Efectivo' : formaPago === 'tarjeta' ? 'Tarjeta' : 'Transferencia')

@@ -3504,7 +3504,8 @@ onKeyDown={e => {
                       const dataCd = resCd.data.data || {}
                       const itemsCd = dataCd.items || []
                       setNcFacturaEncontrada({ ...cdEnc, es_conduce: true, ncf: cdEnc.numero })
-                      setNcItemsSeleccionados(itemsCd.map(it => ({ ...it, seleccionado: false, cantidad_nc: it.cantidad, itbis_rate: 0 })))
+                                           setNcItemsSeleccionados(itemsCd.map(it => ({ ...it, seleccionado: false, cantidad_nc: it.cantidad, itbis_rate: 0 })))
+                      setTimeout(() => document.getElementById('nc-check-0')?.focus(), 250)
                     } catch (e) { alert('Error al cargar el conduce') }
                     return
                   }
@@ -3530,7 +3531,8 @@ onKeyDown={e => {
                         cantidad_nc: 0,
                         disponible
                       }
-                    }))
+                                    }))
+                    setTimeout(() => document.getElementById('nc-check-0')?.focus(), 250)
                   } catch(e) { alert('Error al cargar factura') }
                 }}
          className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
@@ -3566,7 +3568,9 @@ onKeyDown={e => {
                       {ncItemsSeleccionados.map((item, idx) => (
                         <tr key={idx} className="border-t">
                           <td className="px-3 py-2">
-                            <input type="checkbox" checked={item.seleccionado}
+                                                       <input type="checkbox" checked={item.seleccionado}
+                              id={`nc-check-${idx}`}
+                              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById(`nc-cant-${idx}`)?.focus() } }}
                               onChange={e => setNcItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, seleccionado: e.target.checked} : it))} />
                           </td>
                    <td className="px-3 py-2">
@@ -3579,7 +3583,15 @@ onKeyDown={e => {
                           </td>
                           <td className="px-3 py-2 text-right">{item.manual ? '-' : parseFloat(item.cantidad).toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">
-                 <input type="number" value={item.cantidad_nc} min="1"
+                                  <input type="number" value={item.cantidad_nc} min="1"
+                              id={`nc-cant-${idx}`}
+                              onKeyDown={e => {
+                                if (e.key !== 'Enter') return
+                                e.preventDefault()
+                                const sig = document.getElementById(`nc-check-${idx + 1}`)
+                                if (sig) sig.focus()
+                                else document.getElementById('nc-motivo')?.focus()
+                              }}
                               max={item.manual ? undefined : (item.disponible !== undefined ? item.disponible : parseFloat(item.cantidad))}
                               step="1"
                               disabled={!item.seleccionado}
@@ -3630,14 +3642,15 @@ onKeyDown={e => {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
-                    <input type="text" placeholder="Ej: Devolución de mercancía..."
+                                      <input type="text" placeholder="Ej: Devolución de mercancía..."
+                      id="nc-motivo"
                       value={ncMotivo} onChange={e => setNcMotivo(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('nc-emitir')?.focus() } }}
                       className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
 
-                  <div className="flex gap-3">
-                    <button onClick={async () => {
+                                   <div className="flex gap-3">
+                    <button id="nc-emitir" onClick={async () => {
              const itemsNC = ncItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_nc) > 0)
                       if (!itemsNC.length) { alert('Selecciona al menos un producto'); return }
                  const manualIncompleta = itemsNC.find(i => i.manual && (!i.descripcion.trim() || !(parseFloat(i.precio_unitario) > 0)))
@@ -3788,7 +3801,8 @@ onKeyDown={e => {
                       const dataCdDev = resCdDev.data.data || {}
                       const itemsCdDev = dataCdDev.items || []
                       setDevFacturaEncontrada({ ...cdEncDev, es_conduce: true, ncf: cdEncDev.numero })
-                      setDevItemsSeleccionados(itemsCdDev.map(it => ({ ...it, seleccionado: false, cantidad_dev: 0, itbis_rate: 0 })))
+                                          setDevItemsSeleccionados(itemsCdDev.map(it => ({ ...it, seleccionado: true, cantidad_dev: 0, itbis_rate: 0 })))
+                      setTimeout(() => document.getElementById('dev-check-0')?.focus(), 250)
                     } catch (e) { alert('Error al cargar el conduce') }
                     return
                   }
@@ -3810,11 +3824,12 @@ onKeyDown={e => {
                       const disponible = Math.max(parseFloat(it.cantidad) - yaDevuelto, 0)
                       return {
                         ...it,
-                        seleccionado: false,
-                        cantidad_dev: 0,
+                         seleccionado: disponible > 0,
+                                       cantidad_dev: 0,
                         disponible
                       }
                     }))
+                    setTimeout(() => document.getElementById('dev-check-0')?.focus(), 250)
                   } catch(e) { alert('Error al cargar factura') }
                 }}
           className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
@@ -3850,7 +3865,19 @@ onKeyDown={e => {
                       {devItemsSeleccionados.map((item, idx) => (
                         <tr key={idx} className="border-t">
                           <td className="px-3 py-2">
-                            <input type="checkbox" checked={item.seleccionado}
+                                                      <input type="checkbox" checked={item.seleccionado}
+                              id={`dev-check-${idx}`}
+                                                           onKeyDown={e => {
+                                if (e.key !== 'Enter') return
+                                e.preventDefault()
+                                if (!item.seleccionado) {
+                                  const sigChk = document.getElementById(`dev-check-${idx + 1}`)
+                                  if (sigChk) sigChk.focus()
+                                  else document.getElementById('dev-motivo')?.focus()
+                                  return
+                                }
+                                document.getElementById(`dev-cant-${idx}`)?.focus()
+                              }}
                               onChange={e => setDevItemsSeleccionados(prev => prev.map((it,i) => i===idx ? {...it, seleccionado: e.target.checked} : it))} />
                           </td>
                        <td className="px-3 py-2">
@@ -3863,7 +3890,15 @@ onKeyDown={e => {
                           </td>
                           <td className="px-3 py-2 text-right">{item.manual ? '-' : parseFloat(item.cantidad).toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">
-                     <input type="number" value={item.cantidad_dev} min="0"
+                                          <input type="number" value={item.cantidad_dev} min="0"
+                              id={`dev-cant-${idx}`}
+                              onKeyDown={e => {
+                                if (e.key !== 'Enter') return
+                                e.preventDefault()
+                                const sig = document.getElementById(`dev-check-${idx + 1}`)
+                                if (sig) sig.focus()
+                                else document.getElementById('dev-motivo')?.focus()
+                              }}
                               max={item.manual ? undefined : (item.disponible !== undefined ? item.disponible : parseFloat(item.cantidad))}
                               step="0.01"
                               disabled={!item.seleccionado}
@@ -3916,12 +3951,14 @@ onKeyDown={e => {
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de la devolución *</label>
                     <input type="text" placeholder="Ej: Producto defectuoso, cliente insatisfecho..."
+                                            id="dev-motivo"
                       value={devMotivo} onChange={e => setDevMotivo(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('dev-registrar')?.focus() } }}
                       className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
 
                   <div className="flex gap-3">
-                    <button onClick={async () => {
+                                        <button id="dev-registrar" onClick={async () => {
                    const itemsDev = devItemsSeleccionados.filter(i => i.seleccionado && parseFloat(i.cantidad_dev) > 0)
                       if (!itemsDev.length) { alert('Selecciona al menos un producto con cantidad mayor a 0'); return }
                       const manualIncompletaDev = itemsDev.find(i => i.manual && (!i.descripcion.trim() || !(parseFloat(i.precio_unitario) > 0)))

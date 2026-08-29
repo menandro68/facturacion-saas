@@ -682,7 +682,15 @@ export default function Conduces() {
               <tr key={co.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono">{co.numero || 'CD-' + String(co.numero_conduce).padStart(4, '0')}</td>
                 <td className="px-4 py-3">{co.cliente_nombre || '-'}</td>
-                <td className="px-4 py-3">RD${parseFloat(co.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</td>
+                                <td className="px-4 py-3">
+                  {parseFloat(co.nc_aplicada || 0) > 0 ? (
+                    <span className="text-xs font-medium text-gray-800">
+                      Cond: {parseFloat(co.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {co.nc_numeros || ''}: {parseFloat(co.nc_aplicada).toLocaleString('es-DO',{minimumFractionDigits:2})} = RD${parseFloat(co.total_neto != null ? co.total_neto : co.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}
+                    </span>
+                  ) : (
+                    <span>RD${parseFloat(co.total || 0).toLocaleString('es-DO',{minimumFractionDigits:2})}</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">{new Date(co.creado_en).toLocaleDateString('es-DO')}</td>
                 <td className="px-4 py-3">
                                    {(() => {
