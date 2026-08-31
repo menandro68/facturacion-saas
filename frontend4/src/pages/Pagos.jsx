@@ -292,7 +292,8 @@ id="btn-si-recibo-pago"
      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h2 className="text-xl font-bold text-gray-800">Pagos</h2>
         <div className="grid grid-cols-2 sm:flex gap-2">
-       <button onClick={() => {
+           {JSON.parse(sessionStorage.getItem('usuario') || '{}').rol !== 'vendedor' && (
+          <button onClick={() => {
               const u = JSON.parse(sessionStorage.getItem('usuario') || '{}')
               if (u.rol === 'vendedor') { alert('Usted no tiene permiso para este módulo'); return }
               setShowPendientes(true)
@@ -300,6 +301,7 @@ id="btn-si-recibo-pago"
            className="bg-orange-500 text-white px-3 sm:px-4 py-2.5 rounded-lg hover:bg-orange-600 text-xs sm:text-sm font-medium leading-tight">
             ⏳ Pagos por Confirmar
           </button>
+          )}
           <button onClick={() => setShowForm(!showForm)}
            className="bg-blue-600 text-white px-3 sm:px-4 py-2.5 rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium leading-tight">
             + Registrar Pago
@@ -339,6 +341,27 @@ id="btn-si-recibo-pago"
                       const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                       const pagosDeFactura = pagos.filter(p => (p.invoice_id === factura.id || p.conduce_id === factura.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                                    const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                                        // ── Pagos PENDIENTES por confirmar (registrados por un vendedor desde el celular) ──
+                      const pendientesDocK = pagos.filter(p =>
+                        (p.invoice_id === factura.id || p.conduce_id === factura.id) && p.estado === 'pendiente'
+                      )
+                      const montoPendK = pendientesDocK.reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                      const vendedoresPendK = [...new Set(pendientesDocK.map(p => p.vendedor_nombre || 'vendedor').filter(Boolean))].join(', ')
+
+                      if (pendientesDocK.length > 0) {
+                        alert(
+                          'PAGO PENDIENTE POR CONFIRMAR\n\n' +
+                          'Documento: ' + factura.ncf + '\n' +
+                          'Cliente: ' + (factura.cliente_nombre || 'Consumidor Final') + '\n' +
+                          'Monto por confirmar: RD$' + montoPendK.toLocaleString('es-DO', { minimumFractionDigits: 2 }) + '\n' +
+                          'Registrado por: ' + vendedoresPendK + '\n\n' +
+                          'Este pago fue hecho desde el celular y aun NO ha sido confirmado.\n' +
+                          'Vaya a "Pagos por Confirmar" y confirmelo antes de registrar otro pago.'
+                        )
+                        setError('Este documento tiene un pago POR CONFIRMAR de RD$' + montoPendK.toLocaleString('es-DO', { minimumFractionDigits: 2 }) + ' registrado por ' + vendedoresPendK + '. Confirmelo en "Pagos por Confirmar" antes de continuar.')
+                        return
+                      }
+
                       if (balanceReal <= 0.01) {
                         setError((factura.es_conduce ? 'Este conduce ya esta saldado: ' : 'Esta factura ya esta saldada: ') + val)
                         return
@@ -364,11 +387,32 @@ id="btn-si-recibo-pago"
                       else setError('Factura no encontrada: ' + val)
                       return
                     }
-                    setError('')
+                              setError('')
               const ncDeFactura = notasCredito.filter(n => n.referencia_id === factura.id)
                     const montoNc = ncDeFactura.reduce((s, n) => s + parseFloat(n.total || 0), 0)
                     const pagosDeFactura = pagos.filter(p => (p.invoice_id === factura.id || p.conduce_id === factura.id) && (p.estado === 'confirmado' || !p.estado)).reduce((s, p) => s + parseFloat(p.monto || 0), 0)
                                   const balanceReal = parseFloat(factura.total) - montoNc - pagosDeFactura
+                                    // ── Pagos PENDIENTES por confirmar (registrados por un vendedor desde el celular) ──
+                    const pendientesDoc = pagos.filter(p =>
+                      (p.invoice_id === factura.id || p.conduce_id === factura.id) && p.estado === 'pendiente'
+                    )
+                    const montoPend = pendientesDoc.reduce((s, p) => s + parseFloat(p.monto || 0), 0)
+                    const vendedoresPend = [...new Set(pendientesDoc.map(p => p.vendedor_nombre || 'vendedor').filter(Boolean))].join(', ')
+
+                    if (pendientesDoc.length > 0) {
+                      alert(
+                        'PAGO PENDIENTE POR CONFIRMAR\n\n' +
+                        'Documento: ' + factura.ncf + '\n' +
+                        'Cliente: ' + (factura.cliente_nombre || 'Consumidor Final') + '\n' +
+                        'Monto por confirmar: RD$' + montoPend.toLocaleString('es-DO', { minimumFractionDigits: 2 }) + '\n' +
+                        'Registrado por: ' + vendedoresPend + '\n\n' +
+                        'Este pago fue hecho desde el celular y aun NO ha sido confirmado.\n' +
+                        'Vaya a "Pagos por Confirmar" y confirmelo antes de registrar otro pago.'
+                      )
+                      setError('Este documento tiene un pago POR CONFIRMAR de RD$' + montoPend.toLocaleString('es-DO', { minimumFractionDigits: 2 }) + ' registrado por ' + vendedoresPend + '. Confirmelo en "Pagos por Confirmar" antes de continuar.')
+                      return
+                    }
+
                     if (balanceReal <= 0.01) {
                       setError((factura.es_conduce ? 'Este conduce ya esta saldado: ' : 'Esta factura ya esta saldada: ') + val)
                       return

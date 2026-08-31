@@ -534,7 +534,9 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                 }
                 if (!vendedorId) return
                 const vendedorNombreSeleccionado = vendedores.find(v => v.id === vendedorId)?.nombre || ''
-         const filtradas = pagos.filter(p => {
+                 const filtradas = pagos.filter(p => {
+                  // Solo pagos CONFIRMADOS: los pendientes por confirmar no son cobro real
+                  if (p.estado !== 'confirmado') return false
                   // Filtrar por vendedor del CLIENTE de la factura (no por quien registro el pago)
                   const factura = todasFacturas.find(f => f.id === p.invoice_id || f.id === p.conduce_id)
                   if (!factura) return false
@@ -564,8 +566,8 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                   // Restar la NC aplicada: el cliente solo debe el total neto
                   const ncAplicada = parseFloat(factura.nc_aplicada || 0)
                   const totalFactura = parseFloat(factura.total || 0) - ncAplicada
-                  const totalPagadoFactura = pagos
-                    .filter(pg => (pg.invoice_id || pg.conduce_id) === refId)
+                                   const totalPagadoFactura = pagos
+                    .filter(pg => (pg.invoice_id || pg.conduce_id) === refId && pg.estado === 'confirmado')
                     .reduce((s, pg) => s + parseFloat(pg.monto || 0), 0)
         // Solo dar comision si la factura esta pagada al 100% (o mas) del total neto
                   if (totalPagadoFactura < totalFactura - 0.01) return

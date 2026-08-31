@@ -627,6 +627,218 @@ const createTables = async () => {
     `);
     console.log('✅ Columna caja_id agregada a invoices');
 
+    // ============ MODULO NOMINA ============
+    // 1. Empleados
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS empleados (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        codigo VARCHAR(20),
+        nombre VARCHAR(150) NOT NULL,
+        cedula VARCHAR(20),
+        nss VARCHAR(30),
+        cargo VARCHAR(100),
+        departamento VARCHAR(100),
+        fecha_ingreso DATE,
+        fecha_salida DATE,
+        tipo_contrato VARCHAR(30) DEFAULT 'indefinido',
+        salario_base DECIMAL(14,2) DEFAULT 0,
+        frecuencia_pago VARCHAR(20) DEFAULT 'mensual',
+        forma_pago VARCHAR(20) DEFAULT 'transferencia',
+        banco VARCHAR(100),
+        cuenta_bancaria VARCHAR(50),
+        afp_id VARCHAR(60),
+        ars_id VARCHAR(60),
+        telefono VARCHAR(20),
+        email VARCHAR(100),
+        direccion TEXT,
+        exento_isr BOOLEAN DEFAULT false,
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_empleados_tenant ON empleados(tenant_id);
+    `);
+    console.log('✅ Tabla empleados creada');
+
+    // 2. Configuracion de tasas (por tenant, con vigencia)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nomina_config (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        vigente_desde DATE NOT NULL,
+        afp_empleado_pct DECIMAL(6,3) DEFAULT 0,
+        afp_empleador_pct DECIMAL(6,3) DEFAULT 0,
+        sfs_empleado_pct DECIMAL(6,3) DEFAULT 0,
+        sfs_empleador_pct DECIMAL(6,3) DEFAULT 0,
+        srl_empleador_pct DECIMAL(6,3) DEFAULT 0,
+        infotep_empleador_pct DECIMAL(6,3) DEFAULT 0,
+        salario_minimo_cotizable DECIMAL(14,2) DEFAULT 0,
+        tope_afp_salarios INTEGER DEFAULT 0,
+        tope_sfs_salarios INTEGER DEFAULT 0,
+        escala_isr JSONB DEFAULT '[]',
+        notas TEXT,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_nomina_config_tenant ON nomina_config(tenant_id, vigente_desde DESC);
+    `);
+    console.log('✅ Tabla nomina_config creada');
+
+    // 3. Catalogo de conceptos (ingresos y deducciones)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nomina_conceptos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        codigo VARCHAR(20),
+        nombre VARCHAR(120) NOT NULL,
+        tipo VARCHAR(20) NOT NULL,
+        cotizable BOOLEAN DEFAULT true,
+        gravable_isr BOOLEAN DEFAULT true,
+        formula VARCHAR(30) DEFAULT 'monto',
+        valor DECIMAL(14,4) DEFAULT 0,
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_nomina_conceptos_tenant ON nomina_conceptos(tenant_id);
+    `);
+    console.log('✅ Tabla nomina_conceptos creada');
+
+    // 4. Periodos de nomina (cabecera)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nomina_periodos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        numero VARCHAR(20),
+        descripcion VARCHAR(150),
+        tipo VARCHAR(30) DEFAULT 'ordinaria',
+        frecuencia VARCHAR(20) DEFAULT 'mensual',
+        fecha_inicio DATE NOT NULL,
+        fecha_fin DATE NOT NULL,
+        fecha_pago DATE,
+        estado VARCHAR(20) DEFAULT 'borrador',
+        total_ingresos DECIMAL(14,2) DEFAULT 0,
+        total_deducciones DECIMAL(14,2) DEFAULT 0,
+        total_neto DECIMAL(14,2) DEFAULT 0,
+        total_aportes_empleador DECIMAL(14,2) DEFAULT 0,
+        cantidad_empleados INTEGER DEFAULT 0,
+        config_snapshot JSONB DEFAULT '{}',
+        procesado_por UUID,
+        procesado_en TIMESTAMP,
+        anulado_por UUID,
+        anulado_en TIMESTAMP,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_nomina_periodos_tenant ON nomina_periodos(tenant_id, fecha_inicio DESC);
+    `);
+    console.log('✅ Tabla nomina_periodos creada');
+
+    // 5. Detalle por empleado (valores congelados al procesar)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nomina_detalle (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        periodo_id UUID NOT NULL REFERENCES nomina_periodos(id) ON DELETE CASCADE,
+        empleado_id UUID REFERENCES empleados(id) ON DELETE SET NULL,
+        empleado_nombre VARCHAR(150),
+        empleado_cedula VARCHAR(20),
+        cargo VARCHAR(100),
+        salario_base DECIMAL(14,2) DEFAULT 0,
+        dias_trabajados DECIMAL(6,2) DEFAULT 0,
+        horas_extras DECIMAL(8,2) DEFAULT 0,
+        monto_horas_extras DECIMAL(14,2) DEFAULT 0,
+        otros_ingresos DECIMAL(14,2) DEFAULT 0,
+        total_ingresos DECIMAL(14,2) DEFAULT 0,
+        salario_cotizable DECIMAL(14,2) DEFAULT 0,
+        afp_empleado DECIMAL(14,2) DEFAULT 0,
+        sfs_empleado DECIMAL(14,2) DEFAULT 0,
+        isr DECIMAL(14,2) DEFAULT 0,
+        otras_deducciones DECIMAL(14,2) DEFAULT 0,
+        total_deducciones DECIMAL(14,2) DEFAULT 0,
+        neto_pagar DECIMAL(14,2) DEFAULT 0,
+        afp_empleador DECIMAL(14,2) DEFAULT 0,
+        sfs_empleador DECIMAL(14,2) DEFAULT 0,
+        srl_empleador DECIMAL(14,2) DEFAULT 0,
+        infotep_empleador DECIMAL(14,2) DEFAULT 0,
+        total_aportes_empleador DECIMAL(14,2) DEFAULT 0,
+        desglose JSONB DEFAULT '{}',
+        creado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_nomina_detalle_periodo ON nomina_detalle(periodo_id);
+      CREATE INDEX IF NOT EXISTS idx_nomina_detalle_empleado ON nomina_detalle(empleado_id);
+    `);
+    console.log('✅ Tabla nomina_detalle creada');
+
+    // 6. Movimientos variables del empleado por periodo (ingresos/deducciones puntuales)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nomina_movimientos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        periodo_id UUID REFERENCES nomina_periodos(id) ON DELETE CASCADE,
+        empleado_id UUID NOT NULL REFERENCES empleados(id) ON DELETE CASCADE,
+        concepto_id UUID REFERENCES nomina_conceptos(id) ON DELETE SET NULL,
+        concepto_nombre VARCHAR(120),
+        tipo VARCHAR(20) NOT NULL,
+        cantidad DECIMAL(10,2) DEFAULT 1,
+        monto DECIMAL(14,2) DEFAULT 0,
+        cotizable BOOLEAN DEFAULT true,
+        gravable_isr BOOLEAN DEFAULT true,
+        notas TEXT,
+        aplicado BOOLEAN DEFAULT false,
+        creado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_nomina_mov_periodo ON nomina_movimientos(periodo_id);
+      CREATE INDEX IF NOT EXISTS idx_nomina_mov_empleado ON nomina_movimientos(empleado_id);
+    `);
+        console.log('✅ Tabla nomina_movimientos creada');
+
+    // 7. Prestamos a empleados (se amortizan automaticamente en cada nomina)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nomina_prestamos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        empleado_id UUID NOT NULL REFERENCES empleados(id) ON DELETE CASCADE,
+        numero VARCHAR(20),
+        fecha DATE DEFAULT CURRENT_DATE,
+        monto_original DECIMAL(14,2) NOT NULL DEFAULT 0,
+        cuota DECIMAL(14,2) NOT NULL DEFAULT 0,
+        balance DECIMAL(14,2) NOT NULL DEFAULT 0,
+        total_descontado DECIMAL(14,2) DEFAULT 0,
+        motivo VARCHAR(255),
+        notas TEXT,
+        estado VARCHAR(20) DEFAULT 'activo',
+        saldado_en TIMESTAMP,
+        cancelado_en TIMESTAMP,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_nomina_prestamos_tenant ON nomina_prestamos(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_nomina_prestamos_empleado ON nomina_prestamos(empleado_id);
+      CREATE INDEX IF NOT EXISTS idx_nomina_prestamos_estado ON nomina_prestamos(estado);
+    `);
+    console.log('✅ Tabla nomina_prestamos creada');
+
+    // 8. Historial de cuotas descontadas (trazabilidad por periodo)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS nomina_prestamos_cuotas (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        prestamo_id UUID NOT NULL REFERENCES nomina_prestamos(id) ON DELETE CASCADE,
+        periodo_id UUID REFERENCES nomina_periodos(id) ON DELETE SET NULL,
+        empleado_id UUID REFERENCES empleados(id) ON DELETE SET NULL,
+        monto DECIMAL(14,2) NOT NULL DEFAULT 0,
+        balance_anterior DECIMAL(14,2) DEFAULT 0,
+        balance_nuevo DECIMAL(14,2) DEFAULT 0,
+        creado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prestamos_cuotas_prestamo ON nomina_prestamos_cuotas(prestamo_id);
+      CREATE INDEX IF NOT EXISTS idx_prestamos_cuotas_periodo ON nomina_prestamos_cuotas(periodo_id);
+    `);
+    console.log('✅ Tabla nomina_prestamos_cuotas creada');
+    console.log('🎉 Modulo Nomina: tablas listas');
+
     console.log('🎉 Base de datos lista');
   } catch (error) {
     console.error('❌ Error creando tablas:', error.message);

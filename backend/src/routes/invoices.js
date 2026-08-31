@@ -1249,12 +1249,15 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
               c.email as cliente_negocio,
 t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.email as empresa_email,
              t.telefono as empresa_telefono, t.direccion as empresa_direccion, t.actividad as empresa_actividad,
-              v.nombre as vendedor_nombre,
+                 v.nombre as vendedor_nombre,
+              COALESCE(cj.nombre, op.nombre) as cajero_nombre,
               ref.ncf as ref_ncf, ref.numero_factura as ref_numero_factura
        FROM invoices i
        LEFT JOIN customers c ON i.customer_id = c.id
        JOIN tenants t ON i.tenant_id = t.id
        LEFT JOIN vendedores v ON c.vendedor_id = v.id
+       LEFT JOIN cajeros cj ON i.operador_id = cj.id
+       LEFT JOIN operadores op ON i.operador_id = op.id
        LEFT JOIN invoices ref ON i.referencia_id = ref.id
        WHERE i.id = $1 AND i.tenant_id = $2`,
       [id, tenant_id]
@@ -1367,10 +1370,16 @@ t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.email as empresa_email,
       const condMap = { contado: 'Contado', '7_dias': '7 Dias', '15_dias': '15 Dias', '30_dias': '30 Dias', '45_dias': '45 Dias', '60_dias': '60 Dias' };
       doc.fillColor(negro).fontSize(10).font('Helvetica-Bold')
          .text(condMap[data.cliente_condiciones] || 'Contado', cx + 8, y + 20);
+         // Si la factura salio del POS, quien atendio es el CAJERO, no un vendedor
+      const esPOS = !!data.caja_id || String(data.notas || '').startsWith('POS - Pago:');
+      const etiquetaAtendio = esPOS ? 'Cajero:' : 'Vendedor:';
+      const nombreAtendio = esPOS
+        ? (data.cajero_nombre || data.vendedor_nombre || 'N/A')
+        : (data.vendedor_nombre || 'N/A');
       doc.fontSize(8).font('Helvetica').fillColor(grisTexto)
-         .text('Vendedor:', cx + 8, y + 36);
+         .text(etiquetaAtendio, cx + 8, y + 36);
       doc.fillColor(negro)
-         .text(data.vendedor_nombre || 'N/A', cx + 60, y + 36, { width: blockW - 68 });
+         .text(nombreAtendio, cx + 60, y + 36, { width: blockW - 68 });
       doc.fillColor(grisTexto)
          .text('Negocio:', cx + 8, y + 48);
       doc.fillColor(negro)
