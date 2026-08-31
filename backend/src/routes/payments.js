@@ -1,4 +1,5 @@
 const express = require('express');
+const contaAuto = require('../utils/contabilidadAuto');
 const router = express.Router();
 const pool = require('../config/db');
 const verifyToken = require('../middleware/auth');
@@ -163,7 +164,18 @@ if (invoice.rows[0].estado === 'pagada') {
       );
     }
 
-    await client.query('COMMIT');
+      await client.query('COMMIT');
+
+    // Asiento contable automatico. Si falla, el pago ya quedo registrado igual.
+    if (estado_pago === 'confirmado') {
+      contaAuto.asientoPago({
+        tenant_id,
+        pago: payment.rows[0],
+        documento: invoice.rows[0].ncf || invoice.rows[0].numero_factura || null,
+        usuario_id: req.user.operador_id || req.user.id || null
+      }).catch(() => {});
+    }
+
     res.status(201).json({
       success: true,
       data: payment.rows[0],

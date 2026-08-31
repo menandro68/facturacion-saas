@@ -1,4 +1,5 @@
 ﻿const express = require('express');
+const contaAuto = require('../utils/contabilidadAuto');
 const router = express.Router();
 const pool = require('../config/db');
 const verifyToken = require('../middleware/auth');
@@ -884,7 +885,16 @@ for (const item of items) {
         )
       }
     }
-    await client.query('COMMIT');
+      await client.query('COMMIT');
+
+    // Asiento contable automatico. Si falla, la factura ya quedo emitida igual.
+    contaAuto.asientoFactura({
+      tenant_id,
+      invoice: invoice.rows[0],
+      esContado: parseFloat(monto_recibido) > 0,
+      usuario_id: req.user.operador_id || req.user.id || null
+    }).catch(() => {});
+
     res.status(201).json({ success: true, data: invoice.rows[0] });
   } catch (error) {
     await client.query('ROLLBACK');

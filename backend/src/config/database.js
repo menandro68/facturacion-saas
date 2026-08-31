@@ -836,8 +836,117 @@ const createTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_prestamos_cuotas_prestamo ON nomina_prestamos_cuotas(prestamo_id);
       CREATE INDEX IF NOT EXISTS idx_prestamos_cuotas_periodo ON nomina_prestamos_cuotas(periodo_id);
     `);
-    console.log('✅ Tabla nomina_prestamos_cuotas creada');
+       console.log('✅ Tabla nomina_prestamos_cuotas creada');
     console.log('🎉 Modulo Nomina: tablas listas');
+
+    // ============ MODULO CONTABILIDAD ============
+    // 1. Catalogo de cuentas contables (estructura jerarquica)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cuentas_contables (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        codigo VARCHAR(30) NOT NULL,
+        nombre VARCHAR(150) NOT NULL,
+        tipo VARCHAR(20) NOT NULL,
+        naturaleza VARCHAR(10) NOT NULL,
+        nivel INTEGER DEFAULT 1,
+        padre_codigo VARCHAR(30),
+        acepta_movimiento BOOLEAN DEFAULT true,
+        es_sistema BOOLEAN DEFAULT false,
+        descripcion TEXT,
+        estado VARCHAR(20) DEFAULT 'activo',
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tenant_id, codigo)
+      );
+      CREATE INDEX IF NOT EXISTS idx_cuentas_tenant ON cuentas_contables(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_cuentas_codigo ON cuentas_contables(tenant_id, codigo);
+      CREATE INDEX IF NOT EXISTS idx_cuentas_tipo ON cuentas_contables(tenant_id, tipo);
+    `);
+    console.log('✅ Tabla cuentas_contables creada');
+
+    // 2. Periodos contables (un mes cerrado no acepta asientos)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS periodos_contables (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        ano INTEGER NOT NULL,
+        mes INTEGER NOT NULL,
+        estado VARCHAR(20) DEFAULT 'abierto',
+        cerrado_por UUID,
+        cerrado_en TIMESTAMP,
+        notas TEXT,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tenant_id, ano, mes)
+      );
+      CREATE INDEX IF NOT EXISTS idx_periodos_cont_tenant ON periodos_contables(tenant_id, ano DESC, mes DESC);
+    `);
+    console.log('✅ Tabla periodos_contables creada');
+
+    // 3. Asientos contables (cabecera)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS asientos_contables (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        numero VARCHAR(20),
+        fecha DATE NOT NULL,
+        tipo VARCHAR(20) DEFAULT 'manual',
+        origen_modulo VARCHAR(30),
+        origen_id UUID,
+        origen_documento VARCHAR(50),
+        descripcion VARCHAR(255),
+        total_debito DECIMAL(16,2) DEFAULT 0,
+        total_credito DECIMAL(16,2) DEFAULT 0,
+        estado VARCHAR(20) DEFAULT 'registrado',
+        creado_por UUID,
+        anulado_por UUID,
+        anulado_en TIMESTAMP,
+        notas TEXT,
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_asientos_tenant ON asientos_contables(tenant_id, fecha DESC);
+      CREATE INDEX IF NOT EXISTS idx_asientos_origen ON asientos_contables(origen_modulo, origen_id);
+      CREATE INDEX IF NOT EXISTS idx_asientos_estado ON asientos_contables(tenant_id, estado);
+    `);
+    console.log('✅ Tabla asientos_contables creada');
+
+    // 4. Detalle del asiento (las lineas de debito y credito)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS asientos_detalle (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        asiento_id UUID NOT NULL REFERENCES asientos_contables(id) ON DELETE CASCADE,
+        cuenta_id UUID REFERENCES cuentas_contables(id),
+        cuenta_codigo VARCHAR(30),
+        cuenta_nombre VARCHAR(150),
+        descripcion VARCHAR(255),
+        debito DECIMAL(16,2) DEFAULT 0,
+        credito DECIMAL(16,2) DEFAULT 0,
+        orden INTEGER DEFAULT 0,
+        creado_en TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_asientos_det_asiento ON asientos_detalle(asiento_id);
+      CREATE INDEX IF NOT EXISTS idx_asientos_det_cuenta ON asientos_detalle(tenant_id, cuenta_codigo);
+    `);
+    console.log('✅ Tabla asientos_detalle creada');
+
+    // 5. Configuracion: que cuenta usa cada operacion automatica
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contabilidad_config (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        clave VARCHAR(60) NOT NULL,
+        cuenta_codigo VARCHAR(30),
+        descripcion VARCHAR(150),
+        creado_en TIMESTAMP DEFAULT NOW(),
+        actualizado_en TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tenant_id, clave)
+      );
+      CREATE INDEX IF NOT EXISTS idx_cont_config_tenant ON contabilidad_config(tenant_id);
+    `);
+    console.log('✅ Tabla contabilidad_config creada');
+    console.log('🎉 Modulo Contabilidad: tablas listas');
 
     console.log('🎉 Base de datos lista');
   } catch (error) {

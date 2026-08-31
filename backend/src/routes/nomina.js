@@ -1,4 +1,5 @@
 const express = require('express');
+const contaAuto = require('../utils/contabilidadAuto');
 const router = express.Router();
 const pool = require('../config/db');
 const verifyToken = require('../middleware/auth');
@@ -848,6 +849,14 @@ router.put('/periodos/:id/calcular', verifyToken, tenantGuard, async (req, res) 
         mensaje: 'El periodo cambio de estado mientras se calculaba. Vuelva a intentarlo.'
       });
     }
+
+    // Asiento contable automatico. Si falla, la nomina ya quedo procesada igual.
+    contaAuto.asientoNomina({
+      tenant_id,
+      periodo: actualizado.rows[0],
+      detalle: lineas,
+      usuario_id: req.user.operador_id || req.user.id || null
+    }).catch(() => {});
 
     res.json({ success: true, data: actualizado.rows[0] });
   } catch (error) {
@@ -2278,9 +2287,18 @@ router.post('/prestamos', verifyToken, tenantGuard, async (req, res) => {
       `INSERT INTO nomina_prestamos
         (tenant_id, empleado_id, numero, fecha, monto_original, cuota, balance, motivo, notas)
        VALUES ($1,$2,$3,$4,$5,$6,$5,$7,$8) RETURNING *`,
-      [tenant_id, empleado_id, numero, fecha || new Date().toISOString().slice(0, 10),
+        [tenant_id, empleado_id, numero, fecha || new Date().toISOString().slice(0, 10),
        monto, cuotaVal, motivo || null, notas || null]
     );
+
+    // Asiento contable automatico. Si falla, el prestamo ya quedo registrado igual.
+    contaAuto.asientoPrestamo({
+      tenant_id,
+      prestamo: r.rows[0],
+      empleadoNombre: e.rows[0].nombre,
+      usuario_id: req.user.operador_id || req.user.id || null
+    }).catch(() => {});
+
     res.json({ success: true, data: r.rows[0] });
   } catch (error) {
     res.status(500).json({ success: false, mensaje: error.message });

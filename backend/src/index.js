@@ -24,6 +24,7 @@ const conducesRoutes = require('./routes/conduces');
 const operadoresRoutes = require('./routes/operadores');
 const superAdminRoutes = require('./routes/superAdmin');
 const nominaRoutes = require('./routes/nomina');
+const contabilidadRoutes = require('./routes/contabilidad');
 const posRoutes = require('./routes/pos');
 
 const app = express();
@@ -109,6 +110,7 @@ app.use('/conduces', apiLimiter, conducesRoutes);
 app.use('/operadores', apiLimiter, operadoresRoutes);
 app.use('/super-admin', apiLimiter, superAdminRoutes);
 app.use('/nomina', apiLimiter, nominaRoutes);
+app.use('/contabilidad', apiLimiter, contabilidadRoutes);
 
 // === HEALTH CHECK PARA MONITOREO DE RAILWAY (LIVENESS) ===
 // Endpoint de "liveness check" estándar profesional (Kubernetes/Cloud Run/AWS).

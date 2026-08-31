@@ -10,6 +10,7 @@ import Reportes from './pages/Reportes'
 import Configuracion from './pages/Configuracion'
 import Proveedores from './pages/Proveedores'
 import Nomina from './pages/Nomina'
+import Contabilidad from './pages/Contabilidad'
 import Inventario from './pages/Inventario'
 import CuentasCobrar from './pages/CuentasCobrar'
 import CuentasPagar from './pages/CuentasPagar'
@@ -204,7 +205,8 @@ const handleEntrarEmpresa = (user) => {
     { id: 'inventario', label: '📋 Inventario', modulo: 'inventario' },
     { id: 'cuentascobrar', label: '💵 Cuentas por Cobrar', modulo: 'cuentas_cobrar' },
     { id: 'cuentaspagar', label: '💳 Cuentas por Pagar', modulo: 'cuentas_pagar' },
-        { id: 'nomina', label: '👥 Nomina', modulo: 'nomina' },
+    { id: 'nomina', label: '👥 Nomina', modulo: 'nomina' },
+    { id: 'contabilidad', label: '📊 Contabilidad', modulo: 'contabilidad' },
     { id: 'mantenimiento', label: '🔧 Mantenimiento', modulo: 'mantenimiento' },
     { id: 'configuracion', label: '⚙️ Configuración', modulo: 'configuracion' },
   ]
@@ -355,8 +357,9 @@ const handleEntrarEmpresa = (user) => {
                 {pagina === 'conduces' && !esVendedor && puedeVer('conduces') && <Conduces />}
                 {pagina === 'pagos' && (esVendedor || puedeVer('pagos')) && <Pagos vendedor_id={esVendedor ? usuario.id : null} />}
                 {pagina === 'reportes' && (esVendedor || puedeVer('reportes')) && <Reportes vendedor_id={esVendedor ? usuario.id : null} />}
-                               {pagina === 'proveedores' && !esVendedor && puedeVer('proveedores') && <Proveedores />}
-                                {pagina === 'nomina' && !esVendedor && puedeVer('nomina') && <Nomina />}
+                {pagina === 'proveedores' && !esVendedor && puedeVer('proveedores') && <Proveedores />}
+                {pagina === 'nomina' && !esVendedor && puedeVer('nomina') && <Nomina />}
+                {pagina === 'contabilidad' && !esVendedor && puedeVer('contabilidad') && <Contabilidad />}
                 {pagina === 'inventario' && !esVendedor && puedeVer('inventario') && <Inventario modulos_permitidos={esOperador ? permitidos : null} />}
                 {pagina === 'cuentascobrar' && (esVendedor || puedeVer('cuentas_cobrar')) && <CuentasCobrar vendedor_id={esVendedor ? usuario.id : null} modulos_permitidos={esOperador ? permitidos : null} />}
                 {pagina === 'cuentaspagar' && !esVendedor && puedeVer('cuentas_pagar') && <CuentasPagar modulos_permitidos={esOperador ? permitidos : null} />}
