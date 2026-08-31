@@ -254,10 +254,12 @@ if (total <= 0) {
                       sep,
                       '', '', ''
                     ]
+                               // Dos copias consecutivas: una para el cliente y otra para la empresa
+                    const dosCopias = [...lineas, ...lineas]
                     const savedAddress = localStorage.getItem('bt_printer_address')
                     if (savedAddress) {
                       try {
-                        await imprimirEnDispositivo(savedAddress, lineas)
+                        await imprimirEnDispositivo(savedAddress, dosCopias)
                         alert('✅ Impreso')
                       } catch (err) {
                         alert('❌ ' + err)
@@ -266,7 +268,7 @@ if (total <= 0) {
                     }
                     const devices = await listarDispositivos()
                     setBtDevices(devices)
-                    setBtLineas(lineas)
+                    setBtLineas(dosCopias)
                     setBtModal(true)
                     return
                   }

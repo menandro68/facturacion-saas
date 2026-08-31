@@ -61,6 +61,7 @@ function App() {
   }, [usuario, pagina])
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [listadoPrecios, setListadoPrecios] = useState(null)
+  const [buscarPrecio, setBuscarPrecio] = useState('')
   const [mostrarSelector, setMostrarSelector] = useState(() => {
     return sessionStorage.getItem('empresaSeleccionada') !== 'true' && !!sessionStorage.getItem('usuario')
   })
@@ -374,9 +375,16 @@ const handleEntrarEmpresa = (user) => {
         <div className="fixed inset-0 bg-white z-50 overflow-auto p-4">
           <div className="flex justify-between items-center gap-3 mb-4">
             <h2 className="text-lg sm:text-xl font-bold text-blue-700 leading-tight">🏷️ Listado de Precios</h2>
-            <button onClick={() => setListadoPrecios(null)} className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap flex-shrink-0">← Volver</button>
+                        <button onClick={() => { setListadoPrecios(null); setBuscarPrecio('') }} className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap flex-shrink-0">← Volver</button>
           </div>
           <p className="text-gray-400 text-sm mb-4">Fecha: {new Date().toLocaleDateString('es-DO')} — {listadoPrecios.length} producto(s)</p>
+                  <input
+            value={buscarPrecio}
+            onChange={(e) => setBuscarPrecio(e.target.value)}
+            placeholder="Buscar articulo..."
+            autoComplete="off"
+            className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-base mb-4 focus:outline-none focus:border-blue-600"
+          />
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-blue-700 text-white">
@@ -386,7 +394,10 @@ const handleEntrarEmpresa = (user) => {
               </tr>
             </thead>
             <tbody>
-              {listadoPrecios.map((p, i) => (
+                           {listadoPrecios.filter(p => {
+                if (!buscarPrecio.trim()) return true
+                return (p.nombre || '').toLowerCase().includes(buscarPrecio.trim().toLowerCase())
+              }).map((p, i) => (
                 <tr key={p.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                   <td className="px-3 py-3 text-gray-800">{p.nombre}</td>
                   <td className="px-3 py-3 text-right text-blue-700 font-medium">{parseFloat(p.stock_real || 0).toLocaleString('es-DO')}</td>
