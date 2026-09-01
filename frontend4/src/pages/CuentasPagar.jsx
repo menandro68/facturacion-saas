@@ -376,7 +376,7 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
               🖨️ Imprimir
             </button>
           </div>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -419,9 +419,69 @@ export default function CuentasPagar({ modulos_permitidos = null }) {
                       </td>
                     </tr>
                   )
-                })}
+                    })}
               </tbody>
             </table>
+          </div>
+
+          {/* Vista de tarjetas para pantallas pequenas */}
+          <div className="lg:hidden space-y-3">
+            {(() => {
+              const pendientes = ordenes.filter(o => (o.estado_pago || 'pendiente') !== 'pagada')
+              if (pendientes.length === 0) {
+                return (
+                  <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                    No hay cuentas por pagar
+                  </div>
+                )
+              }
+              return pendientes.map(o => {
+                const pagado = parseFloat(o.monto_pagado || 0)
+                const total = parseFloat(o.total || 0)
+                const pendiente = total - pagado
+                const estadoPago = o.estado_pago || 'pendiente'
+                return (
+                  <div key={o.id} className="bg-white rounded-lg shadow p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="min-w-0">
+                        <p className="font-mono font-medium text-gray-800">{o.numero}</p>
+                        <p className="text-sm text-gray-600 truncate">{o.proveedor_nombre || '-'}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${
+                        estadoPago === 'parcial' ? 'bg-yellow-100 text-yellow-700' : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {estadoPago.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-sm pt-2 border-t">
+                      <div>
+                        <p className="text-xs text-gray-500">Total</p>
+                        <p className="font-medium">RD${total.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Pagado</p>
+                        <p className="font-medium text-green-600">RD${pagado.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Pendiente</p>
+                        <p className="font-bold text-orange-600">RD${pendiente.toLocaleString('es-DO',{minimumFractionDigits:2})}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-3 mt-2 border-t">
+                      <span className="text-xs text-gray-500">
+                        Vence: {o.fecha_vencimiento_pago ? new Date(o.fecha_vencimiento_pago).toLocaleDateString('es-DO') : '-'}
+                      </span>
+                      <button onClick={() => { setOrdenSeleccionada(o); setMontoPagoOrden(pendiente.toFixed(2)); setMetodoPagoOrden('efectivo') }}
+                        className="text-blue-600 hover:underline text-sm font-medium">
+                        Pagar
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            })()}
           </div>
         </>
       )}

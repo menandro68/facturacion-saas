@@ -653,7 +653,7 @@ export default function Conduces() {
       )}
 
       {/* Listado */}
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
+           <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
             <tr>
@@ -725,6 +725,84 @@ export default function Conduces() {
             )}
           </tbody>
         </table>
+      </div>
+      
+      {/* Vista de tarjetas para pantallas pequenas */}
+      <div className="lg:hidden space-y-3">
+            {(() => {
+          const filtrados = conduces.filter(co => {
+            if (busquedaConduce) {
+              const numCd = (co.numero || '').toUpperCase()
+              const cliCd = (co.cliente_nombre || '').toUpperCase()
+              if (!numCd.includes(busquedaConduce) && !cliCd.includes(busquedaConduce)) return false
+            }
+            if (!cdFiltroInicio && !cdFiltroFin) return true
+            const d = new Date(co.creado_en)
+            const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+            if (cdFiltroInicio && fcd < cdFiltroInicio) return false
+            if (cdFiltroFin && fcd > cdFiltroFin) return false
+            return true
+          })
+          if (filtrados.length === 0) {
+            return (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                {busquedaConduce ? 'No se encontraron conduces' : 'No hay conduces registrados'}
+              </div>
+            )
+          }
+          return filtrados.map(c => {
+          const ncAplicada = parseFloat(c.nc_aplicada || 0)
+          const totalNeto = parseFloat(c.total_neto != null ? c.total_neto : c.total || 0)
+          return (
+            <div key={c.id} className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div className="min-w-0">
+                  <p className="font-mono font-medium text-gray-800">{c.numero}</p>
+                  <p className="text-sm text-gray-600 truncate">{c.cliente_nombre || '-'}</p>
+                </div>
+                <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${
+                  c.estado === 'anulado' ? 'bg-red-100 text-red-700'
+                    : c.facturado ? 'bg-gray-200 text-gray-600'
+                    : c.estado === 'pagado' ? 'bg-green-100 text-green-700'
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
+                  {c.facturado ? 'FACTURADO' : String(c.estado || '').toUpperCase()}
+                </span>
+              </div>
+
+              {ncAplicada > 0 && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Cond: {parseFloat(c.total).toLocaleString('es-DO',{minimumFractionDigits:2})} − NC# {c.nc_numeros || ''}: {ncAplicada.toLocaleString('es-DO',{minimumFractionDigits:2})}
+                </p>
+              )}
+
+              <div className="flex justify-between items-end pt-2 border-t">
+                <span className="text-xs text-gray-500">
+                  {new Date(c.creado_en).toLocaleDateString('es-DO')}
+                </span>
+                <span className="text-lg font-bold text-gray-800">
+                  RD${totalNeto.toLocaleString('es-DO',{minimumFractionDigits:2})}
+                </span>
+              </div>
+
+              <div className="flex gap-4 mt-3 pt-3 border-t flex-wrap">
+                <button onClick={() => handlePDF(c.id)}
+                  className="text-green-600 hover:underline text-sm">PDF</button>
+                {c.estado !== 'anulado' && !c.facturado && (
+                  <>
+                    <button onClick={() => handleEditar(c)}
+                      className="text-blue-600 hover:underline text-sm">Editar</button>
+                    <button onClick={() => handleConvertir(c)}
+                      className="text-purple-600 hover:underline text-sm">Convertir en Factura</button>
+                    <button onClick={() => handleAnular(c.id, c.numero)}
+                      className="text-red-500 hover:underline text-sm">Anular</button>
+                  </>
+                )}
+              </div>
+            </div>
+          )
+          })
+        })()}
       </div>
     </div>
   )

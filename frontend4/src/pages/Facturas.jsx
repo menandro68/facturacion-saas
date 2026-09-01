@@ -5010,8 +5010,8 @@ onKeyDown={e => {
             </div>
           )}
 
-          {/* Tabla */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+               {/* Tabla */}
+      <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
             <table className="w-full text-sm table-fixed">
               <thead className="bg-gray-50">
                 <tr>
@@ -5107,6 +5107,83 @@ onKeyDown={e => {
           </div>
         </>
       )}
+   
+          {/* Vista de tarjetas para pantallas pequenas */}
+          <div className="lg:hidden space-y-3">
+            {(() => {
+              const factsVF = facturasFiltradas.filter(f =>
+                (f.estado === 'emitida' || f.estado === 'pagada') && (!busquedaNcf || (f.ncf || '').toUpperCase().includes(busquedaNcf.toUpperCase()))
+              ).map(f => ({ ...f, _tipoVF: 'factura' }))
+              const condsVF = conducesVenta.filter(cd => {
+                if (cd.estado !== 'emitido' || cd.facturado) return false
+                if (busquedaNcf && !(cd.numero || '').toUpperCase().includes(busquedaNcf.toUpperCase())) return false
+                const d = new Date(cd.creado_en)
+                const fcd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                if (fechaInicio && fcd < fechaInicio) return false
+                if (fechaFin && fcd > fechaFin) return false
+                return true
+              }).map(cd => ({ ...cd, _tipoVF: 'conduce' }))
+              const todosVF = [...factsVF, ...condsVF].sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
+
+              if (todosVF.length === 0) {
+                return (
+                  <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                    {busquedaNcf ? 'No se encontraron documentos' : 'No hay documentos'}
+                  </div>
+                )
+              }
+
+              return todosVF.map(f => {
+                const esConduce = f._tipoVF === 'conduce'
+                const numero = esConduce ? (f.numero || '-') : (f.ncf || 'BORRADOR')
+                const totalDoc = parseFloat(f.total_neto != null ? f.total_neto : f.total || 0)
+                return (
+                  <div key={f.id} className="bg-white rounded-lg shadow p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="min-w-0">
+                        <p className="font-mono font-medium text-gray-800">{numero}</p>
+                        <p className="text-sm text-gray-600 truncate">{f.cliente_nombre || 'Consumidor Final'}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${
+                        esConduce ? 'bg-orange-100 text-orange-700' : estadoColor(f.estado)
+                      }`}>
+                        {esConduce ? 'CONDUCE' : String(f.estado).toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-end pt-2 border-t">
+                      <span className="text-xs text-gray-500">
+                        {new Date(f.creado_en).toLocaleDateString('es-DO')}
+                      </span>
+                      <span className="text-lg font-bold text-gray-800">
+                        RD${totalDoc.toLocaleString('es-DO', {minimumFractionDigits:2})}
+                      </span>
+                    </div>
+
+                    {!esConduce && f.estado !== 'anulada' && (
+                      <div className="flex gap-4 mt-3 pt-3 border-t">
+                        {f.estado === 'borrador' ? (
+                          <button onClick={() => handleEmitir(f.id)}
+                            className="text-blue-600 hover:underline text-sm">Emitir</button>
+                        ) : (
+                          <>
+                            {puedeVerSubTab('imprimir') && (
+                              <button onClick={() => handleImprimir(f.id)}
+                                className="text-blue-600 hover:underline text-sm">Imprimir</button>
+                            )}
+                            {puedeVerSubTab('pdf') && (
+                              <button onClick={() => handlePDF(f.id)}
+                                className="text-green-600 hover:underline text-sm">PDF</button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            })()}
+          </div>
     </div>
   )
 }

@@ -317,7 +317,7 @@ const handleSubmit = async (e) => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -363,6 +363,66 @@ const handleSubmit = async (e) => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Vista de tarjetas para pantallas pequenas */}
+      <div className="lg:hidden space-y-3">
+        {(() => {
+          const filtrados = productos.filter(p =>
+            !busqueda ||
+            (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+            (p.codigo || '').toLowerCase().includes(busqueda.toLowerCase())
+          )
+          if (filtrados.length === 0) {
+            return (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                {busqueda ? 'No se encontraron resultados' : 'No hay productos registrados'}
+              </div>
+            )
+          }
+          return filtrados.map((p) => (
+            <div key={p.id} className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-start mb-3 pb-3 border-b">
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-800">{p.nombre}</p>
+                  <p className="text-xs text-gray-500 font-mono">{p.codigo || '-'}</p>
+                </div>
+                <div className="flex gap-3 flex-shrink-0 ml-3">
+                  <button onClick={() => handleEditar(p)}
+                    className="text-blue-600 hover:underline text-sm">Editar</button>
+                  <button onClick={() => handleEliminar(p.id, p.nombre)}
+                    className="text-red-500 hover:underline text-sm">Eliminar</button>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center mb-3 bg-blue-50 rounded-lg py-2 px-3">
+                <span className="text-sm text-gray-600">Precio</span>
+                <span className="text-lg font-bold text-blue-700">
+                  RD${parseFloat(p.precio).toLocaleString()}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Costo</span>
+                  <span className="font-medium">{p.costo ? `RD$${parseFloat(p.costo).toLocaleString()}` : '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Beneficio</span>
+                  <span className="font-medium text-green-700">{p.beneficio ? `${p.beneficio}%` : '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">ITBIS</span>
+                  <span className="font-medium">{p.itbis_rate}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Vendedor</span>
+                  <span className="font-medium">{p.comision_vendedor ? `${p.comision_vendedor}%` : '-'}</span>
+                </div>
+              </div>
+            </div>
+          ))
+        })()}
       </div>
     </div>
   )

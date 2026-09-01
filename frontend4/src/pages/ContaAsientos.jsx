@@ -263,7 +263,7 @@ export default function ContaAsientos() {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-x-auto mb-6">
+           <div className="bg-white rounded-lg shadow overflow-x-auto mb-6 hidden lg:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -305,8 +305,51 @@ export default function ContaAsientos() {
                 </td>
               </tr>
             ))}
-          </tbody>
+             </tbody>
         </table>
+      </div>
+
+      {/* Vista de tarjetas para pantallas pequenas */}
+      <div className="lg:hidden space-y-3 mb-6">
+        {asientos.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+            No hay asientos registrados
+          </div>
+        ) : asientos.map(a => (
+          <div key={a.id} className={`bg-white rounded-lg shadow p-4 ${a.estado === 'anulado' ? 'opacity-50' : ''}`}>
+            <div className="flex justify-between items-start mb-2">
+              <div className="min-w-0">
+                <p className="font-mono font-medium text-gray-800">{a.numero}</p>
+                <p className="text-sm text-gray-600">{a.descripcion}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
+                <span className={`px-2 py-1 rounded text-xs font-medium uppercase ${
+                  a.tipo === 'manual' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                }`}>{a.tipo}</span>
+                <span className={`px-2 py-1 rounded text-xs font-medium uppercase ${
+                  a.estado === 'registrado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                }`}>{a.estado}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-end pt-2 border-t">
+              <div className="text-xs text-gray-500">
+                <p>{dia(a.fecha)}</p>
+                {a.origen_documento && <p className="font-mono">{a.origen_documento}</p>}
+              </div>
+              <span className="text-lg font-bold text-gray-800">RD$ {fmt(a.total_debito)}</span>
+            </div>
+
+            <div className="flex gap-4 mt-3 pt-3 border-t">
+              <button onClick={() => verDetalle(a)}
+                className="text-gray-700 hover:underline text-sm">Ver</button>
+              {a.estado === 'registrado' && a.tipo === 'manual' && (
+                <button onClick={() => anular(a)}
+                  className="text-red-600 hover:underline text-sm">Anular</button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {detalle && (

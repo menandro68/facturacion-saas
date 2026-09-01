@@ -24,9 +24,17 @@ export default function Dashboard() {
 
   return (
     <div className="p-6">
-  <div className="relative flex items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
-       <span className="absolute left-1/2 -translate-x-1/2 text-3xl font-bold text-blue-600">Sistema De Facturación SaaS</span>
+      <div className="mb-6">
+        <span className="block text-center text-xl sm:text-3xl font-bold text-blue-600 mb-2 md:hidden">
+          Sistema De Facturacion SaaS
+        </span>
+        <div className="relative hidden md:flex items-center">
+          <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
+          <span className="absolute left-1/2 -translate-x-1/2 text-3xl font-bold text-blue-600 whitespace-nowrap">
+            Sistema De Facturacion SaaS
+          </span>
+        </div>
+        <h2 className="text-xl font-bold text-gray-800 md:hidden">Dashboard</h2>
       </div>
 
       {/* Resumen del día */}
@@ -69,7 +77,7 @@ export default function Dashboard() {
 
       {/* Últimas facturas */}
       <h3 className="text-lg font-semibold text-gray-700 mb-3">Últimas Facturas</h3>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+           <div className="bg-white rounded-lg shadow overflow-hidden hidden sm:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -99,6 +107,29 @@ export default function Dashboard() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Vista de tarjetas para pantallas pequenas */}
+      <div className="sm:hidden space-y-2">
+        {data.ultimas_facturas.map((f) => (
+          <div key={f.id} className="bg-white rounded-lg shadow p-3">
+            <div className="flex justify-between items-start mb-2">
+              <span className="font-mono text-sm text-gray-700">{f.ncf || 'BORRADOR'}</span>
+              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                f.estado === 'pagada' ? 'bg-green-100 text-green-700' :
+                f.estado === 'emitida' ? 'bg-blue-100 text-blue-700' :
+                f.estado === 'anulada' ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {f.estado.toUpperCase()}
+              </span>
+            </div>
+            <div className="flex justify-between items-end">
+              <span className="text-sm text-gray-600">{f.cliente_nombre || 'Consumidor Final'}</span>
+              <span className="font-bold text-gray-800">RD${parseFloat(f.total).toLocaleString()}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

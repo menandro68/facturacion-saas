@@ -92,7 +92,37 @@ const MODULOS_DISPONIBLES = [
           { id: 'cuentas_pagar:pagar_orden', label: 'Pagar Orden' }
         ]
       },
-      { id: 'reportes', label: 'Reportes' }
+       { id: 'reportes', label: 'Reportes' }
+    ]
+  },
+  {
+    categoria: 'NOMINA Y CONTABILIDAD',
+    items: [
+      {
+        id: 'nomina',
+        label: 'Nomina',
+        sub_tabs: [
+          { id: 'nomina:empleados', label: 'Empleados' },
+          { id: 'nomina:periodos', label: 'Periodos' },
+          { id: 'nomina:movimientos', label: 'Movimientos' },
+          { id: 'nomina:prestamos', label: 'Prestamos' },
+          { id: 'nomina:regalia', label: 'Regalia Pascual' },
+          { id: 'nomina:liquidacion', label: 'Liquidaciones' },
+          { id: 'nomina:config', label: 'Configuracion de Tasas' }
+        ]
+      },
+      {
+        id: 'contabilidad',
+        label: 'Contabilidad',
+        sub_tabs: [
+          { id: 'contabilidad:asientos', label: 'Asientos' },
+          { id: 'contabilidad:libros', label: 'Libros' },
+          { id: 'contabilidad:balanza', label: 'Balanza' },
+          { id: 'contabilidad:estados', label: 'Estados Financieros' },
+          { id: 'contabilidad:periodos', label: 'Cierre de Periodos' },
+          { id: 'contabilidad:cuentas', label: 'Catalogo de Cuentas' }
+        ]
+      }
     ]
   },
   {
@@ -771,8 +801,9 @@ const crearEmpresa = async () => {
       )}
 
       {/* Tabla Vendedores */}
-      {tab === 'vendedores' && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {tab === 'vendedores' && (
+        <>
+        <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -798,9 +829,43 @@ const crearEmpresa = async () => {
                   </td>
                 </tr>
               ))}
-            </tbody>
+                 </tbody>
           </table>
         </div>
+
+        {/* Vista de tarjetas para pantallas pequenas */}
+        <div className="lg:hidden space-y-3">
+          {vendedores.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+              No hay vendedores registrados
+            </div>
+          ) : vendedores.map(v => (
+            <div key={v.id} className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-start mb-3 pb-3 border-b">
+                <p className="font-bold text-gray-800 min-w-0 truncate">{v.nombre}</p>
+                <div className="flex gap-3 flex-shrink-0 ml-3">
+                  <button onClick={() => handleEditar('vendedores', v)}
+                    className="text-blue-600 hover:underline text-sm">Editar</button>
+                  <button onClick={() => handleEliminar('vendedores', v.id)}
+                    className="text-red-500 hover:underline text-sm">Eliminar</button>
+                </div>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">Cedula</span>
+                <span className="font-medium text-gray-800">{v.cedula || '-'}</span>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">Telefono</span>
+                <span className="font-medium text-gray-800">{v.telefono || '-'}</span>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">Zona</span>
+                <span className="font-medium text-gray-800">{zonas.find(z => z.id === v.zona_id)?.nombre || '-'}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        </>
       )}
 
       {/* Tabla Zonas */}

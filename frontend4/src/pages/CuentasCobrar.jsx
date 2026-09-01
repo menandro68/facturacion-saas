@@ -373,7 +373,7 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
             </div>
           )}
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -428,9 +428,76 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
                       </tr>
                     )
                   })
-                })()}
+                  })()}
               </tbody>
             </table>
+          </div>
+
+          {/* Vista de tarjetas para pantallas pequenas */}
+          <div className="lg:hidden space-y-3">
+            {(() => {
+              const cuentasCredito = todasFacturas.filter(f => f.estado === 'emitida' || f.estado === 'pagada')
+              if (cuentasCredito.length === 0) {
+                return (
+                  <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                    No hay cuentas por cobrar
+                  </div>
+                )
+              }
+              const hoy = new Date()
+              const condDiasCxc = { contado: 0, '7_dias': 7, '15_dias': 15, '30_dias': 30, '45_dias': 45, '60_dias': 60 }
+              return cuentasCredito.map((f) => {
+                const total = parseFloat(f.total || 0)
+                const pagada = f.estado === 'pagada'
+                const pagado = pagada ? total : 0
+                const pendiente = pagada ? 0 : total
+                let fechaVenc = f.fecha_vencimiento ? new Date(f.fecha_vencimiento) : null
+                if (!fechaVenc && f.customer_id) {
+                  const cliCxc = clientes.find(c => c.id === f.customer_id)
+                  const diasCxc = condDiasCxc[cliCxc?.condiciones] || 0
+                  if (diasCxc > 0) {
+                    fechaVenc = new Date(f.creado_en)
+                    fechaVenc.setDate(fechaVenc.getDate() + diasCxc)
+                  }
+                }
+                const vencida = !pagada && fechaVenc && fechaVenc < hoy
+                const estadoTxt = pagada ? 'pagada' : (vencida ? 'vencida' : 'pendiente')
+                return (
+                  <div key={f.id} className="bg-white rounded-lg shadow p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="min-w-0">
+                        <p className="font-bold text-gray-800 truncate">{f.cliente_nombre || 'Sin cliente'}</p>
+                        <p className="text-xs text-gray-500 font-mono">{f.ncf || 'BORRADOR'}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${estadoColor(estadoTxt)}`}>
+                        {estadoTxt.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-sm pt-2 border-t">
+                      <div>
+                        <p className="text-xs text-gray-500">Total</p>
+                        <p className="font-medium">RD${total.toLocaleString('es-DO', {minimumFractionDigits:2})}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Pagado</p>
+                        <p className="font-medium text-green-600">RD${pagado.toLocaleString('es-DO', {minimumFractionDigits:2})}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Pendiente</p>
+                        <p className="font-bold text-orange-500">RD${pendiente.toLocaleString('es-DO', {minimumFractionDigits:2})}</p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 mt-2 border-t">
+                      <span className={`text-xs ${vencida ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                        Vencimiento: {fechaVenc ? fechaVenc.toLocaleDateString('es-DO') : '-'}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })
+            })()}
           </div>
         </>
       )}

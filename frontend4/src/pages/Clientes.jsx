@@ -289,8 +289,8 @@ export default function Clientes() {
         </div>
       )}
 
-      {/* Tabla */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* Tabla */}
+      <div className="bg-white rounded-lg shadow overflow-x-auto hidden md:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -334,8 +334,56 @@ export default function Clientes() {
                 </tr>
               ))
             )}
-          </tbody>
+           </tbody>
         </table>
+      </div>
+
+      {/* Vista de tarjetas para pantallas pequenas */}
+      <div className="md:hidden space-y-3">
+        {(() => {
+          const filtrados = clientes.filter(c =>
+            !busqueda ||
+            (c.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+            (c.rnc_cedula || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+            (c.email || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+            (c.telefono || '').toLowerCase().includes(busqueda.toLowerCase())
+          )
+          if (filtrados.length === 0) {
+            return (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                {busqueda ? 'No se encontraron resultados' : 'No hay clientes registrados'}
+              </div>
+            )
+          }
+          return filtrados.map((c) => (
+            <div key={c.id} className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-start mb-3 pb-3 border-b">
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-800 truncate">{c.nombre}</p>
+                  <p className="text-xs text-gray-500 capitalize">{c.tipo.replace('_', ' ')}</p>
+                </div>
+                <div className="flex gap-3 flex-shrink-0 ml-3">
+                  <button onClick={() => handleEditar(c)}
+                    className="text-blue-600 hover:underline text-sm">Editar</button>
+                  <button onClick={() => handleEliminar(c.id, c.nombre)}
+                    className="text-red-500 hover:underline text-sm">Eliminar</button>
+                </div>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">RNC/Cedula</span>
+                <span className="font-medium text-gray-800">{c.rnc_cedula || '-'}</span>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">Negocio</span>
+                <span className="font-medium text-gray-800 text-right ml-3 truncate">{c.email || '-'}</span>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">Telefono</span>
+                <span className="font-medium text-gray-800">{c.telefono || '-'}</span>
+              </div>
+            </div>
+          ))
+        })()}
       </div>
     </div>
   )

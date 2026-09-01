@@ -187,8 +187,8 @@ export default function Proveedores() {
         </div>
       )}
 
-      {/* Tabla */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* Tabla */}
+      <div className="bg-white rounded-lg shadow overflow-x-auto hidden md:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -222,8 +222,49 @@ export default function Proveedores() {
                 </tr>
               ))
             )}
-          </tbody>
+            </tbody>
         </table>
+      </div>
+
+      {/* Vista de tarjetas para pantallas pequenas */}
+      <div className="md:hidden space-y-3">
+        {(() => {
+          const filtrados = proveedores.filter(p =>
+            !busqueda || (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase())
+          )
+          if (filtrados.length === 0) {
+            return (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                {busqueda ? 'No se encontraron resultados' : 'No hay proveedores registrados'}
+              </div>
+            )
+          }
+          return filtrados.map((p) => (
+            <div key={p.id} className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-start mb-3 pb-3 border-b">
+                <p className="font-bold text-gray-800 min-w-0 truncate">{p.nombre}</p>
+                <div className="flex gap-3 flex-shrink-0 ml-3">
+                  <button onClick={() => handleEditar(p)}
+                    className="text-blue-600 hover:underline text-sm">Editar</button>
+                  <button onClick={() => handleEliminar(p.id)}
+                    className="text-red-500 hover:underline text-sm">Eliminar</button>
+                </div>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">Email</span>
+                <span className="font-medium text-gray-800 text-right ml-3 truncate">{p.email || '-'}</span>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">Telefono</span>
+                <span className="font-medium text-gray-800">{p.telefono || '-'}</span>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-gray-500">Contacto</span>
+                <span className="font-medium text-gray-800">{p.contacto || '-'}</span>
+              </div>
+            </div>
+          ))
+        })()}
       </div>
     </div>
   )

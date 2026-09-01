@@ -321,7 +321,7 @@ export default function Empleados() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -365,8 +365,59 @@ export default function Empleados() {
                 </td>
               </tr>
             ))}
-          </tbody>
+            </tbody>
         </table>
+      </div>
+
+      {/* Vista de tarjetas para pantallas pequenas */}
+      <div className="lg:hidden space-y-3">
+        {filtrados.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+            No hay empleados registrados
+          </div>
+        ) : filtrados.map(e => (
+          <div key={e.id} className="bg-white rounded-lg shadow p-4">
+            <div className="flex justify-between items-start mb-3 pb-3 border-b">
+              <div className="min-w-0">
+                <p className="font-bold text-gray-800 truncate">{e.nombre}</p>
+                <p className="text-xs text-gray-500 font-mono">{e.codigo || '-'} · {e.cedula || 'Sin cedula'}</p>
+              </div>
+              <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${
+                e.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+              }`}>
+                {e.estado === 'activo' ? 'ACTIVO' : 'INACTIVO'}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center mb-3 bg-blue-50 rounded-lg py-2 px-3">
+              <span className="text-sm text-gray-600 capitalize">Salario {e.frecuencia_pago}</span>
+              <span className="text-lg font-bold text-blue-700">RD$ {fmt(e.salario_base)}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Cargo</span>
+                <span className="font-medium text-right ml-2 truncate">{e.cargo || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Depto</span>
+                <span className="font-medium text-right ml-2 truncate">{e.departamento || '-'}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-3 border-t">
+              <button onClick={() => abrirEditar(e)}
+                className="text-blue-600 hover:underline text-sm">Editar</button>
+              {e.estado === 'activo' ? (
+                <button onClick={() => inactivar(e)}
+                  className="text-red-600 hover:underline text-sm">Inactivar</button>
+              ) : (
+                <button onClick={() => reactivar(e)}
+                  className="text-green-600 hover:underline text-sm">Reactivar</button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

@@ -533,7 +533,7 @@ const handleItemChange = async (idx, field, value) => {
         </div>
       )}
 
-    <div className={"bg-white rounded-lg shadow " + (esResponsiveOC ? "overflow-x-auto" : "overflow-hidden")}>
+        <div className={"bg-white rounded-lg shadow hidden lg:block " + (esResponsiveOC ? "overflow-x-auto" : "overflow-hidden")}>
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -579,6 +579,64 @@ const handleItemChange = async (idx, field, value) => {
             ))}
           </tbody>
         </table>
+      </div>
+      
+      {/* Vista de tarjetas para pantallas pequenas */}
+      <div className="lg:hidden space-y-3">
+           {(() => {
+          const filtradas = ordenes.filter(o =>
+            (!busquedaOC || (o.numero || '').toUpperCase().includes(busquedaOC.toUpperCase())) &&
+            (!ocDesde || new Date(o.fecha_orden || o.creado_en) >= new Date(ocDesde + 'T00:00:00')) &&
+            (!ocHasta || new Date(o.fecha_orden || o.creado_en) <= new Date(ocHasta + 'T23:59:59'))
+          )
+          if (filtradas.length === 0) {
+            return (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                No hay ordenes de compra
+              </div>
+            )
+          }
+          return filtradas.map(o => (
+          <div key={o.id} className="bg-white rounded-lg shadow p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div className="min-w-0">
+                <p className="font-mono font-medium text-gray-800">{o.numero}</p>
+                <p className="text-sm text-gray-600 truncate">{o.proveedor_nombre || '-'}</p>
+              </div>
+                       <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${estadoColor(o.estado)}`}>
+                {String(o.estado || '').toUpperCase()}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-end pt-2 border-t">
+              <div className="text-xs text-gray-500">
+                <p>Fecha: {new Date(o.creado_en).toLocaleDateString('es-DO')}</p>
+                <p>Entrega: {o.fecha_entrega ? new Date(o.fecha_entrega).toLocaleDateString('es-DO') : '-'}</p>
+              </div>
+              <span className="text-lg font-bold text-gray-800">
+                RD${parseFloat(o.total || 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}
+              </span>
+            </div>
+
+                   <div className="flex gap-4 mt-3 pt-3 border-t flex-wrap">
+              <button onClick={() => handleVer(o.id)}
+                className="text-blue-600 hover:underline text-sm">Ver</button>
+              {o.estado !== 'recibida' && (
+                <button onClick={() => handleEditar(o.id)}
+                  className="text-blue-600 hover:underline text-sm">Editar</button>
+              )}
+              {o.estado === 'pendiente' && (
+                <button onClick={() => { setRecibirForm({ factura_proveedor: '', ncf_proveedor: '' }); setModalRecibir(o.id) }}
+                  className="text-green-600 hover:underline text-sm">Recibida</button>
+              )}
+              {o.estado !== 'recibida' && (
+                <button onClick={() => handleEliminar(o.id)}
+                  className="text-red-500 hover:underline text-sm">Eliminar</button>
+              )}
+            </div>
+          </div>
+          ))
+        })()}
       </div>
 
       {editarOrden && (

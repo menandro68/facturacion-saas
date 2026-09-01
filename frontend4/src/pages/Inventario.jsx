@@ -642,8 +642,8 @@ export default function Inventario({ modulos_permitidos = null }) {
             </div>
           )}
 
-          {/* Tabla inventario */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+                   {/* Tabla inventario */}
+          <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -683,8 +683,57 @@ export default function Inventario({ modulos_permitidos = null }) {
                     </tr>
                   ))
                 )}
-              </tbody>
+                </tbody>
             </table>
+          </div>
+
+          {/* Vista de tarjetas para pantallas pequenas */}
+          <div className="lg:hidden space-y-3">
+            {inventario.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+                No hay productos en inventario
+              </div>
+            ) : inventario.map((item) => {
+              const stockAct = parseFloat(item.stock_actual)
+              const minimo = Math.max(parseFloat(item.stock_minimo || 0), parseFloat(item.prod_stock_minimo || 0))
+              const critico = minimo > 0 && stockAct <= minimo
+              const bajo = minimo > 0 && !critico && stockAct <= minimo * 1.5
+              return (
+                <div key={item.id} className="bg-white rounded-lg shadow p-4">
+                  <div className="flex justify-between items-start mb-3 pb-3 border-b">
+                    <p className="font-bold text-gray-800 min-w-0">{item.producto_nombre}</p>
+                    <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${
+                      critico ? 'bg-red-100 text-red-700'
+                        : bajo ? 'bg-orange-100 text-orange-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {critico ? 'CRITICO' : bajo ? 'BAJO' : 'NORMAL'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center mb-3 bg-blue-50 rounded-lg py-2 px-3">
+                    <span className="text-sm text-gray-600">Stock actual</span>
+                    <span className={`text-lg font-bold ${stockColor(item)}`}>{item.stock_actual}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Minimo</span>
+                      <span className="font-medium">{item.prod_stock_minimo || item.stock_minimo}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Maximo</span>
+                      <span className="font-medium">{item.prod_stock_maximo || item.stock_maximo}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t">
+                    <button onClick={() => fetchMovimientos(item.id)}
+                      className="text-gray-600 hover:underline text-sm">Historial</button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </>
       )}

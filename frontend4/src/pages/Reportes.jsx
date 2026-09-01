@@ -300,7 +300,7 @@ const dia = diaLocal(c.fecha_apertura)
       <h2 className="text-xl font-bold text-gray-800 mb-6">Reportes</h2>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6 flex gap-4 items-end">
+            <div className="bg-white rounded-lg shadow p-4 mb-6 flex gap-3 items-end flex-wrap">
   <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
           <input type="date" id="rep-desde" value={desde} onChange={e => setDesde(e.target.value)}
@@ -851,7 +851,7 @@ const dia = diaLocal(c.fecha_apertura)
                 <h3 className="font-semibold text-gray-800">📄 Compras incluidas ({data606.incluidas.length})</h3>
                 <span className="text-sm text-gray-500">Período: {String(mes606).padStart(2, '0')}/{anio606}</span>
               </div>
-              <div className="overflow-x-auto">
+                         <div className="overflow-x-auto hidden lg:block">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
@@ -894,26 +894,89 @@ const dia = diaLocal(c.fecha_apertura)
                         <td className="px-4 py-2 text-right text-orange-600">RD${data606.incluidas.reduce((s, o) => s + (parseFloat(o.total || 0) - parseFloat(o.total || 0) / 1.18), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
                         <td className="px-4 py-2 text-right">RD${data606.incluidas.reduce((s, o) => s + parseFloat(o.total || 0), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</td>
                       </tr>
-                    </tfoot>
+                              </tfoot>
                   )}
                 </table>
+              </div>
+
+              {/* Vista de tarjetas para pantallas pequenas */}
+              <div className="lg:hidden p-3 space-y-3">
+                {data606.incluidas.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8">
+                    No hay compras con NCF en este periodo
+                  </div>
+                ) : (
+                  <>
+                    {data606.incluidas.map(o => {
+                      const total = parseFloat(o.total || 0)
+                      const base = total / 1.18
+                      const itbis = total - base
+                      return (
+                        <div key={o.id} className="border rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-800">{o.numero}</p>
+                              <p className="text-sm text-gray-600 truncate">{o.proveedor_nombre || '-'}</p>
+                            </div>
+                            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                              {new Date(o.creado_en).toLocaleDateString('es-DO')}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mb-2 font-mono">
+                            RNC: {o.proveedor_rnc || 'Sin RNC'} · NCF: {o.ncf_proveedor}
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-sm pt-2 border-t">
+                            <div>
+                              <p className="text-xs text-gray-500">Sin ITBIS</p>
+                              <p className="font-medium">RD${base.toLocaleString('es-DO', {minimumFractionDigits: 2})}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">ITBIS</p>
+                              <p className="font-medium text-orange-600">RD${itbis.toLocaleString('es-DO', {minimumFractionDigits: 2})}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Total</p>
+                              <p className="font-bold">RD${total.toLocaleString('es-DO', {minimumFractionDigits: 2})}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <div className="bg-gray-100 rounded-lg p-3">
+                      <p className="font-semibold text-gray-700 mb-2 text-sm">TOTALES</p>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <p className="text-xs text-gray-500">Sin ITBIS</p>
+                          <p className="font-bold">RD${data606.incluidas.reduce((s, o) => s + parseFloat(o.total || 0) / 1.18, 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">ITBIS</p>
+                          <p className="font-bold text-orange-600">RD${data606.incluidas.reduce((s, o) => s + (parseFloat(o.total || 0) - parseFloat(o.total || 0) / 1.18), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Total</p>
+                          <p className="font-bold">RD${data606.incluidas.reduce((s, o) => s + parseFloat(o.total || 0), 0).toLocaleString('es-DO', {minimumFractionDigits: 2})}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
         </div>
       )}
-
       {/* Historial de Cajas POS */}
       {showCajas && (
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-700 mb-3">🗄️ Historial de Cajas — Punto de Venta</h3>
-          <div className="bg-white rounded-lg shadow p-4 mb-4 flex gap-4 items-center">
+                 <div className="bg-white rounded-lg shadow p-4 mb-4 flex gap-3 items-center flex-wrap">
             <input
               type="text"
               value={buscarCajero}
               onChange={(e) => setBuscarCajero(e.target.value)}
               placeholder="🔍 Buscar operador o cajero..."
-              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-72"
+                            className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 w-full sm:w-72"
             />
            <p className="text-xs text-gray-400">
                 {cajasFiltradas.length} cierre(s) — Usa los campos Desde/Hasta de arriba para filtrar por fecha
@@ -936,7 +999,7 @@ const dia = diaLocal(c.fecha_apertura)
               <p className="text-sm">No hay cierres de caja registrados todavía</p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
+                       <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 text-gray-600">
                   <tr>
@@ -1022,9 +1085,94 @@ const dia = diaLocal(c.fecha_apertura)
                     <p className="text-gray-600 text-xs">Tarjeta + Transferencia</p>
                     <p className="font-bold text-lg text-blue-700">RD$ {fmtCaja(totCajas.tarjeta + totCajas.transferencia)}</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2 border-2 border-green-500">
+                        <div className="bg-white rounded-lg p-2 border-2 border-green-500">
                     <p className="text-gray-600 text-xs">DEBE ENTREGAR EN EFECTIVO</p>
                     <p className="font-bold text-xl text-green-700">RD$ {fmtCaja(totCajas.esperado - totCajas.apertura)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Vista de tarjetas para pantallas pequenas */}
+          {cajasFiltradas.length > 0 && (
+            <div className="lg:hidden space-y-3">
+              {cajasFiltradas.map((c, i) => {
+                const gaveta = parseFloat(c.monto_apertura || 0) + parseFloat(c.total_efectivo || 0)
+                const contado = c.monto_contado != null ? parseFloat(c.monto_contado) : null
+                const dif = contado != null ? contado - gaveta : null
+                const fila = (etq, val, clase) => (
+                  <div className="flex justify-between py-1.5 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-500 text-sm">{etq}</span>
+                    <span className={`font-medium text-sm ${clase || 'text-gray-800'}`}>{val}</span>
+                  </div>
+                )
+                return (
+                  <div key={i} className="bg-white rounded-lg shadow p-4">
+                    <div className="flex justify-between items-start mb-3 pb-3 border-b">
+                      <div>
+                        <p className="font-bold text-gray-800 capitalize">{c.usuario_nombre || '-'}</p>
+                        {c.turnos > 1 && (
+                          <span className="inline-block mt-1 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
+                            {c.turnos} turnos
+                          </span>
+                        )}
+                      </div>
+                      <button onClick={() => imprimirCierre(c)}
+                        className="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-green-700 flex-shrink-0">
+                        Imprimir
+                      </button>
+                    </div>
+
+                    {fila('Apertura', c.abierto_en ? new Date(c.abierto_en).toLocaleString('es-DO') : '-')}
+                    {fila('Cierre', c.cerrado_en ? new Date(c.cerrado_en).toLocaleString('es-DO') : '-')}
+                    {fila('Facturas', c.facturas || 0)}
+                    {fila('Monto apertura', 'RD$ ' + fmtCaja(c.monto_apertura))}
+                    {fila('Efectivo', 'RD$ ' + fmtCaja(c.total_efectivo))}
+                    {fila('Tarjeta', 'RD$ ' + fmtCaja(c.total_tarjeta))}
+                    {fila('Transferencia', 'RD$ ' + fmtCaja(c.total_transferencia))}
+                    {fila('Total ventas', 'RD$ ' + fmtCaja(c.total_ventas), 'text-blue-700 font-bold')}
+                    {fila('Gaveta', 'RD$ ' + fmtCaja(gaveta), 'text-purple-700 font-bold')}
+                    {fila('Contado', contado != null ? 'RD$ ' + fmtCaja(contado) : '-')}
+
+                    <div className={`mt-3 pt-3 border-t text-center rounded py-2 ${
+                      dif == null ? 'bg-gray-50 text-gray-400'
+                        : Math.abs(dif) < 0.01 ? 'bg-green-50 text-green-700'
+                        : dif > 0 ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'
+                    }`}>
+                      <span className="text-xs uppercase font-bold">
+                        {dif == null ? 'Sin cuadre'
+                          : Math.abs(dif) < 0.01 ? 'Cuadrado'
+                          : dif > 0 ? 'Sobrante' : 'Faltante'}
+                      </span>
+                      {dif != null && Math.abs(dif) >= 0.01 && (
+                        <p className="text-lg font-bold">RD$ {fmtCaja(Math.abs(dif))}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+
+              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                <p className="text-sm text-blue-800 font-semibold mb-3">
+                  Resumen de entrega — {cajasFiltradas.length} turno(s)
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-gray-600 text-xs">Efectivo esperado</p>
+                    <p className="font-bold text-green-700">RD$ {fmtCaja(totCajas.esperado)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs">Menos aperturas</p>
+                    <p className="font-bold text-gray-700">RD$ {fmtCaja(totCajas.apertura)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs">Tarjeta + Transferencia</p>
+                    <p className="font-bold text-blue-700">RD$ {fmtCaja(totCajas.tarjeta + totCajas.transferencia)}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-2 border-2 border-green-500">
+                    <p className="text-gray-600 text-xs">DEBE ENTREGAR</p>
+                    <p className="font-bold text-green-700">RD$ {fmtCaja(totCajas.esperado - totCajas.apertura)}</p>
                   </div>
                 </div>
               </div>
