@@ -575,14 +575,28 @@ const handleItemChange = (index, e) => {
       if (e.target.name === 'product_id' && e.target.value) {
         const prod = productos.find(p => p.id === e.target.value)
         if (prod) {
-          updated.descripcion = prod.nombre
-          updated.precio_unitario = prod.precio
+                  updated.descripcion = prod.nombre
+          updated.precio_unitario = precioSegunCliente(prod, form.customer_id)
           updated.itbis_rate = prod.itbis_rate
         }
       }
       return updated
     })
     setItems(newItems)
+  }
+
+    // Devuelve el precio que corresponde al cliente segun su tipo_precio (solo COMERCIAL H D)
+  const precioSegunCliente = (prod, customerId) => {
+    try {
+      const empresa = JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa
+      if (empresa !== 'COMERCIAL H D') return prod.precio
+      const cli = clientes.find(c => String(c.id) === String(customerId))
+      if (!cli || String(cli.tipo_precio) !== '2') return prod.precio
+      const p2 = parseFloat(prod.precio_detalle || 0)
+      return p2 > 0 ? prod.precio_detalle : prod.precio
+    } catch (e) {
+      return prod.precio
+    }
   }
 
   const agregarItem = () => {
@@ -4756,7 +4770,7 @@ onKeyDown={e => {
                                     .filter((_, i) => i !== index))
                                   setBuscarProducto(prev => { const n = {...prev}; delete n[index]; return n })
                                 } else {
-                                  setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate, cantidad: modoPOS ? parseFloat(item.cantidad || 1).toFixed(2) : item.cantidad} : item))
+                                                                    setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: precioSegunCliente(p, form.customer_id), itbis_rate: p.itbis_rate, cantidad: modoPOS ? parseFloat(item.cantidad || 1).toFixed(2) : item.cantidad} : item))
                                   setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
                                 }
                         setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
@@ -4803,7 +4817,7 @@ onKeyDown={e => {
                                         .filter((_, i) => i !== index))
                                       setBuscarProducto(prev => { const n = {...prev}; delete n[index]; return n })
                                     } else {
-                                      setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : item))
+                                                                            setItems(prev => prev.map((item, i) => i === index ? {...item, product_id: p.id, descripcion: p.nombre, precio_unitario: precioSegunCliente(p, form.customer_id), itbis_rate: p.itbis_rate} : item))
                                       setBuscarProducto(prev => ({...prev, [index]: p.nombre}))
                                     }
                                 setMostrarDropdownProducto(prev => ({...prev, [index]: false}))
