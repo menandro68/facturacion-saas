@@ -723,12 +723,13 @@ const handleSubmit = async (e) => {
     items.forEach(item => {
       if (item.product_id && item.precio_unitario) {
         const prodOficial = productos.find(p => p.id === item.product_id)
-        if (prodOficial && parseFloat(item.precio_unitario) < parseFloat(prodOficial.precio)) {
+        const precioRef = prodOficial ? parseFloat(precioSegunCliente(prodOficial, form.customer_id)) : 0
+        if (prodOficial && parseFloat(item.precio_unitario) < precioRef) {
           productosBajos.push({
             nombre: prodOficial.nombre,
-            precio_oficial: parseFloat(prodOficial.precio),
+            precio_oficial: precioRef,
             precio_ingresado: parseFloat(item.precio_unitario),
-            diferencia: parseFloat(prodOficial.precio) - parseFloat(item.precio_unitario)
+            diferencia: precioRef - parseFloat(item.precio_unitario)
           })
         }
       }
