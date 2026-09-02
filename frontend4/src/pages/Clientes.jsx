@@ -8,7 +8,7 @@ export default function Clientes() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: ''
+    nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: '', tipo_precio: '1'
   })
   const [error, setError] = useState('')
   const [zonas, setZonas] = useState([])
@@ -60,7 +60,7 @@ export default function Clientes() {
   }
 
   const handleNuevo = () => {
-    setForm({ nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: '' })
+    setForm({ nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: '', tipo_precio: '1' })
     setEditando(null)
     setShowForm(true)
     setError('')
@@ -76,7 +76,8 @@ export default function Clientes() {
       tipo: cliente.tipo,
       vendedor_id: cliente.vendedor_id || '',
       zona_id: cliente.zona_id || '',
-      condiciones: cliente.condiciones || ''
+      condiciones: cliente.condiciones || '',
+      tipo_precio: String(cliente.tipo_precio || '1')
     })
     setEditando(cliente.id)
     setShowForm(true)
@@ -270,6 +271,16 @@ export default function Clientes() {
                 <option value="60_dias">60 Días</option>
               </select>
             </div>
+            {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' } catch(e) { return false } })() && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Precio</label>
+                <select name="tipo_precio" value={form.tipo_precio || '1'} onChange={handleChange}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="1">Precio 1</option>
+                  <option value="2">Precio 2</option>
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Dirección *</label>
               <input name="direccion" value={form.direccion} onChange={handleChange} required

@@ -8,7 +8,7 @@ export default function Productos() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '',
+        codigo: '', nombre: '', descripcion: '', precio: '', precio_detalle: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '',
     articulo_padre_id: '', factor_empaque: '1', nivel_empaque: ''
   })
   const [buscarPadre, setBuscarPadre] = useState('')
@@ -75,7 +75,9 @@ const handleChange = (e) => {
   }
 
   const handleNuevo = () => {
-    setForm({ codigo: '', nombre: '', descripcion: '', precio: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '', articulo_padre_id: '', factor_empaque: '1', nivel_empaque: '' })
+    setForm({
+      codigo: '', nombre: '', descripcion: '', precio: '', precio_detalle: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '', articulo_padre_id: '', factor_empaque: '1', nivel_empaque: ''
+    })
     setEditando(null)
     setShowForm(true)
     setError('')
@@ -87,6 +89,7 @@ const handleChange = (e) => {
       nombre: producto.nombre,
       descripcion: producto.descripcion || '',
       precio: producto.precio,
+      precio_detalle: producto.precio_detalle || '',
       costo: producto.costo || '',
       itbis_rate: producto.itbis_rate,
       unidad: producto.unidad,
@@ -252,11 +255,22 @@ const handleSubmit = async (e) => {
               )}
             </div>
       <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta *</label>
-              <input name="precio" type="number" step="0.01" value={form.precio} onChange={handleChange} required
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' ? 'Precio 1 *' : 'Precio Venta *' } catch(e) { return 'Precio Venta *' } })()}
+              </label>
+                           <input name="precio" type="number" step="0.01" value={form.precio} onChange={handleChange} required
+                               placeholder="0.00"
                 onBlur={() => { const p = parseFloat(form.precio || 0); const c = parseFloat(form.costo || 0); if (p > 0 && c > 0 && p < c) alert('⚠️ ATENCIÓN: El Precio de Venta (RD$' + p.toLocaleString('es-DO',{minimumFractionDigits:2}) + ') es MENOR que el Costo (RD$' + c.toLocaleString('es-DO',{minimumFractionDigits:2}) + '). Estaría vendiendo con pérdida.') }}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
+                    {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' } catch(e) { return false } })() && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Precio 2</label>
+                <input name="precio_detalle" type="number" step="0.01" value={form.precio_detalle} onChange={handleChange}
+                  placeholder="0.00"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Costo *</label>
               <input name="costo" type="number" step="0.01" value={form.costo} onChange={handleChange} required
@@ -324,7 +338,12 @@ const handleSubmit = async (e) => {
               <th className="px-4 py-3 text-left text-gray-600">Código</th>
               <th className="px-4 py-3 text-left text-gray-600">Nombre</th>
               <th className="px-4 py-3 text-left text-gray-600">% Beneficio</th>
-              <th className="px-4 py-3 text-left text-gray-600">Precio</th>
+                            <th className="px-4 py-3 text-left text-gray-600">
+                {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' ? 'Precio 1' : 'Precio' } catch(e) { return 'Precio' } })()}
+              </th>
+              {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' } catch(e) { return false } })() && (
+                <th className="px-4 py-3 text-left text-gray-600">Precio 2</th>
+              )}
               <th className="px-4 py-3 text-left text-gray-600">Costo</th>
               <th className="px-4 py-3 text-left text-gray-600">ITBIS</th>
               <th className="px-4 py-3 text-left text-gray-600">% Vendedor</th>
@@ -348,7 +367,10 @@ const handleSubmit = async (e) => {
                   <td className="px-4 py-3">{p.codigo || '-'}</td>
                   <td className="px-4 py-3 font-medium">{p.nombre}</td>
                   <td className="px-4 py-3">{p.beneficio ? `${p.beneficio}%` : '-'}</td>
-                  <td className="px-4 py-3">RD${parseFloat(p.precio).toLocaleString()}</td>
+                                    <td className="px-4 py-3">RD${parseFloat(p.precio).toLocaleString()}</td>
+                  {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' } catch(e) { return false } })() && (
+                    <td className="px-4 py-3">{parseFloat(p.precio_detalle || 0) > 0 ? 'RD$' + parseFloat(p.precio_detalle).toLocaleString() : '-'}</td>
+                  )}
                   <td className="px-4 py-3">{p.costo ? `RD$${parseFloat(p.costo).toLocaleString()}` : '-'}</td>
                   <td className="px-4 py-3">{p.itbis_rate}%</td>
                   <td className="px-4 py-3">{p.comision_vendedor ? `${p.comision_vendedor}%` : '-'}</td>
@@ -395,12 +417,22 @@ const handleSubmit = async (e) => {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center mb-3 bg-blue-50 rounded-lg py-2 px-3">
-                <span className="text-sm text-gray-600">Precio</span>
+                         <div className="flex justify-between items-center mb-3 bg-blue-50 rounded-lg py-2 px-3">
+                <span className="text-sm text-gray-600">
+                  {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' ? 'Precio 1' : 'Precio' } catch(e) { return 'Precio' } })()}
+                </span>
                 <span className="text-lg font-bold text-blue-700">
                   RD${parseFloat(p.precio).toLocaleString()}
                 </span>
               </div>
+              {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' } catch(e) { return false } })() && parseFloat(p.precio_detalle || 0) > 0 && (
+                <div className="flex justify-between items-center mb-3 bg-green-50 rounded-lg py-2 px-3">
+                  <span className="text-sm text-gray-600">Precio 2</span>
+                  <span className="text-lg font-bold text-green-700">
+                    RD${parseFloat(p.precio_detalle).toLocaleString()}
+                  </span>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <div className="flex justify-between">

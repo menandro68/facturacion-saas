@@ -946,7 +946,19 @@ const createTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_cont_config_tenant ON contabilidad_config(tenant_id);
     `);
     console.log('✅ Tabla contabilidad_config creada');
-    console.log('🎉 Modulo Contabilidad: tablas listas');
+        console.log('🎉 Modulo Contabilidad: tablas listas');
+
+    // Precio al detalle (segundo precio de venta por articulo)
+    await pool.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS precio_detalle DECIMAL(14,2) DEFAULT 0
+    `);
+        console.log('✅ Columna precio_detalle agregada a products');
+
+    // Tipo de precio que aplica a cada cliente (1 = precio principal, 2 = segundo precio)
+    await pool.query(`
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS tipo_precio SMALLINT DEFAULT 1
+    `);
+    console.log('✅ Columna tipo_precio agregada a customers');
 
     console.log('🎉 Base de datos lista');
   } catch (error) {
