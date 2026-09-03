@@ -65,6 +65,8 @@ router.get('/items/todos', verifyToken, tenantGuard, async (req, res) => {
 router.get('/', verifyToken, tenantGuard, async (req, res) => {
   try {
     const { tenant_id } = req.user;
+    // Un vendedor solo ve las facturas de sus propios clientes
+    const esVendedor = (req.user.rol === 'vendedor' && req.user.vendedor_id) ? req.user.vendedor_id : null;
 const result = await pool.query(
       `SELECT i.*, c.nombre as cliente_nombre,
         COALESCE((
@@ -95,11 +97,12 @@ const result = await pool.query(
                   AND nc.estado = 'nota_credito'
                   AND nc.tenant_id = i.tenant_id
               ), 0)) as total_neto
-       FROM invoices i
+          FROM invoices i
        LEFT JOIN customers c ON i.customer_id = c.id
        WHERE i.tenant_id = $1
+         AND ($2::uuid IS NULL OR c.vendedor_id = $2::uuid)
        ORDER BY i.creado_en DESC`,
-      [tenant_id]
+      [tenant_id, esVendedor]
     );
     res.json({ success: true, data: result.rows });
   } catch (error) {
