@@ -22,16 +22,22 @@ export default function Dashboard() {
   if (loading) return <p className="text-gray-500 p-6">Cargando dashboard...</p>
   if (!data) return <p className="text-red-500 p-6">Error cargando datos.</p>
 
-  return (
+   return (
     <div className="p-6">
       <div className="mb-6">
-        <span className="block text-center text-xl sm:text-3xl font-bold text-blue-600 mb-2 md:hidden">
+        <span className="block text-center text-xl sm:text-3xl font-bold text-blue-600 md:hidden">
           Sistema De Facturacion SaaS
         </span>
+                <p className="block text-center text-xl sm:text-3xl font-bold text-red-600 mb-2 md:hidden">
+          {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa || '' } catch(e) { return '' } })()}
+        </p>
         <div className="relative hidden md:flex items-center">
           <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
-          <span className="absolute left-1/2 -translate-x-1/2 text-3xl font-bold text-blue-600 whitespace-nowrap">
-            Sistema De Facturacion SaaS
+          <span className="absolute left-1/2 -translate-x-1/2 text-center whitespace-nowrap">
+            <span className="block text-3xl font-bold text-blue-600">Sistema De Facturacion SaaS</span>
+                         <span className="block text-3xl font-bold text-red-600">
+              {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa || '' } catch(e) { return '' } })()}
+            </span>
           </span>
         </div>
         <h2 className="text-xl font-bold text-gray-800 md:hidden">Dashboard</h2>
