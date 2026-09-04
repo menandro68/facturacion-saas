@@ -956,8 +956,14 @@ const createTables = async () => {
 
     // Tipo de precio que aplica a cada cliente (1 = precio principal, 2 = segundo precio)
     await pool.query(`
-      ALTER TABLE customers ADD COLUMN IF NOT EXISTS tipo_precio SMALLINT DEFAULT 1
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS tipo_precio SMALLINT DEFAULT 1
     `);
+
+    // Precio al que la empresa entrega el articulo al vendedor
+    await pool.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS precio_vendedor DECIMAL(14,2) DEFAULT 0
+    `);
+    console.log('Columna precio_vendedor agregada a products');
     console.log('✅ Columna tipo_precio agregada a customers');
 
     console.log('🎉 Base de datos lista');

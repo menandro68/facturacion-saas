@@ -1444,10 +1444,11 @@ const abrirCierre = async () => {
       if (d.cantidad > d.cantidad_original) { setErrorCambio(`No puede devolver mas de ${d.cantidad_original} de "${d.descripcion}"`); return }
     }
      setErrorCambio('')
-    setCobroEsCambio(true)
+     setCobroEsCambio(true)
     cobroEsCambioRef.current = true
     setMostrarCambio(false)
     setMostrarCobro(true)
+    setTimeout(() => document.getElementById('cobro-recibido')?.focus(), 150)
   }
 
   const ejecutarCambio = async () => {

@@ -8,7 +8,7 @@ export default function Productos() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-        codigo: '', nombre: '', descripcion: '', precio: '', precio_detalle: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '',
+        codigo: '', nombre: '', descripcion: '', precio: '', precio_detalle: '', precio_vendedor: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '',
     articulo_padre_id: '', factor_empaque: '1', nivel_empaque: ''
   })
   const [buscarPadre, setBuscarPadre] = useState('')
@@ -76,7 +76,7 @@ const handleChange = (e) => {
 
   const handleNuevo = () => {
     setForm({
-      codigo: '', nombre: '', descripcion: '', precio: '', precio_detalle: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '', articulo_padre_id: '', factor_empaque: '1', nivel_empaque: ''
+      codigo: '', nombre: '', descripcion: '', precio: '', precio_detalle: '', precio_vendedor: '', costo: '', itbis_rate: '18', unidad: 'unidad', comision_vendedor: '', beneficio: '', suplidor: '', stock_minimo: '', stock_maximo: '', articulo_padre_id: '', factor_empaque: '1', nivel_empaque: ''
     })
     setEditando(null)
     setShowForm(true)
@@ -90,6 +90,7 @@ const handleChange = (e) => {
       descripcion: producto.descripcion || '',
       precio: producto.precio,
       precio_detalle: producto.precio_detalle || '',
+      precio_vendedor: producto.precio_vendedor || '',
       costo: producto.costo || '',
       itbis_rate: producto.itbis_rate,
       unidad: producto.unidad,
@@ -265,8 +266,16 @@ const handleSubmit = async (e) => {
             </div>
                     {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' } catch(e) { return false } })() && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Precio 2</label>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">Precio 2</label>
                 <input name="precio_detalle" type="number" step="0.01" value={form.precio_detalle} onChange={handleChange}
+                  placeholder="0.00"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            )}
+            {(() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' } catch(e) { return false } })() && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Precio para el Vendedor</label>
+                <input name="precio_vendedor" type="number" step="0.01" value={form.precio_vendedor} onChange={handleChange}
                   placeholder="0.00"
                   className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>

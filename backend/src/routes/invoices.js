@@ -39,7 +39,8 @@ router.get('/items/todos', verifyToken, tenantGuard, async (req, res) => {
               ii.precio_unitario, ii.subtotal,
               CASE WHEN COALESCE(ii.total, 0) > 0 THEN ii.total
                    ELSE COALESCE(ii.cantidad, 0) * COALESCE(ii.precio_unitario, 0) END as total,
-              COALESCE(p.comision_vendedor, 0) as comision_vendedor
+                    COALESCE(p.comision_vendedor, 0) as comision_vendedor,
+              COALESCE(p.precio_vendedor, 0) as precio_vendedor
        FROM invoice_items ii
        LEFT JOIN products p ON ii.product_id = p.id
        INNER JOIN invoices i ON ii.invoice_id = i.id
@@ -49,7 +50,8 @@ router.get('/items/todos', verifyToken, tenantGuard, async (req, res) => {
               ci.precio_unitario,
               (ci.cantidad * ci.precio_unitario) / (1 + COALESCE(ci.itbis_rate,0)/100) as subtotal,
               (ci.cantidad * ci.precio_unitario) as total,
-              COALESCE(pc.comision_vendedor, 0) as comision_vendedor
+                    COALESCE(pc.comision_vendedor, 0) as comision_vendedor,
+              COALESCE(pc.precio_vendedor, 0) as precio_vendedor
        FROM conduces_items ci
        LEFT JOIN products pc ON ci.product_id = pc.id
        INNER JOIN conduces c ON ci.conduce_id = c.id

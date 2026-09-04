@@ -641,8 +641,17 @@ export default function CuentasCobrar({ vendedor_id = null, modulos_permitidos =
            const itemsDeFactura = invoiceItems.filter(it => it.invoice_id === refId)
                   // Comision de esta factura (sobre el valor original de los items)
                   let comisionFactura = 0
+                               const usaPrecioVendedor = (() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' } catch(e) { return false } })()
                   itemsDeFactura.forEach(item => {
              const totalItem = parseFloat(item.total || 0)
+                    const pv = parseFloat(item.precio_vendedor || 0)
+                    if (usaPrecioVendedor && pv > 0) {
+                      // La ganancia del vendedor es la diferencia entre lo que cobro y el precio de entrega
+                      const cant = parseFloat(item.cantidad || 0)
+                      const pu = parseFloat(item.precio_unitario || 0)
+                      comisionFactura += Math.max(0, (pu - pv) * cant)
+                      return
+                    }
                     const porcentaje = parseFloat(item.comision_vendedor || 0)
                     comisionFactura += totalItem * (porcentaje / 100)
                   })
