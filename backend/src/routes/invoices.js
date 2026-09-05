@@ -10,6 +10,12 @@ const bwipjs = require('bwip-js');
 const { obtenerProximoNumeroFactura } = require('../helpers/numeroFactura');
 const { tipoNcfDesdeCliente } = require('../helpers/tipoComprobante');
 
+// Muestra la cantidad sin decimales cuando es entera, y con decimales cuando los tiene
+const formatearCantidad = (valor) => {
+  const n = parseFloat(valor || 0);
+  return Number.isInteger(n) ? String(n) : String(n);
+};
+
 // TIPO DE ENTREGA: el vendedor indica si el pedido se despacha como factura o como conduce
 (async () => {
   try {
@@ -1482,7 +1488,7 @@ t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.email as empresa_email,
       const subtotalLinea = parseFloat(item.cantidad) * parseFloat(item.precio_unitario);
       doc.fillColor(negro)
          .text(item.descripcion, colDescX, y + 4, { width: colDescW })
-         .text(parseFloat(item.cantidad).toFixed(0), colCantX, y + 4, { width: colCantW, align: 'right' })
+         .text(formatearCantidad(item.cantidad), colCantX, y + 4, { width: colCantW, align: 'right' })
          .text(parseFloat(item.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2}), colPUnitX, y + 4, { width: colPUnitW, align: 'right' })
          .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2}), colSubX, y + 4, { width: colSubW, align: 'right' })
          .text(parseFloat(item.itbis_monto).toLocaleString('es-DO', {minimumFractionDigits: 2}), colItbisX, y + 4, { width: colItbisW, align: 'right' })
@@ -1706,7 +1712,7 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
       const subtotalLinea = parseFloat(item.cantidad) * parseFloat(item.precio_unitario);
       doc.fillColor(negro)
          .text(item.descripcion, colDescX, y + 7, { width: colDescW })
-         .text(parseFloat(item.cantidad).toFixed(0), colCantX, y + 7, { width: colCantW, align: 'right' })
+         .text(formatearCantidad(item.cantidad), colCantX, y + 7, { width: colCantW, align: 'right' })
          .text(parseFloat(item.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2}), colPUnitX, y + 7, { width: colPUnitW, align: 'right' })
          .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2}), colSubX, y + 7, { width: colSubW, align: 'right' })
          .text(parseFloat(item.itbis_monto).toLocaleString('es-DO', {minimumFractionDigits: 2}), colItbisX, y + 7, { width: colItbisW, align: 'right' })
