@@ -2721,8 +2721,13 @@ onKeyDown={e => {
                         onChange={e => setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: e.target.value} : it))}
                         onBlur={e => {
                           if (item.product_id && e.target.value !== '') {
-                            const prod = productos.find(p => p.id === item.product_id)
-                            if (prod && parseFloat(e.target.value) < parseFloat(prod.precio)) {
+                                                const prod = productos.find(p => p.id === item.product_id)
+                            const pvMin = parseFloat(prod?.precio_vendedor || 0)
+                                                        const esVend = (() => { try { const u = JSON.parse(sessionStorage.getItem('usuario') || '{}'); return u.rol === 'vendedor' && u.empresa === 'COMERCIAL H D' } catch(er) { return false } })()
+                            if (prod && esVend && pvMin > 0 && parseFloat(e.target.value) < pvMin) {
+                              alert(`El precio no puede ser menor al precio del vendedor: RD$${pvMin.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
+                              setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: pvMin.toFixed(2)} : it))
+                            } else if (prod && parseFloat(e.target.value) < parseFloat(prod.precio)) {
                               alert(`⚠️ El precio no puede ser menor al precio de venta del artículo: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
                               setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: prod.precio} : it))
                             }
@@ -2811,7 +2816,12 @@ onKeyDown={e => {
                   if (!itemsChk.length) return alert('Agrega al menos un producto')
                   for (const it of itemsChk) {
                     if (it.product_id) {
-                      const prod = productos.find(p => p.id === it.product_id)
+                                       const prod = productos.find(p => p.id === it.product_id)
+                      const pvMin = parseFloat(prod?.precio_vendedor || 0)
+                                           const esVend = (() => { try { const u = JSON.parse(sessionStorage.getItem('usuario') || '{}'); return u.rol === 'vendedor' && u.empresa === 'COMERCIAL H D' } catch(er) { return false } })()
+                      if (prod && esVend && pvMin > 0 && parseFloat(it.precio_unitario) < pvMin) {
+                        return alert(`El precio de "${it.descripcion}" es menor al precio del vendedor: RD$${pvMin.toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrigelo antes de guardar.`)
+                      }
                       if (prod && parseFloat(it.precio_unitario) < parseFloat(prod.precio)) {
                         return alert(`El precio de "${it.descripcion}" es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrigelo antes de guardar.`)
                       }
