@@ -1082,6 +1082,11 @@ useEffect(() => {
       <h2>CUADRE DE CAJA</h2>
       <p class="sub">Operador: ${c.usuario_nombre || 'N/D'}<br>
       Apertura: ${fmtFecha(c.fecha_apertura)} &nbsp;|&nbsp; Cierre: ${fmtFecha(c.fecha_cierre)}</p>
+        ${filasDesg ? `<h4 style="margin:16px 0 6px">Detalle de Efectivo</h4>
+      <table><thead><tr><th style="text-align:center">Cant.</th><th style="text-align:center">Billete</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody>${filasDesg}</tbody></table>` : ''}
+      <div class="row tot"><span>TOTAL CONTADO:</span><span>RD$ ${fmt(c.efectivo_contado || 0)}</span></div>
+      <h4 style="margin:20px 0 6px">Resumen del Turno</h4>
       <div class="row"><span>Monto de apertura:</span><b>RD$ ${fmt(c.monto_apertura)}</b></div>
       <div class="row"><span>Facturas del turno:</span><b>${c.cantidad_facturas || 0}</b></div>
       <div class="row"><span>Ventas en efectivo:</span><b>RD$ ${fmt(c.total_efectivo)}</b></div>
@@ -1090,10 +1095,6 @@ useEffect(() => {
       ${parseFloat(c.total_cambios || 0) > 0 ? `<div class="row"><span>Cambios de mercancia:</span><b>RD$ ${fmt(c.total_cambios)}</b></div>` : ''}
       <div class="row"><span>Total de ventas:</span><b>RD$ ${fmt(c.total_ventas)}</b></div>
       <div class="row tot"><span>EFECTIVO ESPERADO:</span><span>RD$ ${fmt(c.efectivo_esperado)}</span></div>
-      ${filasDesg ? `<h4 style="margin:16px 0 6px">Detalle de Efectivo</h4>
-      <table><thead><tr><th style="text-align:center">Cant.</th><th style="text-align:center">Billete</th><th style="text-align:right">Total</th></tr></thead>
-      <tbody>${filasDesg}</tbody></table>` : ''}
-      <div class="row tot"><span>TOTAL CONTADO:</span><span>RD$ ${fmt(c.efectivo_contado || 0)}</span></div>
       <div class="dif"><span>${etiqueta}</span><span>${dif !== null && dif > 0 ? '+' : ''}RD$ ${fmt(dif || 0)}</span></div>
       <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:24px">_______________________<br>Firma del cajero</p>
    </body></html>`)
@@ -1116,7 +1117,7 @@ const abrirCierre = async () => {
       setResumenCaja(res.data.data)
       setConteoBilletes({})
 // 1) Abrir la gaveta PRIMERO (el dialogo de impresion bloquea el hilo)
-      abrirGaveta()
+            // abrirGaveta()
       // 2) Montar el modal DESPUES de que el dialogo se resuelva,
       //    asi el modal queda por encima y no lo tapa la impresion
       setTimeout(() => {
