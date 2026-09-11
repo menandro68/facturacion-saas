@@ -121,6 +121,8 @@ function POS() {
   const [cierreImpresion, setCierreImpresion] = useState(null)
   // Cantidad a eliminar (F4) — permite eliminación parcial de una línea
  const [cantidadEliminar, setCantidadEliminar] = useState('')
+   // Edición de cantidad en línea del ticket (permite decimales, ej. 1.5)
+  const [edicionCantidad, setEdicionCantidad] = useState({ id: null, valor: '' })
   // Acumulado de artículos devueltos (eliminados) en la venta actual
   const [totalDevuelto, setTotalDevuelto] = useState(0)
   // Pago mixto (combinación de métodos en una misma factura)
@@ -1603,7 +1605,7 @@ const agregarAlTicket = (producto) => {
 
   // Cambiar cantidad de una línea
 const cambiarCantidad = (id, nuevaCantidad) => {
-    const cant = parseFloat(nuevaCantidad)
+    const cant = Math.round(parseFloat(String(nuevaCantidad).replace(',', '.')) * 100) / 100
     if (isNaN(cant) || cant <= 0) return
     const linea = ticket.find(l => l.id === id)
     if (linea && linea.stock_disponible !== undefined && cant > linea.stock_disponible) {
@@ -2237,12 +2239,21 @@ const teclasDescuento = (e) => {
                         >
                           −
                         </button>
-                        <input
-                          type="number"
-                          value={l.cantidad}
-                          onChange={(e) => cambiarCantidad(l.id, e.target.value)}
+                                            <input
+                          type="text"
+                          inputMode="decimal"
+                          value={edicionCantidad.id === l.id ? edicionCantidad.valor : l.cantidad}
+                          onFocus={(e) => { setEdicionCantidad({ id: l.id, valor: String(l.cantidad) }); e.target.select() }}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(',', '.')
+                            if (/^\d*\.?\d{0,2}$/.test(v)) setEdicionCantidad({ id: l.id, valor: v })
+                          }}
+                          onBlur={() => {
+                            if (edicionCantidad.id === l.id) cambiarCantidad(l.id, edicionCantidad.valor)
+                            setEdicionCantidad({ id: null, valor: '' })
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur() } }}
                           className="w-14 text-center border rounded py-1 text-sm"
-                          min="1"
                         />
                         <button
                           onClick={() => cambiarCantidad(l.id, l.cantidad + 1)}

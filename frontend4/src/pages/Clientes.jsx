@@ -8,7 +8,7 @@ export default function Clientes() {
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
   const [form, setForm] = useState({
-    nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: '', tipo_precio: '1'
+     nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: '', tipo_precio: (() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' ? '2' : '1' } catch (e) { return '1' } })()
   })
   const [error, setError] = useState('')
   const [zonas, setZonas] = useState([])
@@ -60,7 +60,7 @@ export default function Clientes() {
   }
 
   const handleNuevo = () => {
-    setForm({ nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: '', tipo_precio: '1' })
+       setForm({ nombre: '', rnc_cedula: '', email: '', telefono: '', direccion: '', tipo: 'consumidor_final', vendedor_id: '', zona_id: '', condiciones: '', tipo_precio: (() => { try { return JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa === 'COMERCIAL H D' ? '2' : '1' } catch (e) { return '1' } })() })
     setEditando(null)
     setShowForm(true)
     setError('')

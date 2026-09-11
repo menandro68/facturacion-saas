@@ -585,7 +585,19 @@ const handleItemChange = (index, e) => {
     setItems(newItems)
   }
 
-    // Devuelve el precio que corresponde al cliente segun su tipo_precio (solo COMERCIAL H D)
+     // Precio inicial en pedidos: vendedor de COMERCIAL H D usa precio_vendedor
+  const precioPedido = (prod) => {
+    try {
+      const u = JSON.parse(sessionStorage.getItem('usuario') || '{}')
+      const pv = parseFloat(prod?.precio_vendedor || 0)
+      if (u.rol === 'vendedor' && u.empresa === 'COMERCIAL H D' && pv > 0) return pv.toFixed(2)
+      return prod.precio
+    } catch (e) {
+      return prod.precio
+    }
+   }
+
+  // Devuelve el precio que corresponde al cliente segun su tipo_precio (solo COMERCIAL H D)
   const precioSegunCliente = (prod, customerId) => {
     try {
       const empresa = JSON.parse(sessionStorage.getItem('usuario') || '{}').empresa
@@ -2671,7 +2683,7 @@ onKeyDown={e => {
                           const idx = pedProductoIndex[index] ?? -1
                           if (idx >= 0 && filtrados[idx]) {
                             const p = filtrados[idx]
-                            setItemsPed(prev => prev.map((it, i) => i === index ? {...it, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : it))
+                            setItemsPed(prev => prev.map((it, i) => i === index ? {...it, product_id: p.id, descripcion: p.nombre, precio_unitario: precioPedido(p), itbis_rate: p.itbis_rate} : it))
                             setBuscarProductoPed(prev => ({...prev, [index]: p.nombre}))
                             setDropdownPed(prev => ({...prev, [index]: false}))
                             setPedProductoIndex(prev => ({...prev, [index]: -1}))
@@ -2688,12 +2700,12 @@ onKeyDown={e => {
                         {productos.filter(p => p.nombre.toLowerCase().includes((buscarProductoPed[index]||'').toLowerCase())).map((p, pidx) => (
                           <div key={p.id} className={`px-3 py-2 text-sm cursor-pointer ${(pedProductoIndex[index]??-1) === pidx ? 'bg-blue-200 font-medium' : 'hover:bg-blue-50'}`}
                             onMouseDown={() => {
-                              setItemsPed(prev => prev.map((it, i) => i === index ? {...it, product_id: p.id, descripcion: p.nombre, precio_unitario: p.precio, itbis_rate: p.itbis_rate} : it))
+                              setItemsPed(prev => prev.map((it, i) => i === index ? {...it, product_id: p.id, descripcion: p.nombre, precio_unitario: precioPedido(p), itbis_rate: p.itbis_rate} : it))
                               setBuscarProductoPed(prev => ({...prev, [index]: p.nombre}))
                               setDropdownPed(prev => ({...prev, [index]: false}))
                               setTimeout(() => pedCantidadRefs.current[index]?.focus(), 100)
                             }}>
-                            {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
+                            {p.nombre} — RD${parseFloat(precioPedido(p)).toLocaleString()}
                           </div>
                         ))}
                       </div>
@@ -2727,7 +2739,7 @@ onKeyDown={e => {
                             if (prod && esVend && pvMin > 0 && parseFloat(e.target.value) < pvMin) {
                               alert(`El precio no puede ser menor al precio del vendedor: RD$${pvMin.toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
                               setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: pvMin.toFixed(2)} : it))
-                            } else if (prod && parseFloat(e.target.value) < parseFloat(prod.precio)) {
+                            } else if (prod && !(esVend && pvMin > 0) && parseFloat(e.target.value) < parseFloat(prod.precio)) {
                               alert(`⚠️ El precio no puede ser menor al precio de venta del artículo: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}`)
                               setItemsPed(prev => prev.map((it,i) => i===index ? {...it, precio_unitario: prod.precio} : it))
                             }
@@ -2822,7 +2834,7 @@ onKeyDown={e => {
                       if (prod && esVend && pvMin > 0 && parseFloat(it.precio_unitario) < pvMin) {
                         return alert(`El precio de "${it.descripcion}" es menor al precio del vendedor: RD$${pvMin.toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrigelo antes de guardar.`)
                       }
-                      if (prod && parseFloat(it.precio_unitario) < parseFloat(prod.precio)) {
+                      if (prod && !(esVend && pvMin > 0) && parseFloat(it.precio_unitario) < parseFloat(prod.precio)) {
                         return alert(`El precio de "${it.descripcion}" es menor al precio de venta: RD$${parseFloat(prod.precio).toLocaleString('es-DO', {minimumFractionDigits: 2})}. Corrigelo antes de guardar.`)
                       }
                     }
@@ -3229,7 +3241,7 @@ onKeyDown={e => {
                               setDropdownCot(prev => ({...prev, [index]: false}))
                               setTimeout(() => cotCantidadRefs.current[index]?.focus(), 100)
                             }}>
-                            {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
+                           {p.nombre} — RD${parseFloat(p.precio).toLocaleString()}
                           </div>
                         ))}
                       </div>
