@@ -39,7 +39,13 @@ export default function Conduces() {
   // Descuento global por porcentaje (mismo patron que Nueva Factura)
   const usuarioSesionCd = (() => { try { return JSON.parse(sessionStorage.getItem('usuario')) || {} } catch { return {} } })()
   const esNoAdminCd = usuarioSesionCd?.rol !== 'admin'
-  const [descuentoPctCd, setDescuentoPctCd] = useState('')
+    const [descuentoPctCd, setDescuentoPctCd] = useState('')
+  // Descuento de conduce: requiere clave de autorizacion
+  const [modalDescCd, setModalDescCd] = useState(false)
+  const [pctDescCd, setPctDescCd] = useState('')
+  const [claveDescCd, setClaveDescCd] = useState('')
+  const [errorDescCd, setErrorDescCd] = useState('')
+  const [validandoDescCd, setValidandoDescCd] = useState(false)
   const [mostrarAutorizacionCd, setMostrarAutorizacionCd] = useState(false)
   const [claveAutorizacionCd, setClaveAutorizacionCd] = useState('')
   const [errorAutorizacionCd, setErrorAutorizacionCd] = useState('')
@@ -83,6 +89,36 @@ export default function Conduces() {
   }
 
   const itemsValidos = () => items.filter(it => it.product_id && parseFloat(it.cantidad || 0) > 0)
+
+    // Aplicar descuento al conduce validando la clave de autorizacion
+  const aplicarDescuentoCd = async () => {
+    const pct = parseFloat(pctDescCd)
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      setErrorDescCd('Ingrese un porcentaje valido (0 a 100)')
+      return
+    }
+    if (!claveDescCd.trim()) {
+      setErrorDescCd('Ingrese la clave de autorizacion')
+      return
+    }
+    setValidandoDescCd(true)
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveDescCd })
+      if (res.data.valido) {
+        setDescuentoPctCd(String(pct))
+        setModalDescCd(false)
+        setPctDescCd('')
+        setClaveDescCd('')
+        setErrorDescCd('')
+      } else {
+        setErrorDescCd('Clave incorrecta')
+      }
+    } catch (e) {
+      setErrorDescCd(e.response?.data?.mensaje || 'Clave incorrecta')
+    } finally {
+      setValidandoDescCd(false)
+    }
+   }
 
   const guardar = () => {
     setError(''); setMensaje('')
@@ -628,16 +664,57 @@ export default function Conduces() {
                 <p className="text-gray-600">TOTAL BRUTO: <span className="font-medium">RD${brutoCd.toFixed(2)}</span></p>
                 <div className="flex items-center justify-end gap-2 my-1">
                   <label className="text-gray-600">Descuento</label>
-                  <input type="number" min="0" max="100" step="any" value={descuentoPctCd}
-                    onChange={e => setDescuentoPctCd(e.target.value)}
+                                <input type="text" readOnly value={descuentoPctCd || '0'}
+                    onClick={() => { setPctDescCd(descuentoPctCd || ''); setClaveDescCd(''); setErrorDescCd(''); setModalDescCd(true) }}
+                    title="Clic para aplicar descuento (requiere clave)"
                     placeholder="0"
-                    className="w-16 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    className="w-16 border rounded px-2 py-1 text-sm text-right cursor-pointer bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  {parseFloat(descuentoPctCd) > 0 && (
+                    <button type="button" onClick={() => setDescuentoPctCd('')}
+                      className="text-xs text-gray-500 hover:text-red-600">Quitar</button>
+                  )}
                   <span className="text-gray-600">%</span>
                   <span className="font-medium text-red-600 w-24">-RD${montoDescCd.toFixed(2)}</span>
                 </div>
                 <p className="text-gray-600">SUB-TOTAL: <span className="font-medium">RD${subNetoCd.toFixed(2)}</span></p>
                 <p className="text-gray-600">ITBIS: <span className="font-medium">RD${itbisNetoCd.toFixed(2)}</span></p>
-                <p className="text-lg font-bold text-gray-800">Total: RD${netoCd.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-gray-800">Total: RD${netoCd.toFixed(2)}</p>
+              </div>
+            </div>
+          )}
+
+          {modalDescCd && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setModalDescCd(false)}>
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <div className="bg-red-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center">
+                  <span className="font-bold">DESCUENTO AL CONDUCE</span>
+                  <button type="button" onClick={() => setModalDescCd(false)} className="text-white text-xl leading-none">&times;</button>
+                </div>
+                <div className="p-4">
+                  <label className="block text-sm font-semibold text-gray-600 mb-1">Porcentaje de descuento (%):</label>
+                  <input type="number" min="0" max="100" step="any" autoFocus
+                    value={pctDescCd}
+                    onChange={e => { setPctDescCd(e.target.value); setErrorDescCd('') }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); aplicarDescuentoCd() } }}
+                    placeholder="Ej: 10"
+                    className="w-full border rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-red-400" />
+                  <label className="block text-sm font-semibold text-gray-600 mb-1">Clave de autorizacion:</label>
+                  <input type="password"
+                    value={claveDescCd}
+                    onChange={e => { setClaveDescCd(e.target.value); setErrorDescCd('') }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); aplicarDescuentoCd() } }}
+                    placeholder="Clave del administrador"
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+                  {errorDescCd && <p className="text-red-600 text-sm mt-2">{errorDescCd}</p>}
+                  <div className="flex gap-2 mt-4">
+                    <button type="button" onClick={() => setModalDescCd(false)}
+                      className="flex-1 px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar (Esc)</button>
+                    <button type="button" onClick={aplicarDescuentoCd} disabled={validandoDescCd}
+                      className="flex-1 px-4 py-2 bg-orange-500 text-white rounded text-sm font-bold hover:bg-orange-600 disabled:opacity-50">
+                      {validandoDescCd ? 'Validando...' : 'APLICAR (Enter)'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

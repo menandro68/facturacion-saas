@@ -111,6 +111,12 @@ export default function Facturas({ vendedor_id = null, modulos_permitidos = null
   const [showCotizacion, setShowCotizacion] = useState(false)
   const [itemsCot, setItemsCot] = useState([{descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
   const [descuentoPctCot, setDescuentoPctCot] = useState('')
+  // Descuento de cotizacion: requiere clave de autorizacion
+  const [modalDescCot, setModalDescCot] = useState(false)
+  const [pctDescCot, setPctDescCot] = useState('')
+  const [claveDescCot, setClaveDescCot] = useState('')
+  const [errorDescCot, setErrorDescCot] = useState('')
+  const [validandoDescCot, setValidandoDescCot] = useState(false)
   const [editandoCotId, setEditandoCotId] = useState(null)
   const [buscarProductoCot, setBuscarProductoCot] = useState({})
   const [dropdownCot, setDropdownCot] = useState({})
@@ -482,6 +488,12 @@ const buscarClienteRef = useRef(null)
   const [productosConDescuento, setProductosConDescuento] = useState([])
   // Descuento global por porcentaje en Nueva Factura (no aplica a POS)
   const [descuentoPct, setDescuentoPct] = useState('')
+  // Descuento de factura: requiere clave de autorizacion
+  const [modalDescFac, setModalDescFac] = useState(false)
+  const [pctDescFac, setPctDescFac] = useState('')
+  const [claveDescFac, setClaveDescFac] = useState('')
+  const [errorDescFac, setErrorDescFac] = useState('')
+  const [validandoDescFac, setValidandoDescFac] = useState(false)
   const [errorAutorizacion, setErrorAutorizacion] = useState('')
   const [error, setError] = useState('')
   const [form, setForm] = useState({
@@ -584,7 +596,64 @@ const handleItemChange = (index, e) => {
     })
     setItems(newItems)
   }
-
+      // Aplicar descuento a la cotizacion validando la clave de autorizacion
+  const aplicarDescuentoCot = async () => {
+    const pct = parseFloat(pctDescCot)
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      setErrorDescCot('Ingrese un porcentaje valido (0 a 100)')
+      return
+    }
+    if (!claveDescCot.trim()) {
+      setErrorDescCot('Ingrese la clave de autorizacion')
+      return
+    }
+    setValidandoDescCot(true)
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveDescCot })
+      if (res.data.valido) {
+        setDescuentoPctCot(String(pct))
+        setModalDescCot(false)
+        setPctDescCot('')
+        setClaveDescCot('')
+        setErrorDescCot('')
+      } else {
+        setErrorDescCot('Clave incorrecta')
+      }
+    } catch (e) {
+      setErrorDescCot(e.response?.data?.mensaje || 'Clave incorrecta')
+    } finally {
+      setValidandoDescCot(false)
+    }
+  }
+    // Aplicar descuento a la factura validando la clave de autorizacion
+  const aplicarDescuentoFac = async () => {
+    const pct = parseFloat(pctDescFac)
+    if (isNaN(pct) || pct < 0 || pct > 100) {
+      setErrorDescFac('Ingrese un porcentaje valido (0 a 100)')
+      return
+    }
+    if (!claveDescFac.trim()) {
+      setErrorDescFac('Ingrese la clave de autorizacion')
+      return
+    }
+    setValidandoDescFac(true)
+    try {
+      const res = await API.post('/mantenimiento/validar-clave-descuento', { clave: claveDescFac })
+         if (res.data.valido) {
+        setDescuentoPct(String(pct))
+        setModalDescFac(false)
+        setPctDescFac('')
+        setClaveDescFac('')
+        setErrorDescFac('')
+      } else {
+        setErrorDescFac('Clave incorrecta')
+      }
+    } catch (e) {
+      setErrorDescFac(e.response?.data?.mensaje || 'Clave incorrecta')
+    } finally {
+      setValidandoDescFac(false)
+    }
+  }
      // Precio inicial en pedidos: vendedor de COMERCIAL H D usa precio_vendedor
   const precioPedido = (prod) => {
     try {
@@ -3341,10 +3410,15 @@ onKeyDown={e => {
                       <p className="text-gray-600">TOTAL BRUTO: <span className="font-medium">RD${brutoCot.toLocaleString('es-DO',{minimumFractionDigits:2})}</span></p>
                       <div className="flex items-center justify-end gap-2 my-1">
                         <label className="text-gray-600">Descuento</label>
-                        <input type="number" min="0" max="100" step="any" value={descuentoPctCot}
-                          onChange={e => setDescuentoPctCot(e.target.value)}
+                                              <input type="text" readOnly value={descuentoPctCot || '0'}
+                          onClick={() => { setPctDescCot(descuentoPctCot || ''); setClaveDescCot(''); setErrorDescCot(''); setModalDescCot(true) }}
+                          title="Clic para aplicar descuento (requiere clave)"
                           placeholder="0"
-                          className="w-16 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                          className="w-16 border rounded px-2 py-1 text-sm text-right cursor-pointer bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                        {parseFloat(descuentoPctCot) > 0 && (
+                          <button type="button" onClick={() => setDescuentoPctCot('')}
+                            className="text-xs text-gray-500 hover:text-red-600">Quitar</button>
+                        )}
                         <span className="text-gray-600">%</span>
                         <span className="font-medium text-red-600 w-24">-RD${montoDescCot.toLocaleString('es-DO',{minimumFractionDigits:2})}</span>
                       </div>
@@ -3354,7 +3428,44 @@ onKeyDown={e => {
                     </>
                   })()}
                 </div>
-              </div>
+                           </div>
+
+              {modalDescCot && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setModalDescCot(false)}>
+                  <div className="bg-white rounded-lg shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                    <div className="bg-red-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center">
+                      <span className="font-bold">DESCUENTO A LA COTIZACION</span>
+                      <button type="button" onClick={() => setModalDescCot(false)} className="text-white text-xl leading-none">&times;</button>
+                    </div>
+                    <div className="p-4">
+                      <label className="block text-sm font-semibold text-gray-600 mb-1">Porcentaje de descuento (%):</label>
+                      <input type="number" min="0" max="100" step="any" autoFocus
+                        value={pctDescCot}
+                        onChange={e => { setPctDescCot(e.target.value); setErrorDescCot('') }}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); aplicarDescuentoCot() } }}
+                        placeholder="Ej: 10"
+                        className="w-full border rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-red-400" />
+                      <label className="block text-sm font-semibold text-gray-600 mb-1">Clave de autorizacion:</label>
+                      <input type="password"
+                        value={claveDescCot}
+                        onChange={e => { setClaveDescCot(e.target.value); setErrorDescCot('') }}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); aplicarDescuentoCot() } }}
+                        placeholder="Clave del administrador"
+                        className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+                      {errorDescCot && <p className="text-red-600 text-sm mt-2">{errorDescCot}</p>}
+                      <div className="flex gap-2 mt-4">
+                        <button type="button" onClick={() => setModalDescCot(false)}
+                          className="flex-1 px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar (Esc)</button>
+                        <button type="button" onClick={aplicarDescuentoCot} disabled={validandoDescCot}
+                          className="flex-1 px-4 py-2 bg-orange-500 text-white rounded text-sm font-bold hover:bg-orange-600 disabled:opacity-50">
+                          {validandoDescCot ? 'Validando...' : 'APLICAR (Enter)'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button ref={cotAgregarRef} onClick={() => {
                   setItemsCot(prev => [...prev, {descripcion:'',cantidad:1,precio_unitario:'',itbis_rate:18,product_id:''}])
@@ -5014,10 +5125,15 @@ onKeyDown={e => {
                         <p className="text-gray-600">TOTAL BRUTO: <span className="font-medium">RD${brutoFac.toFixed(2)}</span></p>
                         <div className="flex items-center justify-end gap-2 my-1">
                           <label className="text-gray-600">Descuento</label>
-                          <input type="number" min="0" max="100" step="any" value={descuentoPct}
-                            onChange={e => setDescuentoPct(e.target.value)}
+                                                  <input type="text" readOnly value={descuentoPct || '0'}
+                            onClick={() => { setPctDescFac(descuentoPct || ''); setClaveDescFac(''); setErrorDescFac(''); setModalDescFac(true) }}
+                            title="Clic para aplicar descuento (requiere clave)"
                             placeholder="0"
-                            className="w-16 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                            className="w-16 border rounded px-2 py-1 text-sm text-right cursor-pointer bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                          {parseFloat(descuentoPct) > 0 && (
+                            <button type="button" onClick={() => setDescuentoPct('')}
+                              className="text-xs text-gray-500 hover:text-red-600">Quitar</button>
+                          )}
                           <span className="text-gray-600">%</span>
                           <span className="font-medium text-red-600 w-24">-RD${montoDesc.toFixed(2)}</span>
                         </div>
@@ -5034,6 +5150,42 @@ onKeyDown={e => {
                     })()}
                   </div>
                 </div>
+
+                              {modalDescFac && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setModalDescFac(false)}>
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                      <div className="bg-red-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center">
+                        <span className="font-bold">DESCUENTO A LA FACTURA</span>
+                        <button type="button" onClick={() => setModalDescFac(false)} className="text-white text-xl leading-none">&times;</button>
+                      </div>
+                      <div className="p-4">
+                        <label className="block text-sm font-semibold text-gray-600 mb-1">Porcentaje de descuento (%):</label>
+                        <input type="number" min="0" max="100" step="any" autoFocus
+                          value={pctDescFac}
+                          onChange={e => { setPctDescFac(e.target.value); setErrorDescFac('') }}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); aplicarDescuentoFac() } }}
+                          placeholder="Ej: 10"
+                          className="w-full border rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-red-400" />
+                        <label className="block text-sm font-semibold text-gray-600 mb-1">Clave de autorizacion:</label>
+                        <input type="password"
+                          value={claveDescFac}
+                          onChange={e => { setClaveDescFac(e.target.value); setErrorDescFac('') }}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); aplicarDescuentoFac() } }}
+                          placeholder="Clave del administrador"
+                          className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+                        {errorDescFac && <p className="text-red-600 text-sm mt-2">{errorDescFac}</p>}
+                        <div className="flex gap-2 mt-4">
+                          <button type="button" onClick={() => setModalDescFac(false)}
+                            className="flex-1 px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancelar (Esc)</button>
+                          <button type="button" onClick={aplicarDescuentoFac} disabled={validandoDescFac}
+                            className="flex-1 px-4 py-2 bg-orange-500 text-white rounded text-sm font-bold hover:bg-orange-600 disabled:opacity-50">
+                            {validandoDescFac ? 'Validando...' : 'APLICAR (Enter)'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                               )}
 
                 <div className="flex gap-3 justify-end">
                   <button type="button" onClick={() => setShowForm(false)}

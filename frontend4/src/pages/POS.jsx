@@ -1652,10 +1652,12 @@ const cambiarCantidad = (id, nuevaCantidad) => {
   const recibido = parseFloat(montoRecibido) || 0
     const devuelta = recibido - (cobroEsCambio ? diferenciaCambio : totalGeneral)
 
+  // Monto que realmente se cobra (en cambio de mercancia es la diferencia)
+  const montoACobrar = cobroEsCambio ? diferenciaCambio : totalGeneral
   // Pago mixto: suma de los métodos y lo que falta por cubrir
   const totalMixto = ['efectivo', 'tarjeta', 'transferencia']
     .reduce((acc, m) => acc + (parseFloat(pagosMixto[m]) || 0), 0)
-  const faltaMixto = totalGeneral - totalMixto
+  const faltaMixto = montoACobrar - totalMixto
 
   const fmt = (n) => (parseFloat(n) || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -1697,7 +1699,7 @@ if (procesando) return
      let detallePagos
     if (modoMixto) {
       const noEfec = (parseFloat(pagosMixto.tarjeta) || 0) + (parseFloat(pagosMixto.transferencia) || 0)
-      const efecReal = Math.max(0, totalGeneral - noEfec)
+       const efecReal = Math.max(0, montoACobrar - noEfec)
       const ajustado = { efectivo: efecReal, tarjeta: parseFloat(pagosMixto.tarjeta) || 0, transferencia: parseFloat(pagosMixto.transferencia) || 0 }
       detallePagos = METODOS_MIX.filter(m => ajustado[m] > 0).map(m => ({ metodo: m, monto: ajustado[m] }))
     } else {

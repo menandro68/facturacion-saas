@@ -1458,9 +1458,20 @@ t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.email as empresa_email,
     };
 
     // ============= INICIO RENDERIZADO =============
+   
+       // Descuento global: las lineas se muestran a precio bruto (antes del descuento)
+    let descLineasMC = parseFloat(data.descuento_monto || 0);
+    if (!descLineasMC && data.notas) {
+      const mDescMC = String(data.notas).match(/Descuento:\s*RD\$\s*([\d.,]+)/i);
+      if (mDescMC) descLineasMC = parseFloat(String(mDescMC[1]).replace(/,/g, '')) || 0;
+    }
+    const netoLineasMC = items.rows.reduce((s, it) => s + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
+        const factorBrutoMC = netoLineasMC > 0 ? (netoLineasMC + descLineasMC) / netoLineasMC : 1;
+
     let y = dibujarEncabezadoCompleto();
     y = dibujarHeaderTabla(y);
-    doc.fontSize(9).font('Helvetica');
+       doc.fontSize(9).font('Helvetica');
+ 
     let rowColor = true;
 
     const rowH = 16;
@@ -1485,14 +1496,15 @@ t.nombre as empresa_nombre, t.rnc as empresa_rnc, t.email as empresa_email,
       // Dibujar fila
       if (rowColor) doc.rect(M, y, col, rowH).fill(grisClaro);
       rowColor = !rowColor;
-      const subtotalLinea = parseFloat(item.cantidad) * parseFloat(item.precio_unitario);
+        const precioBrutoMC = Math.round(parseFloat(item.precio_unitario) * factorBrutoMC * 100) / 100;
+      const subtotalLinea = Math.round(parseFloat(item.cantidad) * precioBrutoMC * 100) / 100;
       doc.fillColor(negro)
          .text(item.descripcion, colDescX, y + 4, { width: colDescW })
          .text(formatearCantidad(item.cantidad), colCantX, y + 4, { width: colCantW, align: 'right' })
-         .text(parseFloat(item.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2}), colPUnitX, y + 4, { width: colPUnitW, align: 'right' })
-         .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2}), colSubX, y + 4, { width: colSubW, align: 'right' })
+         .text(precioBrutoMC.toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2}), colPUnitX, y + 4, { width: colPUnitW, align: 'right' })
+         .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2}), colSubX, y + 4, { width: colSubW, align: 'right' })
          .text(parseFloat(item.itbis_monto).toLocaleString('es-DO', {minimumFractionDigits: 2}), colItbisX, y + 4, { width: colItbisW, align: 'right' })
-         .text(parseFloat(item.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), colTotalX, y + 4, { width: colTotalW, align: 'right' });
+         .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2}), colTotalX, y + 4, { width: colTotalW, align: 'right' });
       doc.moveTo(M, y + rowH).lineTo(M + col, y + rowH).strokeColor(grisBorde).lineWidth(0.5).stroke();
       y += rowH;
     }
@@ -1705,19 +1717,28 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
     y += 24;
 
     doc.fontSize(9).font('Helvetica');
+        // Descuento global: las lineas se muestran a precio bruto (antes del descuento)
+    let descLineasC = parseFloat(data.descuento_monto || 0);
+    if (!descLineasC && data.notas) {
+      const mDescLnC = String(data.notas).match(/Descuento:\s*RD\$\s*([\d.,]+)/i);
+      if (mDescLnC) descLineasC = parseFloat(String(mDescLnC[1]).replace(/,/g, '')) || 0;
+    }
+    const netoLineasC = items.rows.reduce((s, it) => s + (parseFloat(it.cantidad) || 0) * (parseFloat(it.precio_unitario) || 0), 0);
+    const factorBrutoC = netoLineasC > 0 ? (netoLineasC + descLineasC) / netoLineasC : 1;
     let rowColor = true;
     for (const item of items.rows) {
       const rowH = 22;
       if (rowColor) doc.rect(M, y, col, rowH).fill(grisClaro);
       rowColor = !rowColor;
-      const subtotalLinea = parseFloat(item.cantidad) * parseFloat(item.precio_unitario);
+         const precioBrutoC = Math.round(parseFloat(item.precio_unitario) * factorBrutoC * 100) / 100;
+      const subtotalLinea = Math.round(parseFloat(item.cantidad) * precioBrutoC * 100) / 100;
       doc.fillColor(negro)
          .text(item.descripcion, colDescX, y + 7, { width: colDescW })
          .text(formatearCantidad(item.cantidad), colCantX, y + 7, { width: colCantW, align: 'right' })
-         .text(parseFloat(item.precio_unitario).toLocaleString('es-DO', {minimumFractionDigits: 2}), colPUnitX, y + 7, { width: colPUnitW, align: 'right' })
-         .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2}), colSubX, y + 7, { width: colSubW, align: 'right' })
+         .text(precioBrutoC.toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2}), colPUnitX, y + 7, { width: colPUnitW, align: 'right' })
+         .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2}), colSubX, y + 7, { width: colSubW, align: 'right' })
          .text(parseFloat(item.itbis_monto).toLocaleString('es-DO', {minimumFractionDigits: 2}), colItbisX, y + 7, { width: colItbisW, align: 'right' })
-         .text(parseFloat(item.total).toLocaleString('es-DO', {minimumFractionDigits: 2}), colTotalX, y + 7, { width: colTotalW, align: 'right' });
+         .text(subtotalLinea.toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2}), colTotalX, y + 7, { width: colTotalW, align: 'right' });
       doc.moveTo(M, y + rowH).lineTo(M + col, y + rowH).strokeColor(grisBorde).lineWidth(0.5).stroke();
       y += rowH;
     }
@@ -1741,8 +1762,9 @@ router.get('/:id/pdf-carta', verifyToken, tenantGuard, async (req, res) => {
       const mDescC = String(data.notas).match(/Descuento:\s*RD\$\s*([\d.,]+)/i);
       if (mDescC) descTotC = parseFloat(String(mDescC[1]).replace(/,/g, '')) || 0;
     }
-    const subNetoC = parseFloat(data.subtotal) || 0;
-    const brutoTotC = subNetoC + descTotC;
+      const subNetoC = parseFloat(data.subtotal) || 0;
+    // TOTAL BRUTO = Sub-Total + ITBIS + Descuento (igual que la pantalla)
+    const brutoTotC = subNetoC + (parseFloat(data.itbis) || 0) + descTotC;
     const filasTotC = [
       ['TOTAL BRUTO', brutoTotC],
       ['TOTAL DESC.', descTotC],
@@ -1930,11 +1952,17 @@ const { customer_id, items } = req.body;
       itbis += itemBruto - itemBase;
     });
     const total = subtotal + itbis;
+    // Registrar el descuento aplicado para que el PDF muestre precios brutos
+    let notasCot = null;
+    if (pctDescCot > 0) {
+      const montoDescCot = total / (1 - pctDescCot / 100) - total;
+      notasCot = `Descuento: RD$ ${montoDescCot.toFixed(2)} (${pctDescCot}%)`;
+    }
 
  const cotizacion = await pool.query(
-      `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, estado, subtotal, itbis, total, fecha_emision, operador_id, operador_creador_id)
-       VALUES ($1, $2, 'B01', 'cotizacion', $3, $4, $5, NOW(), $6, $6) RETURNING *`,
-      [tenant_id, customer_id || null, subtotal, itbis, total, req.user.operador_id || null]
+      `INSERT INTO invoices (tenant_id, customer_id, ncf_tipo, estado, subtotal, itbis, total, fecha_emision, operador_id, operador_creador_id, notas)
+       VALUES ($1, $2, 'B01', 'cotizacion', $3, $4, $5, NOW(), $6, $6, $7) RETURNING *`,
+      [tenant_id, customer_id || null, subtotal, itbis, total, req.user.operador_id || null, notasCot]
     );
 
     const cotizacionId = cotizacion.rows[0].id;
@@ -2178,10 +2206,17 @@ router.put('/cotizacion/:id/editar', verifyToken, tenantGuard, async (req, res) 
       );
     }
 
+    // Registrar el descuento aplicado para que el PDF muestre precios brutos
+    let notasEdCot = null;
+    if (pctDescEdCot > 0) {
+      const montoDescEdCot = totalEdCot / (1 - pctDescEdCot / 100) - totalEdCot;
+      notasEdCot = `Descuento: RD$ ${montoDescEdCot.toFixed(2)} (${pctDescEdCot}%)`;
+    }
+
     const upd = await client.query(
-      `UPDATE invoices SET customer_id=$1, subtotal=$2, itbis=$3, total=$4, actualizado_en=NOW()
+      `UPDATE invoices SET customer_id=$1, subtotal=$2, itbis=$3, total=$4, notas=$7, actualizado_en=NOW()
        WHERE id=$5 AND tenant_id=$6 RETURNING *`,
-      [customer_id || cotQ.rows[0].customer_id, subtotalEd, itbisEd, totalEdCot, id, tenant_id]
+      [customer_id || cotQ.rows[0].customer_id, subtotalEd, itbisEd, totalEdCot, id, tenant_id, notasEdCot]
     );
 
     await client.query('COMMIT');
