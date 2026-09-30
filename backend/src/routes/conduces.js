@@ -610,9 +610,14 @@ router.get('/:id/pdf', verifyToken, tenantGuard, async (req, res) => {
     }
 
     try {
-      const qrData = `CONDUCE:${d.numero}|CLIENTE:${d.cliente_nombre || ''}|FECHA:${new Date(d.creado_en).toLocaleDateString('es-DO')}`;
-      const qrPng = await QRCode.toBuffer(qrData, { width: 110, margin: 1 });
-      doc.image(qrPng, M, y + 10, { width: 90 });
+      // QR de ubicacion del cliente (link a Google Maps), igual que en factura
+      if (d.cliente_direccion && d.cliente_direccion.trim()) {
+        const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(d.cliente_direccion.trim());
+        const qrPng = await QRCode.toBuffer(url, { width: 150, margin: 1 });
+        doc.image(qrPng, M, y + 10, { width: 90 });
+        doc.fillColor('#000000').fontSize(7).font('Helvetica')
+           .text('Escanee para ubicacion', M, y + 103, { width: 90, align: 'center' });
+      }
     } catch (e) { /* si falla el QR, continuar sin el */ }
 
     const firmaY = y + 70;
