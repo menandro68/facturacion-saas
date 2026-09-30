@@ -346,7 +346,8 @@ router.get('/cambio/:id/ticket', verifyToken, tenantGuard, async (req, res) => {
     if (cam.empresa_direccion) izquierda(cam.empresa_direccion, 7);
     y += 3;
     lineaGuiones();
-    centrado('CAMBIO DE MERCANCIA', 10, true);
+       centrado('CAMBIO DE MERCANCIA', 10, true);
+    if (req.query.reimpreso === '1') centrado('*** REIMPRESO ***', 9, true);
     izquierda(`No.: ${cam.numero}`, 8, true);
     izquierda(`Factura: ${cam.factura_ncf || '-'}`, 8);
     izquierda(`Fecha: ${new Date(cam.creado_en).toLocaleString('es-DO', { timeZone: 'America/Santo_Domingo' })}`, 7);

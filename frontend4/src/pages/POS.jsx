@@ -1288,7 +1288,7 @@ const abrirCierre = async () => {
      const cambioGuardado = localStorage.getItem('pos_ultimo_cambio')
     if (cambioGuardado) {
       const tokenC = sessionStorage.getItem('token')
-      const urlC = `/pos/cambio/${cambioGuardado}/ticket?token=${tokenC}`
+      const urlC = `/pos/cambio/${cambioGuardado}/ticket?token=${tokenC}&reimpreso=1`
       const viejoRC = document.getElementById('iframe-reimpresion')
       if (viejoRC) viejoRC.remove()
       const ifrC = document.createElement('iframe')
