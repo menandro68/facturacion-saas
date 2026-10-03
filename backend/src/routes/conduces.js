@@ -371,8 +371,10 @@ router.put('/:id/convertir', verifyToken, tenantGuard, async (req, res) => {
       return res.status(400).json({ success: false, mensaje: `No hay secuencia NCF ${tipoNcf} disponible para este cliente. Cree la secuencia en Mantenimiento > Secuencias NCF` });
     }
     const secuencia = seqQ.rows[0];
-    const numeroActual = parseInt(secuencia.secuencia_actual);
-    const ncf = `${secuencia.prefijo}${String(numeroActual).padStart(8, '0')}`;
+       const numeroActual = parseInt(secuencia.secuencia_actual);
+    // e-CF (prefijo E) usa 10 digitos; tradicional usa 8
+    const longSecCd = String(secuencia.prefijo).toUpperCase().startsWith('E') ? 10 : 8;
+    const ncf = `${secuencia.prefijo}${String(numeroActual).padStart(longSecCd, '0')}`;
     await client.query(
       `UPDATE ncf_secuencias_electronicas
        SET secuencia_actual = secuencia_actual + 1, actualizado_en = NOW()

@@ -417,7 +417,9 @@ WHERE tenant_id = $1 AND tipo_ncf = $2 AND activo = true
       return res.status(400).json({ success: false, mensaje: `No hay secuencia NCF ${tipoNcf} disponible para este cliente. Cree la secuencia en Mantenimiento > Secuencias NCF` });
     }
     const secuencia = seqQ.rows[0];
-    const ncf = `${secuencia.prefijo}${String(parseInt(secuencia.secuencia_actual)).padStart(8, '0')}`;
+       // e-CF (prefijo E) usa 10 digitos; tradicional usa 8
+    const longSec = String(secuencia.prefijo).toUpperCase().startsWith('E') ? 10 : 8;
+    const ncf = `${secuencia.prefijo}${String(parseInt(secuencia.secuencia_actual)).padStart(longSec, '0')}`;
     await client.query(`UPDATE ncf_secuencias_electronicas SET secuencia_actual = secuencia_actual + 1, actualizado_en = NOW() WHERE id = $1`, [secuencia.id]);
     const items = await client.query(`SELECT * FROM invoice_items WHERE invoice_id=$1`, [id]);
     for (const item of items.rows) {
@@ -2103,8 +2105,10 @@ WHERE tenant_id = $1 AND tipo_ncf = $2 AND activo = true
     if (seqQ.rows.length === 0) {
       return res.status(400).json({ success: false, mensaje: `No hay secuencia NCF ${tipoNcf} disponible para este cliente. Cree la secuencia en Mantenimiento > Secuencias NCF` });
     }
-    const secuencia = seqQ.rows[0];
-    const ncf = `${secuencia.prefijo}${String(parseInt(secuencia.secuencia_actual)).padStart(8, '0')}`;
+      const secuencia = seqQ.rows[0];
+    // e-CF (prefijo E) usa 10 digitos; tradicional usa 8
+    const longSecCt = String(secuencia.prefijo).toUpperCase().startsWith('E') ? 10 : 8;
+    const ncf = `${secuencia.prefijo}${String(parseInt(secuencia.secuencia_actual)).padStart(longSecCt, '0')}`;
 
     const updSeq = await pool.query(
       `UPDATE ncf_secuencias_electronicas SET secuencia_actual = secuencia_actual + 1, actualizado_en = NOW()
